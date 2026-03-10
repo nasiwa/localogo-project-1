@@ -428,3 +428,5 @@ app.listen(PORT, () => {
   console.log(`   Midtrans: ${process.env.MIDTRANS_IS_PRODUCTION === 'true' ? '🟢 PRODUCTION' : '🟡 SANDBOX'}`);
 });
 module.exports = app;
+
+if (require.main === module) { app.listen(process.env.PORT || 3001); }

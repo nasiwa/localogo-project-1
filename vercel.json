@@ -3,11 +3,16 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "backend/server.js"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
-      "destination": "public/$1"
+      "destination": "/public/$1"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "runtime": "vercel-node@latest"
+    }
+  }
 }
