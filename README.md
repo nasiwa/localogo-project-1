@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # LOKALOGO OSPEK Pre-Order — Setup Guide
 
 ## Struktur File
@@ -185,3 +186,6 @@ Deduct filled_slots + mark order paid + send email
 ```
 
 Tidak ada double-booking meskipun 1000 user klik bersamaan.
+=======
+# Localogo-Project
+>>>>>>> ffba93f644b8a29c4c610d0e8aca2d514d2e4f90
