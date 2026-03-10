@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOKALOGO Admin — OSPEK 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --td: #024847;
+      --t: #24999b;
+      --tm: #1a7a7c;
+      --tl: #d0eeef;
+      --tp: #e8f7f7;
+      --bg: #0d1a1a;
+      --bg2: #111f1f;
+      --bg3: #162424;
+      --surface: #1e2e2e;
+      --border: #1e3535;
+      --bm: #254545;
+      --tx: #e0f0f0;
+      --txm: #7aadad;
+      --txd: #4a7a7a;
+      --white: #ffffff;
+      --red: #e05555;
+      --green: #1adb7a;
+      --amber: #f0a030;
+      --r: 8px;
+      --rl: 12px;
+      --s1: 0 2px 12px rgba(0, 0, 0, .3);
+      --s2: 0 8px 32px rgba(0, 0, 0, .4);
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+    }
+
+    /* LOGIN SCREEN */
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--s2);
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .login-logo-mark {
+      width: 44px;
+      height: 44px;
+      background: var(--td);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .login-logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--tx);
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--tx);
+      margin-bottom: 6px;
+    }
+
+    .login-sub {
+      font-size: 13px;
+      color: var(--txm);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      background: var(--white);
+      color: #1a1a1a;
+      border: none;
+      border-radius: var(--r);
+      padding: 14px 20px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .2);
+    }
+
+    .btn-google:hover {
+      opacity: .9;
+    }
+
+    .btn-google svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .login-note {
+      font-size: 11px;
+      color: var(--txd);
+      margin-top: 16px;
+      letter-spacing: .06em;
+    }
+
+    .login-err {
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* LAYOUT */
+    .app {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .app.visible {
+      display: flex;
+    }
+
+    .sidebar-nav {
+      width: 220px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+    }
+
+    .snav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .snav-logo-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--td);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .snav-logo-text {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--tx);
+    }
+
+    .snav-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--txd);
+      padding: 20px 20px 8px;
+    }
+
+    .snav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--txm);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      border-radius: 0;
+      text-decoration: none;
+    }
+
+    .snav-item:hover {
+      background: var(--bg3);
+      color: var(--tx);
+    }
+
+    .snav-item.active {
+      background: var(--bg3);
+      color: var(--t);
+      font-weight: 600;
+    }
+
+    .snav-item .icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .snav-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding: 16px 20px;
+    }
+
+    .admin-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .admin-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--td);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .admin-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .admin-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--tx);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-email {
+      font-size: 10px;
+      color: var(--txd);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-logout {
+      width: 100%;
+      background: rgba(224, 85, 85, .1);
+      border: 1px solid rgba(224, 85, 85, .2);
+      color: var(--red);
+      padding: 8px;
+      border-radius: var(--r);
+      font-family: 'Poppins', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .btn-logout:hover {
+      background: rgba(224, 85, 85, .2);
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+      margin-left: 220px;
+      flex: 1;
+      padding: 32px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--tx);
+      letter-spacing: -.01em;
+    }
+
+    .page-sub {
+      font-size: 12px;
+      color: var(--txm);
+      margin-top: 2px;
+    }
+
+    /* STAT CARDS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      padding: 20px;
+    }
+
+    .stat-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--txd);
+      margin-bottom: 8px;
+    }
+
+    .stat-card-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--tx);
+      letter-spacing: -.03em;
+      line-height: 1;
+    }
+
+    .stat-card-sub {
+      font-size: 11px;
+      color: var(--txm);
+      margin-top: 4px;
+    }
+
+    .stat-card.accent {
+      border-color: var(--t);
+    }
+
+    .stat-card.accent .stat-card-val {
+      color: var(--t);
+    }
+
+    /* BATCH TABLE */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--tx);
+      letter-spacing: .04em;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--txm);
+      margin-top: 1px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--txd);
+      padding: 12px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+
+    td {
+      font-size: 13px;
+      color: var(--tx);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .pill {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+
+    .pill.active {
+      background: rgba(26, 219, 122, .1);
+      color: var(--green);
+      border: 1px solid rgba(26, 219, 122, .2);
+    }
+
+    .pill.hidden {
+      background: rgba(240, 160, 48, .1);
+      color: var(--amber);
+      border: 1px solid rgba(240, 160, 48, .2);
+    }
+
+    .pill.closed {
+      background: rgba(224, 85, 85, .1);
+      color: var(--red);
+      border: 1px solid rgba(224, 85, 85, .2);
+    }
+
+    /* PROGRESS IN TABLE */
+    .tbl-progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tbl-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .tbl-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--td), var(--t));
+      border-radius: 99px;
+    }
+
+    .tbl-pct {
+      font-size: 11px;
+      color: var(--txm);
+      min-width: 34px;
+      text-align: right;
+    }
+
+    /* ACTION BUTTONS */
+    .btn-sm {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+
+    .btn-sm:hover {
+      opacity: .8;
+    }
+
+    .btn-activate {
+      background: rgba(26, 219, 122, .1);
+      color: var(--green);
+      border-color: rgba(26, 219, 122, .25);
+    }
+
+    .btn-hide {
+      background: rgba(240, 160, 48, .1);
+      color: var(--amber);
+      border-color: rgba(240, 160, 48, .25);
+    }
+
+    .btn-close-batch {
+      background: rgba(224, 85, 85, .1);
+      color: var(--red);
+      border-color: rgba(224, 85, 85, .25);
+    }
+
+    .btn-edit {
+      background: var(--bg3);
+      color: var(--txm);
+      border-color: var(--border);
+    }
+
+    .btn-primary {
+      background: var(--td);
+      color: #fff;
+      border-color: var(--td);
+      padding: 9px 18px;
+      font-size: 12px;
+    }
+
+    .btn-primary:hover {
+      background: var(--tm);
+      opacity: 1;
+    }
+
+    /* DATETIME PICKER */
+    .datetime-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .datetime-wrap input[type=datetime-local] {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--tx);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    .datetime-wrap input[type=datetime-local]:focus {
+      border-color: var(--t);
+    }
+
+    /* ORDERS TABLE */
+    .badge-paid {
+      display: inline-block;
+      background: rgba(26, 219, 122, .1);
+      color: var(--green);
+      border: 1px solid rgba(26, 219, 122, .2);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .badge-pending {
+      display: inline-block;
+      background: rgba(240, 160, 48, .1);
+      color: var(--amber);
+      border: 1px solid rgba(240, 160, 48, .2);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .badge-expired {
+      display: inline-block;
+      background: rgba(224, 85, 85, .1);
+      color: var(--red);
+      border: 1px solid rgba(224, 85, 85, .2);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .badge-pickup {
+      display: inline-block;
+      background: rgba(36, 153, 155, 0.1);
+      color: var(--t);
+      border: 1px solid rgba(36, 153, 155, 0.2);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      backdrop-filter: blur(8px);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--bm);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: var(--s2);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--tx);
+      margin-bottom: 6px;
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--txm);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .modal-field label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--txm);
+    }
+
+    .modal-field input,
+    .modal-field select {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      color: var(--tx);
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+      width: 100%;
+      appearance: none;
+    }
+
+    .modal-field input:focus,
+    .modal-field select:focus {
+      border-color: var(--t);
+    }
+
+    .modal-field select option {
+      background: var(--bg3);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-cancel-m {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--txm);
+      padding: 10px;
+      border-radius: var(--r);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .btn-save-m {
+      flex: 1;
+      background: var(--t);
+      color: #fff;
+      border: 1px solid var(--t);
+      padding: 10px;
+      border-radius: var(--r);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      transition: background .15s;
+    }
+
+    .btn-save-m:hover {
+      background: var(--tm);
+    }
+
+    /* REVEAL SCHEDULE SECTION */
+    .reveal-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .reveal-set-label {
+      font-size: 11px;
+      color: var(--txd);
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--bm);
+      color: var(--tx);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 999;
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+      transform: translateY(16px);
+      box-shadow: var(--s2);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-color: rgba(26, 219, 122, .3);
+      background: rgba(26, 219, 122, .08);
+    }
+
+    .toast.error {
+      border-color: rgba(224, 85, 85, .3);
+      background: rgba(224, 85, 85, .08);
+    }
+
+    /* LOADING */
+    .loading-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, .2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--txd);
+      font-size: 13px;
+    }
+
+    /* PAGE SECTIONS */
+    .page-section {
+      display: none;
+    }
+
+    .page-section.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- CONFIG -->
+  <script>
+    const SUPABASE_URL = 'https://qbkhapuewbclazyykslr.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFia2hhcHVld2JjbGF6eXlrc2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzcxOTAsImV4cCI6MjA4ODM1MzE5MH0.Io6iH9zJ87aCpy3FhNynsAvxTAfnMCJtzMJDNE8L3Jw';
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3001' : '';
+
+    // ── GANTI PASSWORD DI SINI ──
+    const ADMIN_PASSWORD = 'ospek2026admin';
+    // ────────────────────────────
+  </script>
+
+  <!-- LOGIN SCREEN -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-mark">LK</div>
+        <div class="login-logo-text">Lokalogo</div>
+      </div>
+      <div class="login-title">Admin Dashboard 2026</div>
+      <div class="login-sub">Masukkan password admin untuk mengakses dashboard pengelolaan Pre-Order OSPEK 2026.</div>
+
+      <div style="position:relative;margin-bottom:14px;">
+        <input type="password" id="pw-input" placeholder="Password admin" onkeydown="if(event.key==='Enter')doLogin()"
+          style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:14px;font-weight:500;padding:13px 46px 13px 16px;outline:none;transition:border-color .15s,box-shadow .15s;"
+          onfocus="this.style.borderColor='var(--t)';this.style.boxShadow='0 0 0 3px rgba(36,153,155,.15)'"
+          onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'" />
+        <span onclick="togglePw()" id="pw-eye" title="Tampilkan password"
+          style="position:absolute;right:13px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:17px;opacity:.45;user-select:none;line-height:1;">👁</span>
+      </div>
+
+      <button onclick="doLogin()" id="btn-login"
+        style="width:100%;background:var(--td);color:#fff;border:none;border-radius:var(--r);padding:14px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background .15s;box-shadow:0 4px 16px rgba(2,72,71,.4);">
+        Masuk →
+      </button>
+
+      <div id="login-err"
+        style="margin-top:12px;font-size:12px;color:var(--red);display:none;background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.2);border-radius:6px;padding:8px 12px;">
+        ⚠ Password salah. Coba lagi.
+      </div>
+      <div style="margin-top:14px;font-size:11px;color:var(--txd);letter-spacing:.06em;text-align:center;">Tekan Enter
+        atau klik Masuk</div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div class="app" id="app">
+    <!-- SIDEBAR -->
+    <div class="sidebar-nav">
+      <div class="snav-logo">
+        <div class="snav-logo-mark">LK</div>
+        <div class="snav-logo-text">Admin 2026</div>
+      </div>
+      <div class="snav-label">Menu</div>
+      <a class="snav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span>Dashboard
+      </a>
+      <a class="snav-item" onclick="showPage('batches')" id="nav-batches">
+        <span class="icon">🎯</span>Kelola Batch
+      </a>
+      <a class="snav-item" onclick="showPage('orders')" id="nav-orders">
+        <span class="icon">📋</span>Daftar Order
+      </a>
+      <div class="snav-bottom">
+        <div class="admin-info">
+          <div class="admin-avatar" id="admin-avatar">A</div>
+          <div>
+            <div class="admin-name" id="admin-name">Admin</div>
+            <div class="admin-email" id="admin-email">—</div>
+          </div>
+        </div>
+        <button class="btn-logout" onclick="logout()">Keluar</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+
+      <!-- ── DASHBOARD PAGE ── -->
+      <div class="page-section active" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">Ringkasan Pre-Order OSPEK 2026</div>
+          </div>
+          <button class="btn-sm btn-primary" onclick="refreshAll()">↻ Refresh</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card accent">
+            <div class="stat-card-label">Total Slot Terisi</div>
+            <div class="stat-card-val" id="ds-filled">—</div>
+            <div class="stat-card-sub" id="ds-filled-sub">dari — slot total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Slot Reserved (Pending)</div>
+            <div class="stat-card-val" id="ds-pending" style="color:var(--amber)">—</div>
+            <div class="stat-card-sub">sedang dalam proses bayar</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total Order Lunas</div>
+            <div class="stat-card-val" id="ds-paid">—</div>
+            <div class="stat-card-sub">pembayaran confirmed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total Pengambilan</div>
+            <div class="stat-card-val" id="ds-pickup" style="color:var(--green)">—</div>
+            <div class="stat-card-sub" id="ds-pickup-sub">telah mengambil barang</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Status Batch</div>
+              <div class="card-sub">Overview seluruh batch</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Batch</th>
+                <th>Status</th>
+                <th>Terisi</th>
+                <th>Progress</th>
+                <th>WhatsApp Group</th>
+              </tr>
+            </thead>
+            <tbody id="dash-batch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── BATCHES PAGE ── -->
+      <div class="page-section" id="page-batches">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Kelola Batch</div>
+            <div class="page-sub">Atur status, quota, link WA, dan jadwal reveal</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Daftar Batch</div>
+              <div class="card-sub">Kelola pengaturan batch dan peserta</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Batch</th>
+                <th>Status</th>
+                <th>Quota</th>
+                <th>Progress</th>
+                <th>WhatsApp Link</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="batch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── ORDERS PAGE ── -->
+      <div class="page-section" id="page-orders">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Daftar Order</div>
+            <div class="page-sub">Semua transaksi pre-order OSPEK 2026</div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <input type="text" id="order-search" placeholder="Cari nama / email / order ID..." oninput="filterOrders()"
+              style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px 14px;outline:none;width:260px;">
+          </div>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Smart Code</th>
+                <th>Nama</th>
+                <th>WhatsApp</th>
+                <th>Batch</th>
+                <th>Status</th>
+                <th>Ambil?</th>
+                <th>Waktu</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /app -->
+
+  <!-- EDIT BATCH MODAL -->
+  <div class="modal-backdrop" id="edit-modal">
+    <div class="modal-box">
+      <div class="modal-title">Edit Batch Pengaturan</div>
+      <div class="modal-sub">Ubah quota, status, link WA, atau jadwal reveal.</div>
+      <input type="hidden" id="edit-batch-id" />
+      <div class="modal-field">
+        <label>Nama Batch</label>
+        <input type="text" id="edit-name" />
+      </div>
+      <div class="modal-field">
+        <label>Total Slot</label>
+        <input type="number" id="edit-slots" />
+      </div>
+      <div class="modal-field">
+        <label>WhatsApp Group Link</label>
+        <input type="text" id="edit-wa-link" placeholder="https://chat.whatsapp.com/..." />
+      </div>
+      <div class="modal-field">
+        <label>Status</label>
+        <select id="edit-status">
+          <option value="hidden">Hidden</option>
+          <option value="active">Active</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Reveal At (Opsional)</label>
+        <input type="datetime-local" id="edit-reveal" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel-m" onclick="closeEditModal()">Batal</button>
+        <button class="btn-save-m" onclick="saveBatch()">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMBERS MODAL -->
+  <div class="modal-backdrop" id="members-modal">
+    <div class="modal-box" style="max-width: 600px;">
+      <div class="modal-title" id="m-modal-title">Daftar Peserta</div>
+      <div class="modal-sub">Daftar peserta lunas di batch ini.</div>
+      <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+        <table id="m-modal-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nama</th>
+              <th>WhatsApp</th>
+              <th>Ambil?</th>
+            </tr>
+          </thead>
+          <tbody id="m-modal-tbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel-m" onclick="closeMembersModal()">Tutup</button>
+        <button class="btn-save-m" id="btn-export-csv">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    let allOrders = [];
+
+    function doLogin() {
+      const pw = document.getElementById('pw-input').value;
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem('lok_admin_2026', '1');
+        enterApp();
+      } else {
+        document.getElementById('login-err').style.display = 'block';
+      }
+    }
+
+    function enterApp() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app').classList.add('visible');
+      loadDashboard();
+      subscribeAdmin();
+    }
+
+    function logout() {
+      sessionStorage.removeItem('lok_admin_2026');
+      window.location.reload();
+    }
+
+    function checkAuth() { return sessionStorage.getItem('lok_admin_2026') === '1'; }
+
+    function showPage(page) {
+      document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.snav-item').forEach(i => i.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      document.getElementById('nav-' + page).classList.add('active');
+      if (page === 'dashboard') loadDashboard();
+      if (page === 'batches') loadAdminBatches();
+      if (page === 'orders') loadOrders();
+    }
+
+    async function loadDashboard() {
+      const h = { 'x-admin-token': ADMIN_PASSWORD };
+      const [bRes, oRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
+        fetch(`${BACKEND_URL}/api/admin/orders`, { headers: h })
+      ]);
+      const { batches } = await bRes.json();
+      const { orders } = await oRes.json();
+
+      const totalFilled = batches.reduce((s, b) => s + b.filled_slots, 0);
+      const totalSlots = batches.reduce((s, b) => s + b.total_slots, 0);
+      const paidOrders = orders.filter(o => o.status === 'paid');
+      const pickupCount = paidOrders.filter(o => o.is_picked_up).length;
+
+      document.getElementById('ds-filled').textContent = totalFilled;
+      document.getElementById('ds-filled-sub').textContent = `dari ${totalSlots} total`;
+      document.getElementById('ds-paid').textContent = paidOrders.length;
+      document.getElementById('ds-pending').textContent = batches.reduce((s, b) => s + (b.pending_slots||0), 0);
+      document.getElementById('ds-pickup').textContent = pickupCount;
+      document.getElementById('ds-pickup-sub').textContent = `${((pickupCount/paidOrders.length||0)*100).toFixed(0)}% telah lunas`;
+
+      const tbody = document.getElementById('dash-batch-tbody');
+      tbody.innerHTML = batches.map(b => {
+        const pct = Math.round((b.filled_slots / b.total_slots) * 100);
+        return `<tr>
+          <td>${b.name}</td>
+          <td><span class="pill ${b.status}">${b.status}</span></td>
+          <td>${b.filled_slots} / ${b.total_slots}</td>
+          <td><div class="tbl-bar"><div class="tbl-fill" style="width:${pct}%"></div></div></td>
+          <td style="font-size:10px; color:var(--txm)">${b.wa_group_url ? 'Link Set ✅' : 'No Link ❌'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function loadAdminBatches() {
+      const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const { batches } = await res.json();
+      const tbody = document.getElementById('batch-tbody');
+      tbody.innerHTML = batches.map(b => `
+        <tr>
+          <td style="font-weight:700">${b.name}</td>
+          <td><span class="pill ${b.status}">${b.status}</span></td>
+          <td>${b.total_slots}</td>
+          <td>${b.filled_slots}</td>
+          <td style="font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px">${b.wa_group_url || '—'}</td>
+          <td>
+            <div style="display:flex; gap:5px;">
+              <button class="btn-sm btn-edit" onclick='openEditModal(${JSON.stringify(b)})'>Edit</button>
+              <button class="btn-sm btn-primary" onclick="openMembersModal('${b.id}', '${b.name}')">Lihat</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditModal(b) {
+      document.getElementById('edit-batch-id').value = b.id;
+      document.getElementById('edit-name').value = b.name;
+      document.getElementById('edit-slots').value = b.total_slots;
+      document.getElementById('edit-wa-link').value = b.wa_group_url || '';
+      document.getElementById('edit-status').value = b.status;
+      document.getElementById('edit-modal').classList.add('show');
+    }
+
+    function closeEditModal() { document.getElementById('edit-modal').classList.remove('show'); }
+
+    async function saveBatch() {
+      const id = document.getElementById('edit-batch-id').value;
+      const payload = {
+        name: document.getElementById('edit-name').value,
+        total_slots: parseInt(document.getElementById('edit-slots').value),
+        wa_group_url: document.getElementById('edit-wa-link').value,
+        status: document.getElementById('edit-status').value
+      };
+      await fetch(`${BACKEND_URL}/api/admin/batch/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': ADMIN_PASSWORD },
+        body: JSON.stringify(payload)
+      });
+      showToast('Batch updated!');
+      closeEditModal();
+      loadAdminBatches();
+    }
+
+    async function loadOrders() {
+      const res = await fetch(`${BACKEND_URL}/api/admin/orders`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const { orders } = await res.json();
+      allOrders = orders;
+      renderOrders(orders);
+    }
+
+    function renderOrders(orders) {
+      const tbody = document.getElementById('orders-tbody');
+      tbody.innerHTML = orders.map(o => {
+        const batchName = o.batches?.name || '—';
+        // Smart code calc
+        let smartCode = '—';
+        if (o.status === 'paid' && o.sequence_num) {
+          const bNum = parseInt(batchName.match(/\d+/) || '1');
+          const sess = Math.ceil(o.sequence_num / 200);
+          const romans = ['I','II','III','IV','V'];
+          smartCode = `BC${romans[bNum-1]}${sess}_${o.sequence_num.toString().padStart(4, '0')}`;
+        }
+
+        return `<tr>
+          <td style="font-family:monospace; font-size:10px">${o.order_ref}</td>
+          <td style="font-weight:700; color:var(--t)">${smartCode}</td>
+          <td>${o.full_name}</td>
+          <td style="font-size:12px">${o.whatsapp}</td>
+          <td>${batchName}</td>
+          <td><span class="badge-${o.status}">${o.status.toUpperCase()}</span></td>
+          <td>${o.is_picked_up ? '<span class="badge-pickup">DIAMBIL</span>' : '<span style="opacity:0.3">—</span>'}</td>
+          <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
+          <td>
+             <button class="btn-sm btn-edit" onclick="syncOrder('${o.order_ref}')">Sync</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function syncOrder(ref) {
+      const res = await fetch(`${BACKEND_URL}/api/admin/order/${ref}/sync`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const data = await res.json();
+      showToast(`Sync result: ${data.status}`);
+      loadOrders();
+    }
+
+    let currentBatchMembers = [];
+    async function openMembersModal(id, name) {
+      document.getElementById('m-modal-title').textContent = name;
+      document.getElementById('members-modal').classList.add('show');
+      const res = await fetch(`${BACKEND_URL}/api/admin/batch/${id}/members`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const { members } = await res.json();
+      currentBatchMembers = members;
+      document.getElementById('m-modal-tbody').innerHTML = members.map(m => {
+        const bNum = parseInt(name.match(/\d+/) || '1');
+        const romans = ['I','II','III','IV','V'];
+        
+        let smartCode = '—';
+        if (m.sequence_num) {
+          const sess = Math.ceil(m.sequence_num / 200);
+          smartCode = `BC${romans[bNum-1]}${sess}_${m.sequence_num.toString().padStart(4, '0')}`;
+        }
+        
+        return `
+          <tr>
+            <td style="font-weight:700; color:var(--t); font-size:11px">${smartCode}</td>
+            <td>${m.full_name}</td>
+            <td style="font-size:11px">${m.whatsapp}</td>
+            <td>${m.is_picked_up ? '<span style="color:var(--t)">✅ Diambil</span>' : '<span style="color:var(--red)">❌ Belum</span>'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function closeMembersModal() { document.getElementById('members-modal').classList.remove('show'); }
+
+    function filterOrders() {
+      const q = document.getElementById('order-search').value.toLowerCase();
+      renderOrders(allOrders.filter(o => o.full_name.toLowerCase().includes(q) || o.order_ref.toLowerCase().includes(q)));
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function subscribeAdmin() {
+      _sb.channel('admin-updates').on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, () => loadDashboard()).subscribe();
+    }
+
+    window.onload = () => { if (checkAuth()) enterApp(); };
+  </script>
+</body>
+</html>

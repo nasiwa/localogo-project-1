@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOCALOGO — Pre-Order Perlengkapan OSPEK 2026</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-soft: #f5fafa;
+      --bg-muted: #eaf4f4;
+      --td: #024847;
+      --t: #24999b;
+      --tm: #1a7a7c;
+      --tl: #d0eeef;
+      --tp: #e8f7f7;
+      --tx: #024847;
+      --txb: #2d5c5c;
+      --txm: #6a9999;
+      --txd: #9bbfbf;
+      --border: #c5e3e3;
+      --bm: #9dcece;
+      --white: #ffffff;
+      --red: #e05555;
+      --green: #1a9e6a;
+      --r: 10px;
+      --rl: 16px;
+      --s1: 0 2px 8px rgba(2, 72, 71, .08);
+      --s2: 0 6px 24px rgba(2, 72, 71, .12);
+      --s3: 0 16px 48px rgba(2, 72, 71, .18);
+    }
+
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* TICKER */
+    .ticker-wrap {
+      background: var(--td);
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 9px 0;
+    }
+
+    .ticker-track {
+      display: inline-block;
+      animation: ticker 30s linear infinite;
+    }
+
+    .ticker-track span {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .5);
+      padding: 0 24px;
+    }
+
+    .ticker-track span.hi {
+      color: #fff;
+    }
+
+    @keyframes ticker {
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      background: var(--white);
+      border-bottom: 1.5px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: var(--s1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      background: var(--td);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--td);
+    }
+
+    .live-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: #edfbf4;
+      border: 1.5px solid #b3ecd3;
+      padding: 5px 14px;
+      border-radius: 99px;
+    }
+
+    .live-chip .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 1.8s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(155deg, var(--td) 0%, var(--tm) 55%, var(--t) 100%);
+      padding: 72px 48px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 80% 20%, rgba(36, 153, 155, .3) 0%, transparent 50%);
+    }
+
+    .hero::after {
+      content: 'OSPEK\A2026';
+      white-space: pre;
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: clamp(90px, 13vw, 170px);
+      font-weight: 900;
+      letter-spacing: -.04em;
+      line-height: .9;
+      color: rgba(255, 255, 255, .04);
+      text-transform: uppercase;
+      pointer-events: none;
+      text-align: right;
+    }
+
+    .hero-inner {
+      max-width: 1060px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .8);
+      margin-bottom: 22px;
+    }
+
+    .hero-title {
+      font-size: clamp(36px, 5.5vw, 72px);
+      font-weight: 900;
+      line-height: .95;
+      text-transform: uppercase;
+      letter-spacing: -.02em;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: rgba(255, 255, 255, .5);
+      display: block;
+      font-size: .62em;
+      letter-spacing: .04em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .hero-sub {
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, .6);
+      max-width: 420px;
+      line-height: 1.75;
+      margin-bottom: 40px;
+    }
+
+    .hero-stats {
+      display: flex;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: var(--rl);
+      overflow: hidden;
+      max-width: 500px;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat {
+      flex: 1;
+      min-width: 90px;
+      padding: 18px 22px;
+      border-right: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .hero-stat:last-child {
+      border-right: none;
+    }
+
+    .hero-stat-val {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.03em;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .hero-stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .4);
+    }
+
+    /* MAIN */
+    .main-wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 52px 48px 80px;
+    }
+
+    /* STEP INDICATOR */
+    .steps-nav {
+      display: flex;
+      align-items: stretch;
+      margin-bottom: 44px;
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+    }
+
+    .step-item {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 16px 20px;
+      position: relative;
+      transition: background .2s;
+    }
+
+    .step-item+.step-item::before {
+      content: '›';
+      position: absolute;
+      left: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--bm);
+      font-size: 20px;
+      z-index: 1;
+    }
+
+    .step-item.active {
+      background: var(--tp);
+    }
+
+    .step-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      border: 2px solid var(--border);
+      color: var(--txm);
+      background: var(--white);
+      transition: .2s;
+    }
+
+    .step-item.active .step-circle {
+      background: var(--td);
+      border-color: var(--td);
+      color: #fff;
+    }
+
+    .step-item.done .step-circle {
+      background: var(--t);
+      border-color: var(--t);
+      color: #fff;
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--txm);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .step-item.active .step-label {
+      color: var(--td);
+    }
+
+    .step-desc {
+      font-size: 10px;
+      color: var(--txd);
+    }
+
+    .step-item.active .step-desc {
+      color: var(--txm);
+    }
+
+    /* BATCH */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--txm);
+    }
+
+    .section-note {
+      font-size: 11px;
+      color: var(--txd);
+    }
+
+    .batch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 44px;
+    }
+
+    .batch-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--rl);
+      padding: 20px;
+      transition: box-shadow .2s, border-color .2s;
+    }
+
+    .batch-card.active {
+      border-color: var(--t);
+      box-shadow: 0 0 0 3px rgba(36, 153, 155, .1), var(--s2);
+    }
+
+    .batch-card.closed {
+      opacity: .45;
+    }
+
+    .batch-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .batch-name-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--txm);
+    }
+
+    .status-pill {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+    }
+
+    .status-pill.open {
+      background: #edfbf4;
+      color: var(--green);
+      border: 1.5px solid #b3ecd3;
+    }
+
+    .status-pill.full {
+      background: #fdeaea;
+      color: var(--red);
+      border: 1.5px solid #f5b8b8;
+    }
+
+    .batch-count-big {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--td);
+      letter-spacing: -.04em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .batch-count-big span {
+      color: var(--txd);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .batch-pct-label {
+      font-size: 11px;
+      color: var(--txm);
+      margin-bottom: 10px;
+    }
+
+    .progress-track {
+      height: 5px;
+      background: var(--tl);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--td), var(--t));
+      border-radius: 99px;
+      transition: width 1.2s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .batch-card.closed .progress-fill {
+      background: var(--bm);
+    }
+
+    /* BOOKING LAYOUT */
+    .booking-layout {
+      display: grid;
+      grid-template-columns: 1fr 332px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* FORM CARD */
+    .form-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+      box-shadow: var(--s1);
+    }
+
+    .form-card-head {
+      padding: 26px 30px 22px;
+      border-bottom: 1.5px solid var(--border);
+      background: var(--bg-soft);
+    }
+
+    .form-card-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--td);
+      letter-spacing: -.01em;
+      margin-bottom: 4px;
+    }
+
+    .form-card-sub {
+      font-size: 12px;
+      color: var(--txm);
+      line-height: 1.6;
+    }
+
+    .form-body {
+      padding: 26px 30px 30px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field.full {
+      grid-column: 1/-1;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--txb);
+    }
+
+    label .req {
+      color: var(--t);
+      margin-left: 2px;
+    }
+
+    input {
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+      color: var(--td);
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 14px;
+      width: 100%;
+      transition: border-color .15s, box-shadow .15s, background .15s;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: var(--txd);
+      font-weight: 400;
+    }
+
+    input:focus {
+      border-color: var(--t);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(36, 153, 155, .12);
+    }
+
+    .field-err input {
+      border-color: var(--red) !important;
+    }
+
+    .batch-assign-box {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      background: var(--tp);
+      border: 1.5px solid var(--tl);
+      border-radius: var(--r);
+      padding: 13px 16px;
+      margin-bottom: 18px;
+    }
+
+    .ba-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--td);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .ba-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--tm);
+      margin-bottom: 2px;
+    }
+
+    .ba-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--td);
+    }
+
+    .btn-pay {
+      width: 100%;
+      background: var(--td);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 16px 24px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background .15s, transform .1s, box-shadow .15s;
+      box-shadow: 0 4px 16px rgba(2, 72, 71, .25);
+    }
+
+    .btn-pay:hover {
+      background: var(--tm);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(2, 72, 71, .3);
+    }
+
+    .btn-pay:active {
+      transform: translateY(0);
+    }
+
+    .btn-pay:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .ssl-note {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--txd);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .order-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--rl);
+      overflow: hidden;
+      box-shadow: var(--s1);
+      position: sticky;
+      top: 80px;
+    }
+
+    .order-head {
+      background: var(--td);
+      padding: 20px 22px;
+    }
+
+    .order-head-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .5);
+      margin-bottom: 4px;
+    }
+
+    .order-price {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .order-price-sub {
+      font-size: 11px;
+      color: rgba(255, 255, 255, .45);
+      margin-top: 2px;
+    }
+
+    .order-body {
+      padding: 16px 22px;
+    }
+
+    .order-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--bg-muted);
+      font-size: 12px;
+    }
+
+    .order-row:last-child {
+      border-bottom: none;
+    }
+
+    .order-row .k {
+      color: var(--txm);
+      font-weight: 500;
+    }
+
+    .order-row .v {
+      font-weight: 600;
+      color: var(--td);
+      text-align: right;
+    }
+
+    /* MODAL BACKDROP */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 40, 40, .65);
+      backdrop-filter: blur(12px);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(.88) translateY(24px)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0)
+      }
+    }
+
+    /* PAYMENT MODAL — Midtrans iframe wrapper */
+    .pay-box {
+      background: var(--white);
+      border-radius: 20px;
+      max-width: 440px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: var(--s3);
+      animation: popIn .28s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    .pay-top {
+      background: var(--td);
+      padding: 24px 28px 20px;
+      text-align: center;
+    }
+
+    .pay-brand {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .45);
+      margin-bottom: 8px;
+    }
+
+    .pay-amount {
+      font-size: 40px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.04em;
+      line-height: 1;
+    }
+
+    .pay-oid {
+      font-size: 11px;
+      color: rgba(255, 255, 255, .38);
+      margin-top: 6px;
+      letter-spacing: .1em;
+    }
+
+    .pay-info-body {
+      padding: 24px 24px 20px;
+    }
+
+    .pay-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--bg-muted);
+      font-size: 13px;
+    }
+
+    .pay-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .pay-info-row .k {
+      color: var(--txm);
+    }
+
+    .pay-info-row .v {
+      font-weight: 600;
+      color: var(--td);
+    }
+
+    .btn-open-snap {
+      width: 100%;
+      background: var(--td);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 15px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s;
+      box-shadow: 0 4px 14px rgba(2, 72, 71, .22);
+      margin: 0 0 10px;
+    }
+
+    .btn-open-snap:hover {
+      background: var(--tm);
+    }
+
+    .btn-cancel-modal {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--txm);
+      padding: 8px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .btn-cancel-modal:hover {
+      color: var(--txb);
+    }
+
+    .secure-note {
+      text-align: center;
+      font-size: 10px;
+      color: var(--txd);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin-top: 12px;
+    }
+
+    /* SUCCESS MODAL */
+    .success-box {
+      background: var(--white);
+      border-radius: 20px;
+      max-width: 440px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: var(--s3);
+      animation: popIn .28s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    .success-top {
+      background: linear-gradient(135deg, var(--td), var(--t));
+      padding: 40px 32px 32px;
+      text-align: center;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, .15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 16px;
+      border: 2px solid rgba(255, 255, 255, .25);
+    }
+
+    .success-title {
+      font-size: 21px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.01em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .success-sub {
+      font-size: 13px;
+      color: rgba(255, 255, 255, .6);
+      line-height: 1.6;
+    }
+
+    .success-body {
+      padding: 24px 28px 28px;
+    }
+
+    .email-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--tp);
+      border: 1.5px solid var(--tl);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--tm);
+      line-height: 1.55;
+    }
+
+    .detail-rows {
+      margin-bottom: 20px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--bg-muted);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-key {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--txm);
+      flex-shrink: 0;
+    }
+
+    .detail-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--td);
+      text-align: right;
+    }
+
+    .detail-val.ok {
+      color: var(--green);
+    }
+
+    .btn-close-success {
+      width: 100%;
+      background: var(--td);
+      color: #fff;
+      border: none;
+      border-radius: var(--r);
+      padding: 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .btn-close-success:hover {
+      background: var(--tm);
+    }
+
+    /* SOLD OUT */
+    .sold-out-card {
+      background: var(--white);
+      border: 1.5px solid #f5b8b8;
+      border-radius: var(--rl);
+      padding: 48px 32px;
+      text-align: center;
+      display: none;
+    }
+
+    .sold-out-card.show {
+      display: block;
+    }
+
+    .so-title {
+      font-size: 22px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 6px;
+    }
+
+    .so-desc {
+      font-size: 13px;
+      color: var(--txm);
+      max-width: 380px;
+      margin: 0 auto 24px;
+      line-height: 1.7;
+    }
+
+    .wl-row {
+      display: flex;
+      gap: 10px;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
+    .btn-wl {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 12px 22px;
+      border-radius: var(--r);
+      font-family: 'Poppins', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s;
+    }
+
+    .btn-wl:hover {
+      opacity: .85;
+    }
+
+    /* SPINNER */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, .3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--td);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 999;
+      opacity: 0;
+      transition: all .35s cubic-bezier(.34, 1.56, .64, 1);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--td);
+      padding: 28px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    footer .logo-text {
+      color: #fff;
+    }
+
+    footer .logo-mark {
+      background: rgba(255, 255, 255, .12);
+    }
+
+    footer p {
+      font-size: 11px;
+      color: rgba(255, 255, 255, .35);
+      letter-spacing: .06em;
+    }
+
+    /* RESPONSIVE */
+    @media(max-width:860px) {
+      nav {
+        padding: 0 20px;
+      }
+
+      .hero {
+        padding: 44px 20px 52px;
+      }
+
+      .hero::after {
+        display: none;
+      }
+
+      .main-wrap {
+        padding: 32px 20px 60px;
+      }
+
+      .steps-nav {
+        display: none;
+      }
+
+      .booking-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .order-card {
+        position: static;
+      }
+
+      .field-row {
+        grid-template-columns: 1fr;
+      }
+
+      .form-body {
+        padding: 20px;
+      }
+
+      .form-card-head {
+        padding: 20px;
+      }
+
+      footer {
+        padding: 24px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .wl-row {
+        flex-direction: column;
+      }
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: fadeUp .55s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- CONFIG — replace these values -->
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON = 'YOUR_ANON_KEY';
+    const BACKEND_URL = 'http://localhost:3001';
+    const MIDTRANS_CLIENT = 'SB-Mid-client-XXXXXXXX'; // or live key
+  </script>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
+      <span>·</span><span>Slot Terbatas</span><span>·</span>
+      <span>DP Rp100.000</span><span>·</span>
+      <span>QRIS · GoPay · ShopeePay · VA</span><span>·</span>
+      <span>Invoice PDF Otomatis via Email</span><span>·</span>
+      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
+      <span>·</span><span>Slot Terbatas</span><span>·</span>
+      <span>DP Rp100.000</span><span>·</span>
+      <span>QRIS · GoPay · ShopeePay · VA</span><span>·</span>
+      <span>Invoice PDF Otomatis via Email</span><span>·</span>
+    </div>
+  </div>
+
+  <nav>
+    <a class="logo" href="#">
+      <div class="logo-mark">LK</div>
+      <div class="logo-text">Localogo</div>
+    </a>
+    <div class="live-chip">
+      <div class="dot"></div><span id="nav-status">Booking Open</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge fade-up" style="animation-delay:.05s">🎒 Perlengkapan Resmi OSPEK 2026</div>
+      <h1 class="hero-title fade-up" style="animation-delay:.1s">
+        <em>Pre-Order</em>
+        Amankan<br>Slot Kamu
+      </h1>
+      <p class="hero-sub fade-up" style="animation-delay:.15s">Bayar DP Rp100.000 sekarang untuk mengunci slot
+        perlengkapan OSPEK resmi. Quota terbatas — cepat sebelum habis.</p>
+      <div class="hero-stats fade-up" style="animation-delay:.2s">
+        <div class="hero-stat">
+          <div class="hero-stat-val" id="h-filled">—</div>
+          <div class="hero-stat-label">Slot Terisi</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val" id="h-total">—</div>
+          <div class="hero-stat-label">Total Slot</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val">Rp100K</div>
+          <div class="hero-stat-label">Down Payment</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-val" id="h-batch">—</div>
+          <div class="hero-stat-label">Batch Aktif</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="main-wrap">
+    <div class="steps-nav fade-up" style="animation-delay:.25s">
+      <div class="step-item active" id="step1">
+        <div class="step-circle" id="sc1">1</div>
+        <div>
+          <div class="step-label">Cek Slot</div>
+          <div class="step-desc">Lihat batch tersedia</div>
+        </div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-circle" id="sc2">2</div>
+        <div>
+          <div class="step-label">Isi Data</div>
+          <div class="step-desc">Lengkapi form diri</div>
+        </div>
+      </div>
+      <div class="step-item" id="step3">
+        <div class="step-circle" id="sc3">3</div>
+        <div>
+          <div class="step-label">Bayar DP</div>
+          <div class="step-desc">Via Midtrans</div>
+        </div>
+      </div>
+      <div class="step-item" id="step4">
+        <div class="step-circle" id="sc4">4</div>
+        <div>
+          <div class="step-label">Slot Aman</div>
+          <div class="step-desc">Invoice ke email</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BATCH STATUS -->
+    <div class="fade-up" style="animation-delay:.28s;margin-bottom:40px;">
+      <div class="section-header">
+        <div class="section-title">Status Batch</div>
+        <div class="section-note" id="slots-remain">Memuat...</div>
+      </div>
+      <div class="batch-grid" id="batch-grid">
+        <div
+          style="padding:32px;text-align:center;color:var(--txd);font-size:13px;border:1.5px solid var(--border);border-radius:var(--rl);grid-column:1/-1;">
+          Memuat status batch...</div>
+      </div>
+    </div>
+
+    <!-- FORM + SIDEBAR -->
+    <div class="booking-layout fade-up" style="animation-delay:.32s" id="booking-main">
+      <div class="form-card">
+        <div class="form-card-head">
+          <div class="form-card-title">Form Pendaftaran</div>
+          <div class="form-card-sub">Isi data dengan benar. Invoice PDF akan dikirim otomatis ke emailmu setelah
+            pembayaran berhasil dikonfirmasi oleh Midtrans.</div>
+        </div>
+        <div class="form-body">
+          <div class="batch-assign-box" id="batch-assign">
+            <div class="ba-icon">🎯</div>
+            <div>
+              <div class="ba-label">Kamu akan masuk ke</div>
+              <div class="ba-val" id="ba-val">Memuat...</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full" id="fi-name">
+              <label>Nama Lengkap <span class="req">*</span></label>
+              <input type="text" id="f-name" placeholder="Nama sesuai KTM" oninput="onInput()" />
+            </div>
+            <div class="field full" id="fi-email">
+              <label>Email Aktif <span class="req">*</span></label>
+              <input type="email" id="f-email" placeholder="email@mahasiswa.ac.id" oninput="onInput()" />
+            </div>
+            <div class="field full" id="fi-wa">
+              <label>No. WhatsApp <span class="req">*</span></label>
+              <input type="tel" id="f-wa" placeholder="08xxxxxxxxxx" oninput="onInput()" />
+            </div>
+          </div>
+          <button class="btn-pay" id="btn-pay" onclick="handleBooking()">
+            <span>Lanjut ke Pembayaran</span><span>→</span>
+          </button>
+          <div class="ssl-note">🔒 Transaksi aman via Midtrans · SSL Encrypted</div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="order-card">
+          <div class="order-head">
+            <div class="order-head-label">Ringkasan Pesanan</div>
+            <div class="order-price">Rp100.000</div>
+            <div class="order-price-sub">Down Payment — Perlengkapan OSPEK 2026</div>
+          </div>
+          <div class="order-body">
+            <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
+            <div class="order-row"><span class="k">Tipe</span><span class="v">Down Payment (DP)</span></div>
+            <div class="order-row"><span class="k">Admin</span><span class="v" style="color:var(--green)">Gratis</span>
+            </div>
+            <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">—</span></div>
+            <div class="order-row" style="padding-top:12px;border-top:1.5px solid var(--border);margin-top:4px;">
+              <span class="k"
+                style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Total</span>
+              <span class="v" style="font-size:20px;font-weight:800;color:var(--td);">Rp100.000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLD OUT -->
+    <div class="sold-out-card" id="sold-out">
+      <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+      <div class="so-title">Semua Slot Penuh</div>
+      <div class="so-desc">Semua batch sudah terjual habis. Daftarkan emailmu untuk notifikasi jika ada penambahan slot.
+      </div>
+      <div class="wl-row">
+        <input type="email" id="wl-email" placeholder="email@mahasiswa.ac.id" style="flex:1" />
+        <button class="btn-wl" onclick="joinWL()">Waiting List</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="logo">
+      <div class="logo-mark">LK</div>
+      <div class="logo-text">Localogo</div>
+    </div>
+    <p>© 2026 LOCALOGO · Pre-Order OSPEK · Powered by Midtrans + Resend</p>
+  </footer>
+
+  <!-- CONFIRM MODAL (before Snap opens) -->
+  <div class="modal-backdrop" id="confirm-modal">
+    <div class="pay-box">
+      <div class="pay-top">
+        <div class="pay-brand">Localogo · Konfirmasi Pesanan</div>
+        <div class="pay-amount">Rp100.000</div>
+        <div class="pay-oid" id="pm-oid">ORDER-XXXXXXXX</div>
+      </div>
+      <div class="pay-info-body">
+        <div
+          style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txm);margin-bottom:14px;">
+          Detail Pesanan</div>
+        <div class="pay-info-row"><span class="k">Nama</span><span class="v" id="pm-name">—</span></div>
+        <div class="pay-info-row"><span class="k">Email</span><span class="v" id="pm-email">—</span></div>
+        <div class="pay-info-row"><span class="k">WhatsApp</span><span class="v" id="pm-wa">—</span></div>
+        <div class="pay-info-row"><span class="k">Batch</span><span class="v" id="pm-batch">—</span></div>
+        <div class="pay-info-row"><span class="k">Jumlah</span><span class="v"
+            style="color:var(--td);font-weight:800;">Rp100.000</span></div>
+        <br>
+        <button class="btn-open-snap" id="btn-open-snap" onclick="openSnap()">
+          Buka Halaman Pembayaran
+        </button>
+        <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
+        <div class="secure-note">🔒 Diproses oleh Midtrans · PCI-DSS Compliant</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS MODAL -->
+  <div class="modal-backdrop" id="success-modal">
+    <div class="success-box">
+      <div class="success-top">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Slot Berhasil Diamankan!</div>
+        <div class="success-sub">Pembayaran diterima. Invoice PDF sudah dikirim ke emailmu.</div>
+      </div>
+      <div class="success-body">
+        <div class="email-note">
+          <span style="font-size:18px;flex-shrink:0">📧</span>
+          <span>Cek inbox emailmu. Tidak ada? Cek folder <strong>Spam / Promotions</strong>.</span>
+        </div>
+        <div class="detail-rows">
+          <div class="detail-row"><span class="detail-key">Nama</span><span class="detail-val" id="s-name">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Order ID</span><span class="detail-val" id="s-oid">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Batch</span><span class="detail-val" id="s-batch">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val" id="s-email">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val ok">✓ SETTLED</span>
+          </div>
+        </div>
+        <button class="btn-close-success" onclick="closeSuccess()">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Midtrans Snap.js (sandbox) -->
+  <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key=""></script>
+  <!-- For production: https://app.midtrans.com/snap/snap.js -->
+
+  <script>
+    // ── SUPABASE CLIENT ──────────────────────────────────────────────
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // Update Midtrans client key dynamically
+    document.querySelector('[data-client-key]').setAttribute('data-client-key', MIDTRANS_CLIENT);
+
+    // ── STATE ─────────────────────────────────────────────────────────
+    let activeBatch = null;
+    let snapToken = null;
+    let currentOrder = {};
+
+    // ── INITIAL LOAD ──────────────────────────────────────────────────
+    async function init() {
+      await loadBatches();
+      setupRealtime();
+    }
+    init();
+
+    // ── SUPABASE REALTIME (Auto-refresh UI) ───────────────────────────
+    function setupRealtime() {
+      // Listen for any changes in the 'batches' table
+      supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'batches' },
+          (payload) => {
+            console.log('Realtime update:', payload);
+            loadBatches(); // Refresh UI data
+          }
+        )
+        // Also listen to 'orders' to update "pending booking" text
+        .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'orders' },
+              (payload) => {
+                console.log('Order update:', payload);
+                loadBatches();
+              }
+        )
+        .subscribe();
+    }
+
+    // ── LOAD BATCHES FROM BACKEND ─────────────────────────────────────
+    async function loadBatches() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/batches`);
+        const data = await res.json();
+        if (data.success) renderBatches(data.batches);
+      } catch (e) {
+        console.error('loadBatches:', e);
+        showToast('⚠ Gagal memuat data batch');
+      }
+    }
+
+    // ── SUPABASE REALTIME — auto-update when batch changes ────────────
+    function subscribeRealtime() {
+      _supabase
+        .channel('batches-rt')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'batches',
+        }, payload => {
+          // Re-fetch full batch list on any change
+          loadBatches();
+        })
+        .subscribe();
+    }
+
+    // ── RENDER BATCHES ────────────────────────────────────────────────
+    function renderBatches(batches) {
+      const grid = document.getElementById('batch-grid');
+      const allFull = batches.every(b => b.status === 'closed');
+      activeBatch = batches.find(b => b.status === 'active') || null;
+
+      // Hero stats
+      const totalFilled = batches.reduce((s, b) => s + b.filled_slots, 0);
+      const totalSlots = batches.reduce((s, b) => s + b.total_slots, 0);
+      document.getElementById('h-filled').textContent = totalFilled;
+      document.getElementById('h-total').textContent = totalSlots;
+      document.getElementById('h-batch').textContent = activeBatch ? activeBatch.name : 'HABIS';
+
+      // Batch cards
+      grid.innerHTML = batches.map(b => {
+        const totalUsed = b.filled_slots + (b.pending_slots || 0);
+        const pct = Math.round((totalUsed / b.total_slots) * 100);
+        const isFull = b.slots_left <= 0;
+        const isAct = b.status === 'active' && !isFull;
+        
+        const pill = isFull
+          ? '<span class="status-pill full">Penuh</span>'
+          : '<span class="status-pill open">Open Now</span>';
+          
+        const pendingNote = b.pending_slots > 0 
+          ? `<div style="font-size:10px;color:var(--tm);margin-top:4px;">⏳ ${b.pending_slots} orang sedang booking</div>`
+          : '';
+
+        return `<div class="batch-card ${isAct ? 'active' : isFull ? 'closed' : ''}">
+          <div class="batch-card-top"><span class="batch-name-label">${b.name}</span>${pill}</div>
+          <div class="batch-count-big">${totalUsed}<span>/${b.total_slots}</span></div>
+          <div class="batch-pct-label">${pct}% slot terisi / dibooking</div>
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          ${pendingNote}
+        </div>`;
+      }).join('');
+
+      // Sidebar + batch assign box
+      if (activeBatch) {
+        document.getElementById('ba-val').textContent = `${activeBatch.name} — Sisa ${activeBatch.slots_left} slot`;
+        document.getElementById('sidebar-batch').textContent = activeBatch.name;
+        
+        // Final check for form display if slots_left is 0 due to pending
+        if (activeBatch.slots_left <= 0) {
+          activeBatch = null; // Mark as none available for booking
+        }
+      }
+
+      // Slots remain note
+      document.getElementById('slots-remain').textContent = activeBatch
+        ? `Tersisa ${activeBatch.total_slots - activeBatch.filled_slots} slot di ${activeBatch.name}`
+        : 'Semua slot penuh';
+
+      // Toggle sold out (only show if NO active batch and ALL are closed)
+      const showSoldOut = !activeBatch && batches.every(b => b.status === 'closed');
+      document.getElementById('booking-main').style.display = showSoldOut ? 'none' : '';
+      document.getElementById('sold-out').classList.toggle('show', showSoldOut);
+    }
+
+    // ── FORM INPUT ─────────────────────────────────────────────────────
+    function onInput() {
+      const any = ['f-name', 'f-email', 'f-wa'].some(id => document.getElementById(id).value.trim());
+      if (any) setStep(2); else setStep(1);
+    }
+
+    // ── VALIDATE ───────────────────────────────────────────────────────
+    function validate() {
+      const checks = [
+        { wrap: 'fi-name', id: 'f-name', ok: v => v.length > 1 },
+        { wrap: 'fi-email', id: 'f-email', ok: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+        { wrap: 'fi-wa', id: 'f-wa', ok: v => v.length > 7 },
+      ];
+      let ok = true;
+      checks.forEach(c => {
+        const el = document.getElementById(c.id);
+        const wr = document.getElementById(c.wrap);
+        wr.classList.remove('field-err');
+        if (!c.ok(el.value.trim())) { wr.classList.add('field-err'); ok = false; }
+      });
+      return ok;
+    }
+
+    // ── HANDLE BOOKING ─────────────────────────────────────────────────
+    async function handleBooking() {
+      if (!validate()) return;
+      if (!activeBatch) { showToast('⚠ Tidak ada batch aktif'); return; }
+
+      const btn = document.getElementById('btn-pay');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>&nbsp; Memproses...';
+
+      try {
+        const body = {
+          full_name: document.getElementById('f-name').value.trim(),
+          email: document.getElementById('f-email').value.trim(),
+          whatsapp: document.getElementById('f-wa').value.trim(),
+          batch_id: activeBatch.id,
+        };
+
+        const res = await fetch(`${BACKEND_URL}/api/create-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          showToast('⚠ ' + (data.error || 'Gagal membuat order'));
+          return;
+        }
+
+        // Store state
+        snapToken = data.snap_token;
+        currentOrder = { ...body, order_ref: data.order_ref, batch_name: data.batch_name };
+
+        // Show confirm modal
+        document.getElementById('pm-oid').textContent = data.order_ref;
+        document.getElementById('pm-name').textContent = body.full_name;
+        document.getElementById('pm-email').textContent = body.email;
+        document.getElementById('pm-wa').textContent = body.whatsapp;
+        document.getElementById('pm-batch').textContent = data.batch_name;
+        document.getElementById('confirm-modal').classList.add('show');
+        setStep(3);
+
+      } catch (e) {
+        showToast('⚠ Koneksi gagal, coba lagi');
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Lanjut ke Pembayaran</span><span>→</span>';
+      }
+    }
+
+    // ── OPEN MIDTRANS SNAP ─────────────────────────────────────────────
+    function openSnap() {
+      if (!snapToken) return;
+      document.getElementById('confirm-modal').classList.remove('show');
+
+      window.snap.pay(snapToken, {
+        onSuccess: async result => {
+          // Show checking toast
+          showToast('📡 Memverifikasi pembayaran...');
+          
+          try {
+            // Fast Sync: Trigger backend verification immediately
+            const res = await fetch(`${BACKEND_URL}/api/verify-payment/${currentOrder.order_ref}`);
+            const data = await res.json();
+            
+            console.log('[FastSync] Result:', data);
+          } catch (e) {
+            console.error('[FastSync] Failed:', e);
+          }
+
+          // Show success modal
+          document.getElementById('s-name').textContent = currentOrder.full_name;
+          document.getElementById('s-oid').textContent = currentOrder.order_ref;
+          document.getElementById('s-batch').textContent = currentOrder.batch_name;
+          document.getElementById('s-email').textContent = currentOrder.email;
+          document.getElementById('success-modal').classList.add('show');
+          setStep(4);
+          resetForm();
+        },
+        onPending: result => {
+          showToast('⏳ Pembayaran pending — selesaikan dalam 2 jam');
+        },
+        onError: result => {
+          showToast('⚠ Pembayaran gagal, coba lagi');
+          setStep(2);
+        },
+        onClose: () => {
+          showToast('Pembayaran dibatalkan');
+          setStep(2);
+        },
+      });
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirm-modal').classList.remove('show');
+      setStep(2);
+    }
+    function closeSuccess() {
+      document.getElementById('success-modal').classList.remove('show');
+      setStep(1);
+    }
+
+    function resetForm() {
+      ['f-name', 'f-email', 'f-wa'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    // ── STEP HELPER ────────────────────────────────────────────────────
+    function setStep(n) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('step' + i);
+        const sc = document.getElementById('sc' + i);
+        if (!el) continue;
+        el.classList.remove('active', 'done');
+        if (i < n) { el.classList.add('done'); sc.textContent = '✓'; }
+        else if (i === n) { el.classList.add('active'); sc.textContent = i; }
+        else { sc.textContent = i; }
+      }
+    }
+
+    // ── TOAST ──────────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── WAITLIST ───────────────────────────────────────────────────────
+    function joinWL() {
+      const email = document.getElementById('wl-email').value.trim();
+      if (!email) return;
+      showToast(`✅ ${email} berhasil masuk waiting list!`);
+      document.getElementById('wl-email').value = '';
+    }
+
+    // Close modals on backdrop click
+    document.getElementById('confirm-modal').addEventListener('click', function (e) { if (e.target === this) closeConfirm(); });
+    document.getElementById('success-modal').addEventListener('click', function (e) { if (e.target === this) closeSuccess(); });
+
+    // BOOT
+    init();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lokalogo QR Scanner — Admin 2026</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --t: #24999b; --td: #024847; --bg: #f5fafa; --surface: #ffffff;
+      --tx: #024847; --txs: #2d5c5c; --txm: #6a9999;
+      --red: #e05555; --green: #1a9e6a; --amber: #f0a030;
+      --r: 16px; --shadow: 0 10px 30px rgba(2,72,71,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--tx); min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    
+    .header { width: 100%; padding: 25px; background: var(--td); color: #fff; text-align: center; border-radius: 0 0 var(--r) var(--r); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 20px; letter-spacing: 1px; }
+    
+    .container { width: 100%; max-width: 500px; padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    
+    .card { background: var(--surface); padding: 25px; border-radius: var(--r); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    
+    /* LOGIN SCREEN */
+    #login-section { display: flex; flex-direction: column; gap: 15px; margin-top: 50px; }
+    .input-field { width: 100%; padding: 14px; border: 1.5px solid #e0eeee; border-radius: 12px; outline: none; font-size: 15px; font-family: inherit; transition: border-color 0.2s; }
+    .input-field:focus { border-color: var(--t); }
+    .btn-action { width: 100%; padding: 14px; background: var(--t); color: #fff; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .btn-action:active { background: var(--td); transform: scale(0.98); }
+
+    /* SCANNER SECTION */
+    #scan-section { display: none; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; border: none !important; }
+    #reader__dashboard_section_csr { padding: 10px !important; }
+    #reader__status_span { font-size: 12px !important; color: var(--txm) !important; }
+    
+    /* RESULT OVERLAY */
+    #result-overlay { 
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;
+      backdrop-filter: blur(5px); padding: 20px; align-items: center; justify-content: center;
+    }
+    .result-card { background: #fff; width: 100%; max-width: 400px; padding: 30px; border-radius: var(--r); text-align: center; transform: translateY(20px); transition: transform 0.3s; }
+    .result-card.show { transform: translateY(0); }
+    .res-icon { font-size: 60px; margin-bottom: 20px; }
+    .res-title { font-size: 20px; font-weight: 700; color: var(--td); margin-bottom: 10px; }
+    .res-name { font-size: 18px; font-weight: 600; color: var(--t); margin-bottom: 20px; }
+    .res-detail { text-align: left; background: #f8fdfd; padding: 20px; border-radius: 12px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+    .res-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #e0eeee; padding-bottom: 8px; }
+    .res-row:last-child { border-bottom: none; }
+    .label { color: var(--txm); }
+    .val { font-weight: 600; color: var(--td); }
+    .btn-close { background: var(--td); width: 100%; padding: 14px; color: #fff; border: none; border-radius: 12px; font-weight: 700; }
+
+    .badge-paid { background: #e7f7f2; color: #1a9e6a; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .badge-unpaid { background: #fdf2f2; color: #e05555; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    
+    .badge-pickup-yes { background: #fdf2f2; color: #e05555; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .badge-pickup-no { background: #eef5f5; color: #2d5c5c; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+
+    .btn-pickup { background: var(--green); margin-top: 15px; }
+    .btn-pickup:disabled { background: var(--txm); cursor: not-allowed; opacity: 0.6; }
+
+    #toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: var(--td); color: #fff; padding: 12px 24px; border-radius: 10px;
+      font-size: 13px; z-index: 2000; display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>LOCALOGO SCAN 2026</h1>
+    <div style="font-size: 10px; opacity: 0.6; margin-top: 5px;">QR VERIFICATION & PICKUP SYSTEM</div>
+  </div>
+
+  <div class="container">
+    <!-- LOGIN SCREEN -->
+    <div id="login-section" class="card">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 40px; margin-bottom: 10px;">🔒</div>
+        <h2 style="font-size: 18px;">Admin Login</h2>
+        <p style="font-size: 12px; color: var(--txm);">Masukkan password admin untuk memindai tiket.</p>
+      </div>
+      <input type="password" id="admin-password" class="input-field" placeholder="Admin Password">
+      <button class="btn-action" onclick="checkAuth()">Masuk</button>
+      <div id="login-err" style="color: var(--red); font-size: 12px; display: none; text-align: center;">⚠ Password salah!</div>
+    </div>
+
+    <!-- SCANNER SCREEN -->
+    <div id="scan-section">
+      <div class="card" style="padding: 10px; margin-bottom: 20px;">
+        <div id="reader"></div>
+      </div>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 12px; color: var(--txm);">Arahkan kamera ke QR Code di Invoice peserta.</p>
+        <button class="btn-action" style="margin-top: 15px; background: var(--txs);" onclick="logout()">Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT OVERLAY -->
+  <div id="result-overlay">
+    <div class="result-card" id="result-card">
+      <div id="res-icon" class="res-icon">✅</div>
+      <div id="res-title" class="res-title">TICKET VALID</div>
+      <div id="res-name" class="res-name">Nama Peserta</div>
+      
+      <div class="res-detail">
+        <div class="res-row"><span class="label">Status</span><span id="res-status" class="val"></span></div>
+        <div class="res-row"><span class="label">PENGAMBILAN</span><span id="res-pickup" class="val"></span></div>
+        <div class="res-row"><span class="label">Batch</span><span id="res-batch" class="val"></span></div>
+        <div class="res-row"><span class="label">No. Antrean</span><span id="res-seq" class="val"></span></div>
+        <div class="res-row"><span class="label">Ref ID</span><span id="res-ref" class="val" style="font-family: monospace; font-size: 10px;"></span></div>
+      </div>
+
+      <div id="pickup-action-area">
+        <button id="btn-confirm-pickup" class="btn-action btn-pickup" onclick="confirmPickup()">Konfirmasi Barang Diambil</button>
+      </div>
+      <button class="btn-close" style="margin-top: 10px;" onclick="closeResult()">Tutup & Scan Lagi</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:3001'
+      : ''; // Empty for production relative path
+    
+    let html5QrCode;
+    let isAdmin = false;
+    let currentOrderRef = null;
+
+    // --- AUTH LOGIC ---
+    async function checkAuth() {
+      const pw = document.getElementById('admin-password').value;
+      const res = await fetch(`${BACKEND_URL}/api/admin/check`, {
+        headers: { 'x-admin-token': pw }
+      });
+      const data = await res.json();
+      
+      if (data.allowed) {
+        localStorage.setItem('admin_pw', pw);
+        isAdmin = true;
+        initScanner();
+      } else {
+        document.getElementById('login-err').style.display = 'block';
+      }
+    }
+
+    function autoLogin() {
+      const saved = localStorage.getItem('admin_pw');
+      if (saved) {
+        document.getElementById('admin-password').value = saved;
+        checkAuth();
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('admin_pw');
+      window.location.reload();
+    }
+
+    // --- SCANNER LOGIC ---
+    function initScanner() {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('scan-section').style.display = 'block';
+
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+        .catch(err => {
+          showToast("⚠ Gagal akses kamera: " + err);
+        });
+    }
+
+    async function onScanSuccess(decodedText, decodedResult) {
+      if (decodedText) {
+        // Stop scanning while showing result
+        html5QrCode.pause();
+        verifyTicket(decodedText);
+      }
+    }
+
+    async function verifyTicket(orderRef) {
+      const pw = localStorage.getItem('admin_pw');
+      currentOrderRef = orderRef;
+      showToast("Verifikasi...");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/verify/${orderRef}`, {
+          headers: { 'x-admin-token': pw }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showResult(data.order);
+        } else {
+          showError("TICKET TIDAK DITEMUKAN");
+        }
+      } catch (err) {
+        showError("ERROR VERIFIKASI");
+      }
+    }
+
+    async function confirmPickup() {
+      const pw = localStorage.getItem('admin_pw');
+      const btn = document.getElementById('btn-confirm-pickup');
+      btn.disabled = true;
+      btn.textContent = "Memproses...";
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/pickup/${currentOrderRef}`, {
+          method: 'POST',
+          headers: { 'x-admin-token': pw }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast("Status Berhasil Diupdate!");
+          // Re-verify to show updated status
+          verifyTicket(currentOrderRef);
+        } else {
+          showToast("⚠ Gagal: " + data.error);
+          btn.disabled = false;
+          btn.textContent = "Konfirmasi Barang Diambil";
+        }
+      } catch (err) {
+        showToast("⚠ Connection Error");
+        btn.disabled = false;
+        btn.textContent = "Konfirmasi Barang Diambil";
+      }
+    }
+
+    function showResult(order) {
+      const overlay = document.getElementById('result-overlay');
+      const card = document.getElementById('result-card');
+      const actionArea = document.getElementById('pickup-action-area');
+      
+      const isSettled = order.status === 'paid';
+      const isPickedUp = order.is_picked_up;
+
+      // Icon & Color Logic
+      if (!isSettled) {
+        document.getElementById('res-icon').textContent = '⚠';
+        document.getElementById('res-title').textContent = 'BELUM LUNAS';
+        actionArea.style.display = 'none';
+      } else if (isPickedUp) {
+        document.getElementById('res-icon').textContent = '🚫';
+        document.getElementById('res-title').textContent = 'SUDAH DIAMBIL';
+        document.getElementById('res-title').style.color = 'var(--red)';
+        actionArea.style.display = 'none';
+      } else {
+        document.getElementById('res-icon').textContent = '✅';
+        document.getElementById('res-title').textContent = 'TICKET VALID';
+        document.getElementById('res-title').style.color = 'var(--td)';
+        actionArea.style.display = 'block';
+        document.getElementById('btn-confirm-pickup').disabled = false;
+        document.getElementById('btn-confirm-pickup').textContent = "Konfirmasi Barang Diambil";
+      }
+
+      document.getElementById('res-name').textContent = order.full_name;
+      document.getElementById('res-status').innerHTML = isSettled 
+        ? '<span class="badge-paid">LUNAS</span>' 
+        : '<span class="badge-unpaid">PENDING</span>';
+      
+      document.getElementById('res-pickup').innerHTML = isPickedUp
+        ? '<span class="badge-pickup-yes">SUDAH DIAMBIL</span>'
+        : '<span class="badge-pickup-no">BELUM DIAMBIL</span>';
+
+      document.getElementById('res-batch').textContent = order.batches?.name || 'Unknown';
+      document.getElementById('res-ref').textContent = order.order_ref;
+      document.getElementById('res-seq').textContent = order.sequence_num || '—';
+
+      overlay.style.display = 'flex';
+      setTimeout(() => card.classList.add('show'), 10);
+    }
+
+    function showError(msg) {
+      const overlay = document.getElementById('result-overlay');
+      const card = document.getElementById('result-card');
+      document.getElementById('pickup-action-area').style.display = 'none';
+      
+      document.getElementById('res-icon').textContent = '❌';
+      document.getElementById('res-title').textContent = msg;
+      document.getElementById('res-title').style.color = 'var(--red)';
+      document.getElementById('res-name').textContent = "Unknown";
+      document.getElementById('res-status').textContent = "—";
+      document.getElementById('res-pickup').textContent = "—";
+      document.getElementById('res-batch').textContent = "—";
+      document.getElementById('res-ref').textContent = "—";
+      document.getElementById('res-seq').textContent = "—";
+
+      overlay.style.display = 'flex';
+      setTimeout(() => card.classList.add('show'), 10);
+    }
+
+    function closeResult() {
+      const overlay = document.getElementById('result-overlay');
+      const card = document.getElementById('result-card');
+      
+      card.classList.remove('show');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        html5QrCode.resume();
+      }, 300);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    window.onload = autoLogin;
+  </script>
+</body>
+</html>
