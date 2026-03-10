@@ -204,7 +204,7 @@ app.post('/api/midtrans-webhook', async (req, res) => {
     } catch (err) {
       console.error('📧 Error sending invoice email:', err);
     }
-    
+
     res.json({ success: true });
 
   } catch (err) {
@@ -249,7 +249,7 @@ app.get('/api/admin/order/:orderRef/sync', async (req, res) => {
         .rpc('confirm_payment', { p_order_ref: orderRef });
 
       if (confirmErr) throw confirmErr;
-      
+
       if (confirmData && confirmData.success) {
         // Only send email if it wasn't already paid (RPC handles this check)
         const order = {
@@ -303,13 +303,13 @@ app.post('/api/admin/pickup/:orderRef', async (req, res) => {
     return res.status(403).json({ error: 'Unauthorized' });
 
   const { orderRef } = req.params;
-  
+
   // Update order status to picked up
   const { data, error } = await supabase
     .from('orders')
-    .update({ 
-      is_picked_up: true, 
-      picked_up_at: new Date().toISOString() 
+    .update({
+      is_picked_up: true,
+      picked_up_at: new Date().toISOString()
     })
     .eq('order_ref', orderRef)
     .eq('status', 'paid') // Only paid orders can be picked up
@@ -381,44 +381,44 @@ app.get('/api/admin/orders', async (req, res) => {
 
 // ── PUBLIC FAST SYNC (For Frontend onSuccess) ──────────────────
 app.get('/api/verify-payment/:orderRef', async (req, res) => {
-    const { orderRef } = req.params;
-    try {
-        console.log(`[FastSync] Checking: ${orderRef}`);
-        const status = await snap.transaction.status(orderRef);
-        
-        if (status.transaction_status === 'settlement' || status.transaction_status === 'capture') {
-            console.log(`[FastSync] Order ${orderRef} is SETTLED. Confirming...`);
-            const { data, error } = await supabase.rpc('confirm_payment', { p_order_ref: orderRef });
-            
-            if (error) throw error;
-            
-            // Send email in background (don't block response)
-            // The `data` object from `confirm_payment` RPC already contains the necessary order details
-            // for `sendInvoiceEmail` if it was designed to accept it directly.
-            // Assuming `sendInvoiceEmail` expects the same `order` structure as in the webhook/sync logic.
-            const order = {
-              order_ref: data.order_ref,
-              full_name: data.full_name,
-              email: data.email,
-              whatsapp: data.whatsapp || 'N/A',
-              batch_name: data.batch_name,
-              batch_num: data.batch_num,
-              sequence: data.sequence,
-              wa_group_url: data.wa_group_url, // Added
-              paid_at: new Date().toISOString(),
-            };
-            generateInvoicePDF(order).then(pdfBuffer => {
-              sendInvoiceEmail(order, pdfBuffer).catch(e => console.error('[FastSync] Email error:', e));
-            }).catch(e => console.error('[FastSync] PDF generation error:', e));
-            
-            return res.json({ success: true, status: 'paid' });
-        }
-        
-        res.json({ success: true, status: status.transaction_status });
-    } catch (err) {
-        console.error('[FastSync] Error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
+  const { orderRef } = req.params;
+  try {
+    console.log(`[FastSync] Checking: ${orderRef}`);
+    const status = await snap.transaction.status(orderRef);
+
+    if (status.transaction_status === 'settlement' || status.transaction_status === 'capture') {
+      console.log(`[FastSync] Order ${orderRef} is SETTLED. Confirming...`);
+      const { data, error } = await supabase.rpc('confirm_payment', { p_order_ref: orderRef });
+
+      if (error) throw error;
+
+      // Send email in background (don't block response)
+      // The `data` object from `confirm_payment` RPC already contains the necessary order details
+      // for `sendInvoiceEmail` if it was designed to accept it directly.
+      // Assuming `sendInvoiceEmail` expects the same `order` structure as in the webhook/sync logic.
+      const order = {
+        order_ref: data.order_ref,
+        full_name: data.full_name,
+        email: data.email,
+        whatsapp: data.whatsapp || 'N/A',
+        batch_name: data.batch_name,
+        batch_num: data.batch_num,
+        sequence: data.sequence,
+        wa_group_url: data.wa_group_url, // Added
+        paid_at: new Date().toISOString(),
+      };
+      generateInvoicePDF(order).then(pdfBuffer => {
+        sendInvoiceEmail(order, pdfBuffer).catch(e => console.error('[FastSync] Email error:', e));
+      }).catch(e => console.error('[FastSync] PDF generation error:', e));
+
+      return res.json({ success: true, status: 'paid' });
     }
+
+    res.json({ success: true, status: status.transaction_status });
+  } catch (err) {
+    console.error('[FastSync] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Server boot
@@ -430,3 +430,5 @@ app.listen(PORT, () => {
 module.exports = app;
 
 if (require.main === module) { app.listen(process.env.PORT || 3001); }
+
+module.exports = app;
