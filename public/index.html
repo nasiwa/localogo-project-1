@@ -1217,7 +1217,10 @@
   <script>
     const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
     const SUPABASE_ANON = 'YOUR_ANON_KEY';
-    const BACKEND_URL = 'http://localhost:3001';
+    // Dynamic Backend URL for Local vs Production
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : window.location.origin;
     const MIDTRANS_CLIENT = 'SB-Mid-client-XXXXXXXX'; // or live key
   </script>
 
@@ -1257,20 +1260,12 @@
         perlengkapan OSPEK resmi. Quota terbatas — cepat sebelum habis.</p>
       <div class="hero-stats fade-up" style="animation-delay:.2s">
         <div class="hero-stat">
-          <div class="hero-stat-val" id="h-filled">—</div>
-          <div class="hero-stat-label">Slot Terisi</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-val" id="h-total">—</div>
-          <div class="hero-stat-label">Total Slot</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-val">Rp100K</div>
-          <div class="hero-stat-label">Down Payment</div>
-        </div>
-        <div class="hero-stat">
           <div class="hero-stat-val" id="h-batch">—</div>
           <div class="hero-stat-label">Batch Aktif</div>
+        </div>
+        <div class="hero-stat" style="opacity: 0.5">
+          <div class="hero-stat-val">Rp100K</div>
+          <div class="hero-stat-label">Down Payment</div>
         </div>
       </div>
     </div>
@@ -1384,13 +1379,8 @@
     <!-- SOLD OUT -->
     <div class="sold-out-card" id="sold-out">
       <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
-      <div class="so-title">Semua Slot Penuh</div>
-      <div class="so-desc">Semua batch sudah terjual habis. Daftarkan emailmu untuk notifikasi jika ada penambahan slot.
-      </div>
-      <div class="wl-row">
-        <input type="email" id="wl-email" placeholder="email@mahasiswa.ac.id" style="flex:1" />
-        <button class="btn-wl" onclick="joinWL()">Waiting List</button>
-      </div>
+      <div class="so-title">Slot Pre-Order Penuh</div>
+      <div class="so-desc">Semua batch yang tersedia saat ini sudah terisi penuh. Nantikan info penambahan batch di media sosial kami.</div>
     </div>
   </div>
 
@@ -1544,31 +1534,30 @@
       activeBatch = batches.find(b => b.status === 'active') || null;
 
       // Hero stats
-      const totalFilled = batches.reduce((s, b) => s + b.filled_slots, 0);
-      const totalSlots = batches.reduce((s, b) => s + b.total_slots, 0);
-      document.getElementById('h-filled').textContent = totalFilled;
-      document.getElementById('h-total').textContent = totalSlots;
       document.getElementById('h-batch').textContent = activeBatch ? activeBatch.name : 'HABIS';
 
       // Batch cards
       grid.innerHTML = batches.map(b => {
         const totalUsed = b.filled_slots + (b.pending_slots || 0);
-        const pct = Math.round((totalUsed / b.total_slots) * 100);
-        const isFull = b.slots_left <= 0;
-        const isAct = b.status === 'active' && !isFull;
+        const pct = Math.min(100, Math.round((totalUsed / b.total_slots) * 100)); // Cap at 100
         
-        const pill = isFull
+        // Logical "isFull" for UI: 
+        // 1. Backend says 'closed'
+        // 2. Or slots_left (after pending) is 0
+        const isActuallyFull = b.status === 'closed' || b.slots_left <= 0;
+        const isAct = b.status === 'active' && !isActuallyFull;
+        
+        const pill = isActuallyFull
           ? '<span class="status-pill full">Penuh</span>'
-          : '<span class="status-pill open">Open Now</span>';
+          : b.status === 'active' ? '<span class="status-pill open">Open Now</span>' : '<span class="status-pill">Segera</span>';
           
-        const pendingNote = b.pending_slots > 0 
-          ? `<div style="font-size:10px;color:var(--tm);margin-top:4px;">⏳ ${b.pending_slots} orang sedang booking</div>`
+        const pendingNote = (b.status === 'active' && b.pending_slots > 0 && !isActuallyFull)
+          ? `<div style="font-size:10px;color:var(--tm);margin-top:4px;">⏳ Beberapa orang sedang proses booking</div>`
           : '';
 
-        return `<div class="batch-card ${isAct ? 'active' : isFull ? 'closed' : ''}">
+        return `<div class="batch-card ${isAct ? 'active' : isActuallyFull ? 'closed' : ''}">
           <div class="batch-card-top"><span class="batch-name-label">${b.name}</span>${pill}</div>
-          <div class="batch-count-big">${totalUsed}<span>/${b.total_slots}</span></div>
-          <div class="batch-pct-label">${pct}% slot terisi / dibooking</div>
+          <div class="batch-pct-label" style="font-size:12px; font-weight:600">${isActuallyFull ? 'Kuota Habis' : 'Slot Tersedia'}</div>
           <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
           ${pendingNote}
         </div>`;
@@ -1576,7 +1565,7 @@
 
       // Sidebar + batch assign box
       if (activeBatch) {
-        document.getElementById('ba-val').textContent = `${activeBatch.name} — Sisa ${activeBatch.slots_left} slot`;
+        document.getElementById('ba-val').textContent = `${activeBatch.name} — Tersedia`;
         document.getElementById('sidebar-batch').textContent = activeBatch.name;
         
         // Final check for form display if slots_left is 0 due to pending
@@ -1587,8 +1576,8 @@
 
       // Slots remain note
       document.getElementById('slots-remain').textContent = activeBatch
-        ? `Tersisa ${activeBatch.total_slots - activeBatch.filled_slots} slot di ${activeBatch.name}`
-        : 'Semua slot penuh';
+        ? `Silakan amankan slot kamu di ${activeBatch.name}`
+        : 'Pendaftaran ditutup';
 
       // Toggle sold out (only show if NO active batch and ALL are closed)
       const showSoldOut = !activeBatch && batches.every(b => b.status === 'closed');

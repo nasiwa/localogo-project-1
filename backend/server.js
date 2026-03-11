@@ -430,5 +430,3 @@ app.listen(PORT, () => {
 module.exports = app;
 
 if (require.main === module) { app.listen(process.env.PORT || 3001); }
-
-module.exports = app;
