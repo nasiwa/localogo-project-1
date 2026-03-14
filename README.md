@@ -1,5 +1,5 @@
 <<<<<<< HEAD
-# LOKALOGO OSPEK Pre-Order — Setup Guide
+# LOCALOGO OSPEK Pre-Order — Setup Guide
 
 ## Struktur File
 ```
@@ -85,7 +85,7 @@ MIDTRANS_CLIENT_KEY=SB-Mid-client-XXXX
 MIDTRANS_IS_PRODUCTION=false
 RESEND_API_KEY=re_XXXX
 EMAIL_FROM=noreply@yourdomain.com
-EMAIL_FROM_NAME=Lokalogo OSPEK 2026
+EMAIL_FROM_NAME=Localogo OSPEK 2026
 PORT=3001
 FRONTEND_URL=http://localhost:5500
 ```

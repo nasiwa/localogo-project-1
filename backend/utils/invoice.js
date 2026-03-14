@@ -1,8 +1,10 @@
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const { Resend } = require('resend');
+const crypto = require('crypto');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const QR_SECRET = process.env.QR_SECRET || 'localogo_secure_qr_2026';
 
 function toRoman(num) {
   const map = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
@@ -16,6 +18,13 @@ function toRoman(num) {
   return result;
 }
 
+function generateSecureQrData(orderRef) {
+  const hmac = crypto.createHmac('sha256', QR_SECRET);
+  hmac.update(orderRef);
+  const signature = hmac.digest('hex').substring(0, 16); // Shorten for QR density but secure enough
+  return `${orderRef}|${signature}`;
+}
+
 /**
  * Generate PDF Invoice Buffer
  */
@@ -24,99 +33,139 @@ async function generateInvoicePDF(order) {
   const batchNum = parseInt(order.batch_num) || 1;
   const sessionNum = Math.ceil(seq / 200) || 1;
   const romanBatch = toRoman(batchNum);
-  // SMART CODE with SESSION NUMBER (1-5)
   const smartCode = `BC${romanBatch}${sessionNum}_${seq.toString().padStart(4, '0')}`;
   
-  const qrBuffer = await QRCode.toBuffer(order.order_ref, { margin: 1, width: 200 });
+  const qrData = generateSecureQrData(order.order_ref);
+  const qrBuffer = await QRCode.toBuffer(qrData, { margin: 1, width: 90, color: { dark: '#000000', light: '#ffffff' } });
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 0, size: 'A4' });
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
     const chunks = [];
     doc.on('data', c => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // --- COLORS ---
-    const teal = '#24999b';
-    const darkTeal = '#024847';
-    const white = '#ffffff';
-    const grayText = '#6a9999';
+    // --- COLORS & FONTS ---
+    const primaryBlue = '#374151'; // Reference uses a clean dark blue/gray
+    const secondaryBlue = '#60a5fa'; // Light blue accents
+    const textGray = '#4b5563';
+    const lightBg = '#f3f4f6';
+    const accentDark = '#1e3a8a';
 
-    // ── HEADER SECTION ──
-    doc.rect(0, 0, doc.page.width, 220).fill(darkTeal);
-    doc.fillColor(white).font('Helvetica-Bold').fontSize(70).text('LOCALOGO', 0, 45, { align: 'center' });
-    doc.fontSize(24).font('Helvetica-Bold').text('Toko Ospek UB', 0, 115, { align: 'center', opacity: 0.9 });
+    // ── HEADER ──
+    doc.font('Helvetica-Bold').fontSize(28).fillColor(accentDark).text('LOCALOGO', 40, 50);
+    doc.font('Helvetica').fontSize(10).fillColor(textGray).text('Jl. Kertosentono No.23, Kota Malang', 40, 85);
+    doc.text('localogo.id | info@localogo.id', 40, 100);
+
+    doc.font('Helvetica-Bold').fontSize(36).fillColor(primaryBlue).text('INVOICE', 0, 50, { align: 'right', width: doc.page.width - 40 });
     
-    // Address Bar
-    doc.rect(0, 175, doc.page.width, 30).fill(teal);
-    doc.fillColor(white).font('Helvetica-Bold').fontSize(9)
-       .text('LOCALOGO 2 | Jl. Kertosentono No.23, Ketawanggede, Kec. Lowokwaru, Kota Malang, Jawa Timur 65144', 0, 186, { align: 'center' });
+    // Line separator
+    doc.moveTo(40, 125).lineTo(doc.page.width - 40, 125).lineWidth(1).strokeColor('#e5e7eb').stroke();
 
-    // ── MAIN CONTENT ──
-    // Sequence Number (Big Bold Focus)
-    doc.fillColor('#eef5f5').rect(40, 240, 150, 80).fill();
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(54).text(seq.toString().padStart(4, '0'), 40, 255, { width: 150, align: 'center' });
-    doc.fontSize(10).font('Helvetica-Bold').text('No. Antrean', 40, 245, { width: 150, align: 'center', opacity: 0.8 });
+    // ── INVOICE INFO ──
+    const infoY = 150;
+    
+    // Left: Invoice To
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(primaryBlue).text('INVOICE TO:', 40, infoY);
+    // Name block bg
+    doc.rect(40, infoY + 15, 260, 24).fill(accentDark);
+    doc.font('Helvetica-Bold').fontSize(14).fillColor('#ffffff').text(order.full_name, 50, infoY + 20, { width: 240, height: 14 });
+    
+    doc.font('Helvetica').fontSize(10).fillColor(textGray);
+    doc.text(`Email: ${order.email}`, 40, infoY + 45);
+    doc.text(`WhatsApp: ${order.whatsapp}`, 40, infoY + 60);
 
-    // Order Details
-    const startY = 360;
-    const labelX = 50;
-    const valueX = 160;
+    // Right: Details
+    const rightX = doc.page.width - 240;
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(primaryBlue).text('Order Ref:', rightX, infoY, { width: 80, align: 'right' });
+    doc.font('Helvetica').text(order.order_ref, rightX + 85, infoY);
+    
+    doc.font('Helvetica-Bold').text('Smart Code:', rightX, infoY + 20, { width: 80, align: 'right' });
+    doc.font('Helvetica-Bold').fillColor(accentDark).text(smartCode, rightX + 85, infoY + 20);
+    
+    doc.font('Helvetica-Bold').fillColor(primaryBlue).text('Date:', rightX, infoY + 40, { width: 80, align: 'right' });
+    const dateStr = order.paid_at ? new Date(order.paid_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A';
+    doc.font('Helvetica').text(dateStr, rightX + 85, infoY + 40);
 
-    const row = (label, value, y, color = '#000') => {
-      doc.fillColor(grayText).font('Helvetica-Bold').fontSize(11).text(label, labelX, y);
-      doc.fillColor(color).font('Helvetica-Bold').fontSize(11).text(`:  ${value}`, valueX, y);
-    };
+    // ── TABLE ──
+    const tableTop = 260;
+    
+    // Table Header Background
+    doc.rect(40, tableTop, doc.page.width - 80, 25).fill(accentDark);
+    
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
+    doc.text('ITEM DESCRIPTION', 55, tableTop + 8);
+    doc.text('UNIT PRICE', 320, tableTop + 8, { width: 80, align: 'center' });
+    doc.text('QUANTITY', 400, tableTop + 8, { width: 60, align: 'center' });
+    doc.text('AMOUNT', 460, tableTop + 8, { width: 80, align: 'right' });
 
-    row('Nama Pemesan', order.full_name, startY);
-    row('Email', order.email, startY + 30);
-    row('WhatsApp', order.whatsapp, startY + 60);
-    row('Order', 'PO PAKET PERLENGKAPAN OSPEK RABRAW 2026', startY + 90, teal);
-    row('Nominal DP', 'Rp. 100,000', startY + 120);
+    // Table Row Background
+    doc.rect(40, tableTop + 25, doc.page.width - 80, 40).fill(lightBg);
 
-    const paidTime = order.paid_at ? new Date(order.paid_at).toLocaleString('id-ID') : 'N/A';
-    doc.fillColor(grayText).font('Helvetica-Bold').fontSize(9).text(`Dibayar pada: ${paidTime}`, labelX, startY + 160);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(primaryBlue);
+    doc.text('DP Paket Perlengkapan OSPEK 2026', 55, tableTop + 40);
+    
+    doc.font('Helvetica').fontSize(10).fillColor(textGray);
+    doc.text('Rp 100,000', 320, tableTop + 40, { width: 80, align: 'center' });
+    doc.text('01', 400, tableTop + 40, { width: 60, align: 'center' });
+    doc.text('Rp 100,000', 460, tableTop + 40, { width: 80, align: 'right' });
 
-    // ── RIGHT SIDE BOXES ──
-    const rightX = 380;
-    const boxWidth = 170;
+    // Table divider line
+    doc.moveTo(40, tableTop + 65).lineTo(doc.page.width - 40, tableTop + 65).lineWidth(1).strokeColor('#d1d5db').stroke();
 
-    // Smart Code Box
-    doc.roundedRect(rightX, 240, boxWidth, 90, 8).strokeColor('#d0eeee').lineWidth(2).stroke();
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(11).text('KODE PESANAN', rightX, 250, { width: boxWidth, align: 'center' });
-    doc.fillColor(teal).fontSize(24).text(smartCode, rightX, 275, { width: boxWidth, align: 'center' });
+    // ── TOTALS ──
+    const totalsY = tableTop + 85;
+    
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(primaryBlue).text('SUB TOTAL', 380, totalsY);
+    doc.font('Helvetica').fontSize(10).text('Rp 100,000', 460, totalsY, { width: 80, align: 'right' });
 
-    // Batch & Session Row
-    const halfW = (boxWidth - 10) / 2;
-    // Batch
-    doc.roundedRect(rightX, 345, halfW, 90, 8).stroke();
-    doc.fillColor(grayText).font('Helvetica-Bold').fontSize(10).text('Batch', rightX, 355, { width: halfW, align: 'center' });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(batchNum.toString(), rightX, 385, { width: halfW, align: 'center' });
-    // Session
-    doc.roundedRect(rightX + halfW + 10, 345, halfW, 90, 8).stroke();
-    doc.fillColor(grayText).font('Helvetica-Bold').fontSize(10).text('Sesi', rightX + halfW + 10, 355, { width: halfW, align: 'center' });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(sessionNum.toString(), rightX + halfW + 10, 385, { width: halfW, align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(primaryBlue).text('TOTAL', 380, totalsY + 25);
+    doc.font('Helvetica-Bold').fontSize(16).text('Rp 100,000', 440, totalsY + 23, { width: 100, align: 'right' });
 
-    // ── FOOTER & QR ──
-    const footY = 560;
-    doc.rect(40, footY, 515, 1).fill('#e0eeee');
+    // ── TERMS & CONDITIONS & QR ──
+    const bottomY = 620;
 
-    doc.image(qrBuffer, 480, footY + 20, { width: 75 });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(8).text('SCAN UNTUK VERIFIKASI', 370, footY + 50, { width: 100, align: 'right' });
+    // T&C Box
+    doc.rect(40, bottomY, 320, 100).fill(accentDark);
+    // Checkbox styling for T&C
+    doc.fontSize(8);
+    const tc1 = 'Simpan invoice ini sebagai bukti sah saat pengambilan.';
+    const tc2 = 'Jangan bagikan Kode Pesanan & QR ini kepada siapapun.';
+    const tc3 = 'Info sesi penukaran diumumkan di Grup WhatsApp Batch.';
+    const tc4 = 'Pembayaran bersifat final dan tidak dapat direfund.';
+    
+    doc.fillColor('#ffffff').font('Helvetica-Bold').text('TERMS & CONDITIONS', 55, bottomY + 15);
+    doc.font('Helvetica').fontSize(7);
+    
+    doc.rect(55, bottomY + 35, 6, 6).fill('#ffffff');
+    doc.text(tc1, 67, bottomY + 34, { width: 280 });
+    
+    doc.rect(55, bottomY + 50, 6, 6).fill('#ffffff');
+    doc.text(tc2, 67, bottomY + 49, { width: 280 });
+    
+    doc.rect(55, bottomY + 65, 6, 6).fill('#ffffff');
+    doc.text(tc3, 67, bottomY + 64, { width: 280 });
+    
+    doc.rect(55, bottomY + 80, 6, 6).fill('#ffffff');
+    doc.text(tc4, 67, bottomY + 79, { width: 280 });
 
-    // Notes
-    doc.fontSize(8).fillColor('#222').font('Helvetica-Bold');
-    const noteX = 50;
-    const noteY = footY + 20;
-    doc.text('INFORMASI PENTING:', noteX, noteY, { underline: true });
-    doc.text('• Simpan struk ini sebagai bukti sah pengambilan.', noteX, noteY + 15);
-    doc.text('• Jangan bagikan Kode Pesanan Anda kepada orang lain.', noteX, noteY + 28);
-    doc.text('• Info sesi pengambilan akan dikirim via grup WhatsApp.', noteX, noteY + 41);
-    doc.text('• Pastikan nomor WA aktif untuk info lebih lanjut.', noteX, noteY + 54);
+    // Manager / Signature Area & QR Code inside it
+    doc.rect(360, bottomY, 195, 100).fill(primaryBlue);
+    
+    // Draw QR on the blue box
+    doc.image(qrBuffer, 375, bottomY + 5, { width: 90 });
+    
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9).text('SCAN FOR', 475, bottomY + 35);
+    doc.text('VERIFICATION', 475, bottomY + 47);
+    
+    doc.font('Helvetica').fontSize(7).text('Valid Ticket', 475, bottomY + 65);
 
-    // Bottom Decorative Strip
-    doc.rect(0, 810, doc.page.width, 32).fill(darkTeal);
-    doc.fillColor(white).font('Helvetica-Bold').fontSize(12).text('AUTHENTIC INVOICE — OSPEK RABRAW 2026', 0, 822, { align: 'center' });
+    // Footer contact ribbon
+    doc.rect(40, 750, doc.page.width - 80, 20).fill(accentDark);
+    doc.fillColor('#ffffff').fontSize(7);
+    doc.text('WhatsApp: +62 821-xxxx-xxxx', 50, 756);
+    doc.text('Instagram: @localogo', 200, 756);
+    doc.text('localogo.id', 480, 756, { width: 60, align: 'right' });
 
     doc.end();
   });

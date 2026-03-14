@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LOKALOGO Admin — OSPEK 2026</title>
+  <title>LOCALOGO Admin — OSPEK 2026</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -864,8 +864,8 @@
   <div class="login-screen" id="login-screen">
     <div class="login-card">
       <div class="login-logo">
-        <div class="login-logo-mark">LK</div>
-        <div class="login-logo-text">Lokalogo</div>
+        <div class="login-logo-mark">LC</div>
+        <div class="login-logo-text">Localogo</div>
       </div>
       <div class="login-title">Admin Dashboard 2026</div>
       <div class="login-sub">Masukkan password admin untuk mengakses dashboard pengelolaan Pre-Order OSPEK 2026.</div>
@@ -1030,6 +1030,7 @@
           <table>
             <thead>
               <tr>
+                <th>No</th>
                 <th>Order ID</th>
                 <th>Smart Code</th>
                 <th>Nama</th>
@@ -1095,6 +1096,7 @@
         <table id="m-modal-table">
           <thead>
             <tr>
+              <th>No</th>
               <th>Code</th>
               <th>Nama</th>
               <th>WhatsApp</th>
@@ -1244,7 +1246,7 @@
 
     function renderOrders(orders) {
       const tbody = document.getElementById('orders-tbody');
-      tbody.innerHTML = orders.map(o => {
+      tbody.innerHTML = orders.map((o, index) => {
         const batchName = o.batches?.name || '—';
         // Smart code calc
         let smartCode = '—';
@@ -1256,6 +1258,7 @@
         }
 
         return `<tr>
+          <td>${index + 1}</td>
           <td style="font-family:monospace; font-size:10px">${o.order_ref}</td>
           <td style="font-weight:700; color:var(--t)">${smartCode}</td>
           <td>${o.full_name}</td>
@@ -1285,7 +1288,7 @@
       const res = await fetch(`${BACKEND_URL}/api/admin/batch/${id}/members`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
       const { members } = await res.json();
       currentBatchMembers = members;
-      document.getElementById('m-modal-tbody').innerHTML = members.map(m => {
+      document.getElementById('m-modal-tbody').innerHTML = members.map((m, index) => {
         const bNum = parseInt(name.match(/\d+/) || '1');
         const romans = ['I','II','III','IV','V'];
         
@@ -1297,6 +1300,7 @@
         
         return `
           <tr>
+            <td>${index + 1}</td>
             <td style="font-weight:700; color:var(--t); font-size:11px">${smartCode}</td>
             <td>${m.full_name}</td>
             <td style="font-size:11px">${m.whatsapp}</td>

@@ -281,12 +281,33 @@ app.get('/api/admin/order/:orderRef/sync', async (req, res) => {
   }
 });
 
-// ── GET /api/admin/verify/:orderRef — verify order status for QR Scanner ──
-app.get('/api/admin/verify/:orderRef', async (req, res) => {
+// ── GET /api/admin/verify/:qrData — verify order status and QR SIGNATURE for QR Scanner ──
+app.get('/api/admin/verify/:qrData', async (req, res) => {
   if (req.headers['x-admin-token'] !== process.env.ADMIN_PASSWORD)
     return res.status(403).json({ error: 'Unauthorized' });
 
-  const { orderRef } = req.params;
+  const { qrData } = req.params;
+  
+  // New secure format is "ORDER_REF|SIGNATURE"
+  // Legacy format is just "ORDER_REF" -> we should probably reject it for strict security, 
+  // but let's handle the extraction first.
+  const parts = qrData.split('|');
+  const orderRef = parts[0];
+  const providedSignature = parts[1];
+
+  if (!providedSignature) {
+    return res.status(400).json({ success: false, error: 'QR Code tidak valid (Missing Signature)' });
+  }
+
+  // Verify Cryptographic Signature
+  const QR_SECRET = process.env.QR_SECRET || 'localogo_secure_qr_2026';
+  const hmac = crypto.createHmac('sha256', QR_SECRET);
+  hmac.update(orderRef);
+  const expectedSignature = hmac.digest('hex').substring(0, 16);
+
+  if (crypto.timingSafeEqual(Buffer.from(providedSignature), Buffer.from(expectedSignature)) === false) {
+    return res.status(400).json({ success: false, error: 'QR Code Palsu / Tidak Dikenali (Invalid Signature)' });
+  }
   const { data, error } = await supabase
     .from('orders')
     .select('*, batches(name, wa_group_url)')

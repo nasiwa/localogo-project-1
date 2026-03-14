@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lokalogo QR Scanner — Admin 2026</title>
+  <title>Localogo QR Scanner — Admin 2026</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -182,17 +182,20 @@
       if (decodedText) {
         // Stop scanning while showing result
         html5QrCode.pause();
+        // decodedText now contains "ORDER_REF|SIGNATURE"
         verifyTicket(decodedText);
       }
     }
 
-    async function verifyTicket(orderRef) {
+    async function verifyTicket(qrData) {
       const pw = localStorage.getItem('admin_pw');
-      currentOrderRef = orderRef;
+      // Save just the orderRef for pickup confirmation later
+      currentOrderRef = qrData.split('|')[0]; 
       showToast("Verifikasi...");
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/admin/verify/${orderRef}`, {
+        // EncodeInput because qrData contains a pipe '|' character
+        const res = await fetch(`${BACKEND_URL}/api/admin/verify/${encodeURIComponent(qrData)}`, {
           headers: { 'x-admin-token': pw }
         });
         const data = await res.json();
@@ -200,7 +203,7 @@
         if (data.success) {
           showResult(data.order);
         } else {
-          showError("TICKET TIDAK DITEMUKAN");
+          showError(data.error || "TICKET TIDAK DITEMUKAN");
         }
       } catch (err) {
         showError("ERROR VERIFIKASI");
@@ -222,8 +225,14 @@
 
         if (data.success) {
           showToast("Status Berhasil Diupdate!");
-          // Re-verify to show updated status
-          verifyTicket(currentOrderRef);
+          // Re-verify to show updated status (we re-construct the payload because verify expects the full QR text)
+          // Wait, actually, the user can't re-verify programmatically without the full signature.
+          // Let's just update the UI directly for success.
+          document.getElementById('res-pickup').innerHTML = '<span class="badge-pickup-yes">SUDAH DIAMBIL</span>';
+          document.getElementById('res-icon').textContent = '🚫';
+          document.getElementById('res-title').textContent = 'SUDAH DIAMBIL';
+          document.getElementById('res-title').style.color = 'var(--red)';
+          document.getElementById('pickup-action-area').style.display = 'none';
         } else {
           showToast("⚠ Gagal: " + data.error);
           btn.disabled = false;
