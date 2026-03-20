@@ -95,7 +95,7 @@ app.post('/api/create-order', async (req, res) => {
     const midtransParams = {
       transaction_details: {
         order_id: orderRef,
-        gross_amount: 100000,
+        gross_amount: 102500,
       },
       enabled_payments: ['qris', 'gopay', 'shopeepay', 'bca_va', 'bni_va', 'mandiri_bill', 'permata_va'],
       customer_details: {
@@ -103,12 +103,20 @@ app.post('/api/create-order', async (req, res) => {
         email: email,
         phone: whatsapp,
       },
-      item_details: [{
-        id: 'ospek-dp-2026',
-        price: 100000,
-        quantity: 1,
-        name: `DP Perlengkapan OSPEK 2026 — ${claimData.batch_name}`,
-      }],
+      item_details: [
+        {
+          id: 'ospek-dp-2026',
+          price: 100000,
+          quantity: 1,
+          name: `DP Perlengkapan OSPEK 2026 — ${claimData.batch_name}`,
+        },
+        {
+          id: 'admin-fee',
+          price: 2500,
+          quantity: 1,
+          name: 'Biaya Layanan',
+        }
+      ],
       expiry: {
         unit: 'hours',
         duration: 2,  // token expires in 2 hours
