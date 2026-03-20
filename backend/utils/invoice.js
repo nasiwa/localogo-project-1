@@ -88,7 +88,7 @@ async function generateInvoicePDF(order) {
     doc.rect(labelX, startY + 152, 260, 1).fill('#e0eeee');
     row('Total Bayar', 'Rp. 102,500', startY + 162, darkTeal);
 
-    const paidTime = order.paid_at ? new Date(order.paid_at).toLocaleString('id-ID') : 'N/A';
+    const paidTime = order.paid_at ? new Date(order.paid_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'N/A';
     doc.fillColor(grayText).font('Helvetica-Bold').fontSize(9).text(`Dibayar pada: ${paidTime}`, labelX, startY + 185);
 
     // ── RIGHT SIDE BOXES ──
