@@ -1445,6 +1445,7 @@
           <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val ok">✓ SETTLED</span>
           </div>
         </div>
+        <a id="btn-download-pdf" href="#" target="_blank" class="btn-close-success" style="background:#24999b; margin-bottom:12px; display:block; text-align:center; text-decoration:none;">📥 Download Invoice PDF</a>
         <button class="btn-close-success" onclick="closeSuccess()">Selesai</button>
       </div>
     </div>
@@ -1684,6 +1685,7 @@
           document.getElementById('s-oid').textContent = currentOrder.order_ref;
           document.getElementById('s-batch').textContent = currentOrder.batch_name;
           document.getElementById('s-email').textContent = currentOrder.email;
+          document.getElementById('btn-download-pdf').href = `${BACKEND_URL}/api/invoice/${currentOrder.order_ref}`;
           document.getElementById('success-modal').classList.add('show');
           setStep(4);
           resetForm();

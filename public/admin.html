@@ -1268,7 +1268,10 @@
           <td>${o.is_picked_up ? '<span class="badge-pickup">DIAMBIL</span>' : '<span style="opacity:0.3">—</span>'}</td>
           <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
           <td>
-             <button class="btn-sm btn-edit" onclick="syncOrder('${o.order_ref}')">Sync</button>
+             <div style="display:flex; gap:4px; justify-content:flex-end;">
+               <button class="btn-sm btn-edit" onclick="syncOrder('${o.order_ref}')">Sync</button>
+               ${o.status === 'paid' ? `<a href="${BACKEND_URL}/api/invoice/${o.order_ref}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none; text-align:center; display:inline-block;">PDF</a>` : ''}
+             </div>
           </td>
         </tr>`;
       }).join('');

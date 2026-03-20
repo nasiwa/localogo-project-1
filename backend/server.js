@@ -450,6 +450,42 @@ app.get('/api/verify-payment/:orderRef', async (req, res) => {
   }
 });
 
+// ── PUBLIC GET /api/invoice/:orderRef (Download PDF) ──
+app.get('/api/invoice/:orderRef', async (req, res) => {
+  const { orderRef } = req.params;
+  try {
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*, batches(name, wa_group_url)')
+      .eq('order_ref', orderRef)
+      .single();
+
+    if (error || !order) return res.status(404).send('Order not found');
+    if (order.status !== 'paid') return res.status(400).send('Order is not paid');
+
+    const formattedOrder = {
+      order_ref: order.order_ref,
+      full_name: order.full_name,
+      email: order.email,
+      whatsapp: order.whatsapp || 'N/A',
+      batch_name: order.batches?.name,
+      batch_num: order.batch_id,
+      sequence: order.sequence_num,
+      wa_group_url: order.batches?.wa_group_url,
+      paid_at: order.paid_at || order.created_at,
+    };
+
+    const pdfBuffer = await generateInvoicePDF(formattedOrder);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Invoice-${orderRef}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Invoice Download Error:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
 // Server boot
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
