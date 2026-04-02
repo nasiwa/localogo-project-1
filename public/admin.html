@@ -1265,7 +1265,7 @@
           <td style="font-size:12px">${o.whatsapp}</td>
           <td>${batchName}</td>
           <td><span class="badge-${o.status}">${o.status.toUpperCase()}</span></td>
-          <td>${o.is_picked_up ? '<span class="badge-pickup">DIAMBIL</span>' : '<span style="opacity:0.3">—</span>'}</td>
+          <td>${o.is_picked_up ? `<span class="badge-pickup">DIAMBIL</span><div style="font-size:9px;color:var(--txm);margin-top:2px;">oleh ${o.scanned_by || 'Loket'}</div>` : '<span style="opacity:0.3">—</span>'}</td>
           <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
           <td>
              <div style="display:flex; gap:4px; justify-content:flex-end;">
@@ -1307,7 +1307,7 @@
             <td style="font-weight:700; color:var(--t); font-size:11px">${smartCode}</td>
             <td>${m.full_name}</td>
             <td style="font-size:11px">${m.whatsapp}</td>
-            <td>${m.is_picked_up ? '<span style="color:var(--t)">✅ Diambil</span>' : '<span style="color:var(--red)">❌ Belum</span>'}</td>
+            <td>${m.is_picked_up ? `<span style="color:var(--t)">✅ Diambil</span> <span style="font-size:9px;color:#859a9a;">(${m.scanned_by || 'Lkt'})</span>` : '<span style="color:var(--red)">❌ Belum</span>'}</td>
           </tr>
         `;
       }).join('');

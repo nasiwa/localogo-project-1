@@ -84,6 +84,13 @@
         <h2 style="font-size: 18px;">Admin Login</h2>
         <p style="font-size: 12px; color: var(--txm);">Masukkan password admin untuk memindai tiket.</p>
       </div>
+      <select id="admin-loket" class="input-field" style="margin-bottom: 15px; color: var(--txd);">
+        <option value="" disabled selected>Pilih Loket</option>
+        <option value="Loket 1">Loket 1</option>
+        <option value="Loket 2">Loket 2</option>
+        <option value="Loket 3">Loket 3</option>
+        <option value="Loket 4">Loket 4</option>
+      </select>
       <input type="password" id="admin-password" class="input-field" placeholder="Admin Password">
       <button class="btn-action" onclick="checkAuth()">Masuk</button>
       <div id="login-err" style="color: var(--red); font-size: 12px; display: none; text-align: center;">⚠ Password salah!</div>
@@ -135,18 +142,23 @@
     let currentOrderRef = null;
 
     // --- AUTH LOGIC ---
-    async function checkAuth() {
+    function checkAuth() {
       const pw = document.getElementById('admin-password').value;
-      const res = await fetch(`${BACKEND_URL}/api/admin/check`, {
-        headers: { 'x-admin-token': pw }
-      });
-      const data = await res.json();
-      
-      if (data.allowed) {
+      const loket = document.getElementById('admin-loket').value;
+      document.getElementById('login-err').style.display = 'none';
+
+      if (!loket) {
+        document.getElementById('login-err').textContent = '⚠ Pilih Loket terlebih dahulu!';
+        document.getElementById('login-err').style.display = 'block';
+        return;
+      }
+
+      if (pw) {
         localStorage.setItem('admin_pw', pw);
-        isAdmin = true;
+        localStorage.setItem('admin_loket', loket);
         initScanner();
       } else {
+        document.getElementById('login-err').textContent = '⚠ Password kosong!';
         document.getElementById('login-err').style.display = 'block';
       }
     }
@@ -154,13 +166,18 @@
     function autoLogin() {
       const saved = localStorage.getItem('admin_pw');
       if (saved) {
-        document.getElementById('admin-password').value = saved;
-        checkAuth();
+        // We cannot fully auto-login if the Loket is not preserved in the select UI, 
+        // but we can trust localStorage if it has both.
+        const loket = localStorage.getItem('admin_loket');
+        if (loket) {
+            initScanner();
+        }
       }
     }
 
     function logout() {
       localStorage.removeItem('admin_pw');
+      localStorage.removeItem('admin_loket');
       window.location.reload();
     }
 
@@ -212,6 +229,7 @@
 
     async function confirmPickup() {
       const pw = localStorage.getItem('admin_pw');
+      const loketId = localStorage.getItem('admin_loket') || 'Admin';
       const btn = document.getElementById('btn-confirm-pickup');
       btn.disabled = true;
       btn.textContent = "Memproses...";
@@ -219,7 +237,8 @@
       try {
         const res = await fetch(`${BACKEND_URL}/api/admin/pickup/${currentOrderRef}`, {
           method: 'POST',
-          headers: { 'x-admin-token': pw }
+          headers: { 'x-admin-token': pw, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ loketId })
         });
         const data = await res.json();
 

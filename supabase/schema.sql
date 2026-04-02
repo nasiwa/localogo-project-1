@@ -53,6 +53,7 @@ create table if not exists orders (
   sequence_num    int,                           -- Participant sequence in batch (e.g. 1-1000)
   is_picked_up    boolean default false,        -- Anti-cheat pickup status
   picked_up_at    timestamptz,
+  scanned_by      text,                          -- Which Loket/Admin scanned this code
   created_at      timestamptz default now()
 );
 
@@ -60,6 +61,7 @@ create table if not exists orders (
 alter table orders add column if not exists is_picked_up boolean default false;
 alter table orders add column if not exists picked_up_at timestamptz;
 alter table orders add column if not exists sequence_num int;
+alter table orders add column if not exists scanned_by text;
 
 -- ============================================================
 -- TABLE: admin_users  (Google OAuth whitelist)

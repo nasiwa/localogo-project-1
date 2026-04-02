@@ -229,7 +229,7 @@ app.get('/api/admin/batch/:id/members', async (req, res) => {
   const { id } = req.params;
   const { data, error } = await supabase
     .from('orders')
-    .select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num')
+    .select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num, scanned_by')
     .eq('batch_id', id)
     .eq('status', 'paid')  // Only show paid members
     .order('created_at');
@@ -332,13 +332,15 @@ app.post('/api/admin/pickup/:orderRef', async (req, res) => {
     return res.status(403).json({ error: 'Unauthorized' });
 
   const { orderRef } = req.params;
+  const { loketId } = req.body || {};
 
   // Update order status to picked up
   const { data, error } = await supabase
     .from('orders')
     .update({
       is_picked_up: true,
-      picked_up_at: new Date().toISOString()
+      picked_up_at: new Date().toISOString(),
+      scanned_by: loketId || 'Unknown'
     })
     .eq('order_ref', orderRef)
     .eq('status', 'paid') // Only paid orders can be picked up
