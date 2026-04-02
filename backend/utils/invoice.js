@@ -116,7 +116,10 @@ async function generateInvoicePDF(order) {
     doc.rect(40, footY, 515, 1).fill('#e0eeee');
 
     doc.image(qrBuffer, 480, footY + 20, { width: 75 });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(8).text('SCAN UNTUK VERIFIKASI', 370, footY + 50, { width: 100, align: 'right' });
+    
+    const qrWarningX = 330;
+    doc.fillColor('#c0392b').font('Helvetica-Bold').fontSize(8.5).text('RAHASIA & PENTING!', qrWarningX, footY + 25, { width: 140, align: 'right' });
+    doc.fillColor('#555').font('Helvetica').fontSize(7.5).text('Simpan QR Code ini dan jangan diberikan ke sembarang orang. Tunjukkan kode ini saat pengambilan barang.', qrWarningX, footY + 38, { width: 140, align: 'right' });
 
     // Notes
     doc.fontSize(8).fillColor('#222').font('Helvetica-Bold');
