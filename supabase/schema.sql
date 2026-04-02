@@ -108,7 +108,7 @@ begin
   from orders
   where batch_id = p_batch_id 
     and status = 'pending'
-    and created_at > (now() - interval '2 hours');
+    and created_at > (now() - interval '30 minutes');
 
   -- 3. Calculate real slots left
   v_slots_left := v_total_slots - v_filled_slots - v_pending_slots;
@@ -228,7 +228,7 @@ with pending_counts as (
   select batch_id, count(*) as pending_count
   from orders
   where status = 'pending'
-    and created_at > (now() - interval '2 hours')
+    and created_at > (now() - interval '30 minutes')
   group by batch_id
 )
 select

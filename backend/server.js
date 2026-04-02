@@ -118,8 +118,8 @@ app.post('/api/create-order', async (req, res) => {
         }
       ],
       expiry: {
-        unit: 'hours',
-        duration: 2,  // token expires in 2 hours
+        unit: 'minutes',
+        duration: 30,  // token expires in 30 minutes
       },
     };
 
