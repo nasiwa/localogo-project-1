@@ -490,10 +490,11 @@ app.get('/api/invoice/:orderRef', async (req, res) => {
 
 // Server boot
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`\n🚀 LOCALOGO Backend running on port ${PORT}`);
-  console.log(`   Midtrans: ${process.env.MIDTRANS_IS_PRODUCTION === 'true' ? '🟢 PRODUCTION' : '🟡 SANDBOX'}`);
-});
 module.exports = app;
 
-if (require.main === module) { app.listen(process.env.PORT || 3001); }
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 LOCALOGO Backend running on port ${PORT}`);
+    console.log(`   Midtrans: ${process.env.MIDTRANS_IS_PRODUCTION === 'true' ? '🟢 PRODUCTION' : '🟡 SANDBOX'}`);
+  });
+}
