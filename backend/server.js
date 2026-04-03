@@ -28,7 +28,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('../public')); // Serve frontend files
+app.use(express.static('..')); // Serve frontend files from root
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function genOrderRef() {
