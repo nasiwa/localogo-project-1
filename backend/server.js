@@ -30,6 +30,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('..')); // Serve frontend files from root
 
+// FIX: Normalize /api prefix for Vercel
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api')) {
+    req.url = req.url.replace('/api', '');
+  }
+  if (req.url === '') req.url = '/';
+  next();
+});
+
 // ── HELPERS ──────────────────────────────────────────────────────
 function genOrderRef() {
   const ts = Date.now().toString(36).toUpperCase();
