@@ -1615,8 +1615,9 @@
     // ── RENDER BATCHES ────────────────────────────────────────────────
     function renderBatches(batches) {
       const grid = document.getElementById('batch-grid');
-      const allFull = batches.every(b => b.status === 'closed');
-      activeBatch = batches.find(b => b.status === 'active') || null;
+      
+      // Determine the truly active batch (must be 'active' status AND have slots)
+      activeBatch = batches.find(b => b.status === 'active' && b.slots_left > 0) || null;
 
       // Hero stats
       document.getElementById('h-batch').textContent = activeBatch ? activeBatch.name : 'HABIS';
@@ -1652,11 +1653,6 @@
       if (activeBatch) {
         document.getElementById('ba-val').textContent = `${activeBatch.name} — Tersedia`;
         document.getElementById('sidebar-batch').textContent = activeBatch.name;
-        
-        // Final check for form display if slots_left is 0 due to pending
-        if (activeBatch.slots_left <= 0) {
-          activeBatch = null; // Mark as none available for booking
-        }
       }
 
       // Slots remain note
@@ -1664,8 +1660,8 @@
         ? `Silakan amankan slot kamu di ${activeBatch.name}`
         : 'Pendaftaran ditutup';
 
-      // Toggle sold out (only show if NO active batch and ALL are closed)
-      const showSoldOut = !activeBatch && batches.every(b => b.status === 'closed');
+      // Toggle sold out: Show if NO active batch is available
+      const showSoldOut = !activeBatch;
       document.getElementById('booking-main').style.display = showSoldOut ? 'none' : '';
       document.getElementById('sold-out').classList.toggle('show', showSoldOut);
     }
