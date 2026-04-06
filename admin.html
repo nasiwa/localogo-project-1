@@ -854,8 +854,9 @@
     const SUPABASE_URL = 'https://qbkhapuewbclazyykslr.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFia2hhcHVld2JjbGF6eXlrc2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzcxOTAsImV4cCI6MjA4ODM1MzE5MH0.Io6iH9zJ87aCpy3FhNynsAvxTAfnMCJtzMJDNE8L3Jw';
     const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3001' : window.location.origin;
-
-    const ADMIN_PASSWORD = 'ospek2026admin';
+    
+    // Keamanan: Password tidak lagi ditulis di sini (View Source aman).
+    function getAdminToken() { return sessionStorage.getItem('lok_admin_token') || ''; }
   </script>
 
   <!-- LOGIN SCREEN -->
@@ -1119,13 +1120,30 @@
     const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     let allOrders = [];
 
-    function doLogin() {
+    async function doLogin() {
       const pw = document.getElementById('pw-input').value;
-      if (pw === ADMIN_PASSWORD) {
-        sessionStorage.setItem('lok_admin_2026', '1');
-        enterApp();
-      } else {
-        document.getElementById('login-err').style.display = 'block';
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      btn.textContent = 'Memverifikasi...';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/check`, {
+          headers: { 'x-admin-token': pw }
+        });
+        const data = await res.json();
+
+        if (data.allowed) {
+          sessionStorage.setItem('lok_admin_token', pw);
+          enterApp();
+        } else {
+          document.getElementById('login-err').style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Masuk →';
+        }
+      } catch (e) {
+        alert('Gagal menyambung ke server');
+        btn.disabled = false;
+        btn.textContent = 'Masuk →';
       }
     }
 
@@ -1137,11 +1155,11 @@
     }
 
     function logout() {
-      sessionStorage.removeItem('lok_admin_2026');
+      sessionStorage.removeItem('lok_admin_token');
       window.location.reload();
     }
 
-    function checkAuth() { return sessionStorage.getItem('lok_admin_2026') === '1'; }
+    function checkAuth() { return !!getAdminToken(); }
 
     function showPage(page) {
       document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
@@ -1154,7 +1172,7 @@
     }
 
     async function loadDashboard() {
-      const h = { 'x-admin-token': ADMIN_PASSWORD };
+      const h = { 'x-admin-token': getAdminToken() };
       const [bRes, oRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
         fetch(`${BACKEND_URL}/api/admin/orders`, { headers: h })
@@ -1188,7 +1206,7 @@
     }
 
     async function loadAdminBatches() {
-      const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
       const { batches } = await res.json();
       const tbody = document.getElementById('batch-tbody');
       tbody.innerHTML = batches.map(b => `
@@ -1229,7 +1247,7 @@
       };
       await fetch(`${BACKEND_URL}/api/admin/batch/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-admin-token': ADMIN_PASSWORD },
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
         body: JSON.stringify(payload)
       });
       showToast('Batch updated!');
@@ -1238,7 +1256,7 @@
     }
 
     async function loadOrders() {
-      const res = await fetch(`${BACKEND_URL}/api/admin/orders`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const res = await fetch(`${BACKEND_URL}/api/admin/orders`, { headers: { 'x-admin-token': getAdminToken() } });
       const { orders } = await res.json();
       allOrders = orders;
       renderOrders(orders);
@@ -1279,7 +1297,7 @@
     }
 
     async function syncOrder(ref) {
-      const res = await fetch(`${BACKEND_URL}/api/admin/order/${ref}/sync`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const res = await fetch(`${BACKEND_URL}/api/admin/order/${ref}/sync`, { headers: { 'x-admin-token': getAdminToken() } });
       const data = await res.json();
       showToast(`Sync result: ${data.status}`);
       loadOrders();
@@ -1289,7 +1307,7 @@
     async function openMembersModal(id, name) {
       document.getElementById('m-modal-title').textContent = name;
       document.getElementById('members-modal').classList.add('show');
-      const res = await fetch(`${BACKEND_URL}/api/admin/batch/${id}/members`, { headers: { 'x-admin-token': ADMIN_PASSWORD } });
+      const res = await fetch(`${BACKEND_URL}/api/admin/batch/${id}/members`, { headers: { 'x-admin-token': getAdminToken() } });
       const { members } = await res.json();
       currentBatchMembers = members;
       document.getElementById('m-modal-tbody').innerHTML = members.map((m, index) => {

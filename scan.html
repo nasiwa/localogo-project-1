@@ -142,9 +142,10 @@
     let currentOrderRef = null;
 
     // --- AUTH LOGIC ---
-    function checkAuth() {
+    async function checkAuth() {
       const pw = document.getElementById('admin-password').value;
       const loket = document.getElementById('admin-loket').value;
+      const btn = document.querySelector('.btn-login');
       document.getElementById('login-err').style.display = 'none';
 
       if (!loket) {
@@ -153,13 +154,35 @@
         return;
       }
 
-      if (pw) {
-        localStorage.setItem('admin_pw', pw);
-        localStorage.setItem('admin_loket', loket);
-        initScanner();
-      } else {
+      if (!pw) {
         document.getElementById('login-err').textContent = '⚠ Password kosong!';
         document.getElementById('login-err').style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Memverifikasi...';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/check`, {
+          headers: { 'x-admin-token': pw }
+        });
+        const data = await res.json();
+
+        if (data.allowed) {
+          localStorage.setItem('admin_pw', pw);
+          localStorage.setItem('admin_loket', loket);
+          initScanner();
+        } else {
+          document.getElementById('login-err').textContent = '⚠ Password salah!';
+          document.getElementById('login-err').style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Masuk Scanner →';
+        }
+      } catch (e) {
+        alert('Gagal menyambung ke server');
+        btn.disabled = false;
+        btn.textContent = 'Masuk Scanner →';
       }
     }
 
