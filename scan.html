@@ -135,7 +135,7 @@
   <script>
     const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:3001'
-      : 'https://localogo.id'; // Absolute path for production
+      : window.location.origin;
     
     let html5QrCode;
     let isAdmin = false;
