@@ -143,7 +143,7 @@ async function generateInvoicePDF(order) {
  * Send Invoice Email
  */
 async function sendInvoiceEmail(order, pdfBuffer) {
-  const waGroup = order.wa_group_url || 'https://chat.whatsapp.com/HENBjsvxRuMAq546mVfHpL';
+  const waGroup = order.wa_group_url || '';
   
   const html = `
   <!DOCTYPE html>

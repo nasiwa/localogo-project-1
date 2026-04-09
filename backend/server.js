@@ -382,7 +382,7 @@ app.patch('/api/admin/batch/:id', async (req, res) => {
 
   const { id } = req.params;
   const updates = {};
-  const allowed = ['status', 'reveal_at', 'total_slots', 'name'];
+  const allowed = ['status', 'reveal_at', 'total_slots', 'name', 'wa_group_url'];
   allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
   const { data, error } = await supabase
