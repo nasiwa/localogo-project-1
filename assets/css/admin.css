@@ -816,3 +816,20 @@ tr:hover td {
     transform: rotate(360deg)
   }
 }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: var(--txd);
+  font-size: 13px;
+}
+
+/* PAGE SECTIONS */
+.page-section {
+  display: none;
+}
+
+.page-section.active {
+  display: block;
+}
