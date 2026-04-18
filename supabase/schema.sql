@@ -54,6 +54,7 @@ create table if not exists orders (
   is_picked_up    boolean default false,        -- Anti-cheat pickup status
   picked_up_at    timestamptz,
   scanned_by      text,                          -- Which Loket/Admin scanned this code
+  payment_gateway text default 'midtrans',
   created_at      timestamptz default now()
 );
 
@@ -62,6 +63,7 @@ alter table orders add column if not exists is_picked_up boolean default false;
 alter table orders add column if not exists picked_up_at timestamptz;
 alter table orders add column if not exists sequence_num int;
 alter table orders add column if not exists scanned_by text;
+alter table orders add column if not exists payment_gateway text default 'midtrans';
 
 -- ============================================================
 -- TABLE: admin_users  (Google OAuth whitelist)

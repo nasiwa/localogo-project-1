@@ -10,31 +10,7 @@
     rel="stylesheet">
   <link rel="icon" type="image/png" href="/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --bg-soft: #f5fafa;
-      --bg-muted: #eaf4f4;
-      --td: #024847;
-      --t: #24999b;
-      --tm: #1a7a7c;
-      --tl: #d0eeef;
-      --tp: #e8f7f7;
-      --tx: #024847;
-      --txb: #2d5c5c;
-      --txm: #6a9999;
-      --txd: #9bbfbf;
-      --border: #c5e3e3;
-      --bm: #9dcece;
-      --white: #ffffff;
-      --red: #e05555;
-      --green: #1a9e6a;
-      --r: 10px;
-      --rl: 16px;
-      --s1: 0 2px 8px rgba(2, 72, 71, .08);
-      --s2: 0 6px 24px rgba(2, 72, 71, .12);
-      --s3: 0 16px 48px rgba(2, 72, 71, .18);
-    }
+  <link rel="stylesheet" href="assets/css/index.css">
 
     *,
     *::before,
@@ -1214,16 +1190,7 @@
 
 <body>
 
-  <!-- CONFIG — replace these values -->
-  <script>
-    const SUPABASE_URL = 'https://qbkhapuewbclazyykslr.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFia2hhcHVld2JjbGF6eXlrc2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzcxOTAsImV4cCI6MjA4ODM1MzE5MH0.Io6iH9zJ87aCpy3FhNynsAvxTAfnMCJtzMJDNE8L3Jw';
-    // Dynamic Backend URL for Local vs Production
-    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : window.location.origin;
-    const MIDTRANS_CLIENT = 'SB-Mid-client-867f05f8846726194273'; // Sandbox Client Key
-  </script>
+  <script src="assets/js/config.js"></script>
 
   <div class="ticker-wrap">
     <div class="ticker-track">
@@ -1405,7 +1372,7 @@
     <p>© 2026 LOCALOGO · Pre-Order OSPEK · Powered by Midtrans + Resend</p>
   </footer>
 
-  <!-- CONFIRM MODAL (before Snap opens) -->
+  <!-- CONFIRM MODAL (before Payment opens) -->
   <div class="modal-backdrop" id="confirm-modal">
     <div class="pay-box">
       <div class="pay-top">
@@ -1424,11 +1391,19 @@
         <div class="pay-info-row"><span class="k">Total (+ Admin)</span><span class="v"
             style="color:var(--td);font-weight:800;">Rp102.500</span></div>
         <br>
-        <button class="btn-open-snap" id="btn-open-snap" onclick="openSnap()">
+
+        <!-- MANUAL TRANSFER BOX -->
+        <div id="manual-box" style="display:none; background:var(--tp); border:1.5px dashed var(--t); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+          <div style="font-size:10px; font-weight:700; color:var(--tm); margin-bottom:10px; letter-spacing:1px; text-transform:uppercase;">Silakan Transfer Ke:</div>
+          <div id="manual-bank-info" style="font-size:16px; font-weight:800; color:var(--td); line-height:1.4;">—</div>
+          <p style="font-size:11px; color:var(--txm); margin-top:12px;">Lampirkan bukti transfer saat konfirmasi ke Admin agar Invoice & Link Grup terkirim otomatis.</p>
+        </div>
+
+        <button class="btn-open-snap" id="btn-pay" onclick="startPayment()">
           Buka Halaman Pembayaran
         </button>
         <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
-        <div class="secure-note">🔒 Diproses oleh Midtrans · PCI-DSS Compliant</div>
+        <div class="secure-note" id="secure-note">🔒 Payment Securely Processed</div>
       </div>
     </div>
   </div>
@@ -1472,367 +1447,12 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://app-sandbox.duitku.com/lib/js/duitku.js"></script>
   <!-- Midtrans Snap.js (sandbox) -->
   <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key=""></script>
   <!-- For production: https://app.midtrans.com/snap/snap.js -->
 
-  <script>
-    // ── SUPABASE CLIENT ──────────────────────────────────────────────
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-    // Update Midtrans client key dynamically
-    document.querySelector('[data-client-key]').setAttribute('data-client-key', MIDTRANS_CLIENT);
-
-    // ── STATE ─────────────────────────────────────────────────────────
-    let activeBatch = null;
-    let snapToken = null;
-    let currentOrder = {};
-
-    // ── INITIAL LOAD ──────────────────────────────────────────────────
-    async function init() {
-      await checkAuthSession();
-      await loadBatches();
-      setupRealtime();
-    }
-    init();
-
-    // ── GOOGLE AUTH ───────────────────────────────────────────────────
-    async function checkAuthSession() {
-      const { data: { session } } = await _supabase.auth.getSession();
-      handleSessionResult(session);
-
-      _supabase.auth.onAuthStateChange((event, session) => {
-        handleSessionResult(session);
-      });
-    }
-
-    function handleSessionResult(session) {
-      const overlay = document.getElementById('google-auth-overlay');
-      const formBody = document.getElementById('the-form-body');
-      const nameInput = document.getElementById('f-name');
-      const emailInput = document.getElementById('f-email');
-
-      if (session && session.user) {
-        overlay.style.display = 'none';
-        formBody.style.display = 'block';
-        
-        const u = session.user;
-        emailInput.value = u.email;
-        emailInput.readOnly = true;
-        emailInput.style.background = '#f2f8f8';
-        emailInput.style.color = '#555';
-        emailInput.style.pointerEvents = 'none';
-        
-        if (u.user_metadata && u.user_metadata.full_name && !nameInput.value) {
-          nameInput.value = u.user_metadata.full_name;
-        }
-        
-        if (!document.getElementById('logout-btn-box')) {
-           const logoutBox = document.createElement('div');
-           logoutBox.id = 'logout-btn-box';
-           logoutBox.style = "margin-bottom:15px; font-size:11.5px; text-align:right;";
-           logoutBox.innerHTML = `Login sebagai <strong style="color:var(--td)">${u.email}</strong> (<a href="#" onclick="logoutGoogle(event)" style="color:var(--red);text-decoration:underline;">Ganti Akun</a>)`;
-           formBody.insertBefore(logoutBox, formBody.firstChild);
-        }
-        onInput(); 
-      } else {
-        overlay.style.display = 'block';
-        formBody.style.display = 'none';
-        const box = document.getElementById('logout-btn-box');
-        if(box) box.remove();
-      }
-    }
-
-    async function loginGoogle() {
-      showToast('Mengalihkan ke Google...');
-      const { data, error } = await _supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) showToast('Gagal login: ' + error.message);
-    }
-
-    async function logoutGoogle(e) {
-      if(e) e.preventDefault();
-      await _supabase.auth.signOut();
-      window.location.reload();
-    }
-
-    // ── SUPABASE REALTIME (Auto-refresh UI) ───────────────────────────
-    function setupRealtime() {
-      // Listen for any changes in the 'batches' table
-      supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'batches' },
-          (payload) => {
-            console.log('Realtime update:', payload);
-            loadBatches(); // Refresh UI data
-          }
-        )
-        // Also listen to 'orders' to update "pending booking" text
-        .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'orders' },
-              (payload) => {
-                console.log('Order update:', payload);
-                loadBatches();
-              }
-        )
-        .subscribe();
-    }
-
-    // ── LOAD BATCHES FROM BACKEND ─────────────────────────────────────
-    async function loadBatches() {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/batches`);
-        const data = await res.json();
-        if (data.success) renderBatches(data.batches);
-      } catch (e) {
-        console.error('loadBatches:', e);
-        showToast('⚠ Gagal memuat data batch');
-      }
-    }
-
-    // ── SUPABASE REALTIME — auto-update when batch changes ────────────
-    function subscribeRealtime() {
-      _supabase
-        .channel('batches-rt')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'batches',
-        }, payload => {
-          // Re-fetch full batch list on any change
-          loadBatches();
-        })
-        .subscribe();
-    }
-
-    // ── RENDER BATCHES ────────────────────────────────────────────────
-    function renderBatches(batches) {
-      const grid = document.getElementById('batch-grid');
-      
-      // Determine the truly active batch (must be 'active' status AND have slots)
-      activeBatch = batches.find(b => b.status === 'active' && b.slots_left > 0) || null;
-
-      // Hero stats
-      document.getElementById('h-batch').textContent = activeBatch ? activeBatch.name : 'HABIS';
-
-      // Batch cards
-      grid.innerHTML = batches.map(b => {
-        const totalUsed = b.filled_slots + (b.pending_slots || 0);
-        const pct = Math.min(100, Math.round((totalUsed / b.total_slots) * 100)); // Cap at 100
-        
-        // Logical "isFull" for UI: 
-        // 1. Backend says 'closed'
-        // 2. Or slots_left (after pending) is 0
-        const isActuallyFull = b.status === 'closed' || b.slots_left <= 0;
-        const isAct = b.status === 'active' && !isActuallyFull;
-        
-        const pill = isActuallyFull
-          ? '<span class="status-pill full">Penuh</span>'
-          : b.status === 'active' ? '<span class="status-pill open">Open Now</span>' : '<span class="status-pill">Segera</span>';
-          
-        const pendingNote = (b.status === 'active' && b.pending_slots > 0 && !isActuallyFull)
-          ? `<div style="font-size:10px;color:var(--tm);margin-top:4px;">⏳ Beberapa orang sedang proses booking</div>`
-          : '';
-
-        return `<div class="batch-card ${isAct ? 'active' : isActuallyFull ? 'closed' : ''}">
-          <div class="batch-card-top"><span class="batch-name-label">${b.name}</span>${pill}</div>
-          <div class="batch-pct-label" style="font-size:12px; font-weight:600">${isActuallyFull ? 'Kuota Habis' : 'Slot Tersedia'}</div>
-          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-          ${pendingNote}
-        </div>`;
-      }).join('');
-
-      // Sidebar + batch assign box
-      if (activeBatch) {
-        document.getElementById('ba-val').textContent = `${activeBatch.name} — Tersedia`;
-        document.getElementById('sidebar-batch').textContent = activeBatch.name;
-      }
-
-      // Slots remain note
-      document.getElementById('slots-remain').textContent = activeBatch
-        ? `Silakan amankan slot kamu di ${activeBatch.name}`
-        : 'Pendaftaran ditutup';
-
-      // Toggle sold out: Show if NO active batch is available
-      const showSoldOut = !activeBatch;
-      document.getElementById('booking-main').style.display = showSoldOut ? 'none' : '';
-      document.getElementById('sold-out').classList.toggle('show', showSoldOut);
-    }
-
-    // ── FORM INPUT ─────────────────────────────────────────────────────
-    function onInput() {
-      const any = ['f-name', 'f-email', 'f-wa'].some(id => document.getElementById(id).value.trim());
-      if (any) setStep(2); else setStep(1);
-    }
-
-    // ── VALIDATE ───────────────────────────────────────────────────────
-    function validate() {
-      const checks = [
-        { wrap: 'fi-name', id: 'f-name', ok: v => v.length > 1 },
-        { wrap: 'fi-email', id: 'f-email', ok: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-        { wrap: 'fi-wa', id: 'f-wa', ok: v => v.length > 7 },
-      ];
-      let ok = true;
-      checks.forEach(c => {
-        const el = document.getElementById(c.id);
-        const wr = document.getElementById(c.wrap);
-        wr.classList.remove('field-err');
-        if (!c.ok(el.value.trim())) { wr.classList.add('field-err'); ok = false; }
-      });
-      return ok;
-    }
-
-    // ── HANDLE BOOKING ─────────────────────────────────────────────────
-    async function handleBooking() {
-      if (!validate()) return;
-      if (!activeBatch) { showToast('⚠ Tidak ada batch aktif'); return; }
-
-      const btn = document.getElementById('btn-pay');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>&nbsp; Memproses...';
-
-      try {
-        const body = {
-          full_name: document.getElementById('f-name').value.trim(),
-          email: document.getElementById('f-email').value.trim(),
-          whatsapp: document.getElementById('f-wa').value.trim(),
-          batch_id: activeBatch.id,
-        };
-
-        const res = await fetch(`${BACKEND_URL}/api/create-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-          showToast('⚠ ' + (data.error || 'Gagal membuat order'));
-          return;
-        }
-
-        // Store state
-        snapToken = data.snap_token;
-        currentOrder = { ...body, order_ref: data.order_ref, batch_name: data.batch_name };
-
-        // Show confirm modal
-        document.getElementById('pm-oid').textContent = data.order_ref;
-        document.getElementById('pm-name').textContent = body.full_name;
-        document.getElementById('pm-email').textContent = body.email;
-        document.getElementById('pm-wa').textContent = body.whatsapp;
-        document.getElementById('pm-batch').textContent = data.batch_name;
-        document.getElementById('confirm-modal').classList.add('show');
-        setStep(3);
-
-      } catch (e) {
-        showToast('⚠ Koneksi gagal, coba lagi');
-        console.error(e);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>Lanjut ke Pembayaran</span><span>→</span>';
-      }
-    }
-
-    // ── OPEN MIDTRANS SNAP ─────────────────────────────────────────────
-    function openSnap() {
-      if (!snapToken) return;
-      document.getElementById('confirm-modal').classList.remove('show');
-
-      window.snap.pay(snapToken, {
-        onSuccess: async result => {
-          // Show checking toast
-          showToast('📡 Memverifikasi pembayaran...');
-          
-          try {
-            // Fast Sync: Trigger backend verification immediately
-            const res = await fetch(`${BACKEND_URL}/api/verify-payment/${currentOrder.order_ref}`);
-            const data = await res.json();
-            
-            console.log('[FastSync] Result:', data);
-          } catch (e) {
-            console.error('[FastSync] Failed:', e);
-          }
-
-          // Show success modal
-          document.getElementById('s-name').textContent = currentOrder.full_name;
-          document.getElementById('s-oid').textContent = currentOrder.order_ref;
-          document.getElementById('s-batch').textContent = currentOrder.batch_name;
-          document.getElementById('s-email').textContent = currentOrder.email;
-          document.getElementById('btn-download-pdf').href = `${BACKEND_URL}/api/invoice/${currentOrder.order_ref}`;
-          document.getElementById('success-modal').classList.add('show');
-          setStep(4);
-          resetForm();
-        },
-        onPending: result => {
-          showToast('⏳ Pembayaran pending — selesaikan dalam 30 menit');
-        },
-        onError: result => {
-          showToast('⚠ Pembayaran gagal, coba lagi');
-          setStep(2);
-        },
-        onClose: () => {
-          showToast('Pembayaran dibatalkan');
-          setStep(2);
-        },
-      });
-    }
-
-    function closeConfirm() {
-      document.getElementById('confirm-modal').classList.remove('show');
-      setStep(2);
-    }
-    function closeSuccess() {
-      document.getElementById('success-modal').classList.remove('show');
-      setStep(1);
-    }
-
-    function resetForm() {
-      ['f-name', 'f-email', 'f-wa'].forEach(id => document.getElementById(id).value = '');
-    }
-
-    // ── STEP HELPER ────────────────────────────────────────────────────
-    function setStep(n) {
-      for (let i = 1; i <= 4; i++) {
-        const el = document.getElementById('step' + i);
-        const sc = document.getElementById('sc' + i);
-        if (!el) continue;
-        el.classList.remove('active', 'done');
-        if (i < n) { el.classList.add('done'); sc.textContent = '✓'; }
-        else if (i === n) { el.classList.add('active'); sc.textContent = i; }
-        else { sc.textContent = i; }
-      }
-    }
-
-    // ── TOAST ──────────────────────────────────────────────────────────
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    // ── WAITLIST ───────────────────────────────────────────────────────
-    function joinWL() {
-      const email = document.getElementById('wl-email').value.trim();
-      if (!email) return;
-      showToast(`✅ ${email} berhasil masuk waiting list!`);
-      document.getElementById('wl-email').value = '';
-    }
-
-    // Close modals on backdrop click
-    document.getElementById('confirm-modal').addEventListener('click', function (e) { if (e.target === this) closeConfirm(); });
-    document.getElementById('success-modal').addEventListener('click', function (e) { if (e.target === this) closeSuccess(); });
-
-    // BOOT
-    init();
-  </script>
+  <script src="assets/js/index-app.js"></script>
 </body>
 
 </html>
