@@ -254,7 +254,7 @@ async function handleBooking() {
     document.getElementById('pm-batch').textContent = data.batch_name;
     
     // Handle Gateway Layout
-    const payBtn = document.getElementById('btn-pay');
+    const payBtn = document.getElementById('btn-pay-modal');
     const manualBox = document.getElementById('manual-box');
     const secureNote = document.getElementById('secure-note');
     
