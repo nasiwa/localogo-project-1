@@ -222,6 +222,7 @@ async function loadOrders() {
 function renderOrders(orders) {
   const tbody = document.getElementById('orders-tbody');
   if (!tbody) return;
+  console.log('DEBUG_ORDERS:', orders);
   
   tbody.innerHTML = orders.map((o, index) => {
     const batchName = o.batches?.name || '—';
