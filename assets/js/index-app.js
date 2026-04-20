@@ -18,6 +18,91 @@ async function init() {
   await checkAuthSession();
   await loadBatches();
   setupRealtime();
+  restorePendingOrder(); // 🔁 Pulihkan modal jika user refresh
+}
+
+// ── LOCALSTORAGE: SIMPAN & PULIHKAN PESANAN PENDING ────────────────
+function savePendingOrder(orderData, amount, bank_info) {
+  const payload = {
+    ...orderData,
+    amount,
+    bank_info,
+    savedAt: Date.now()
+  };
+  localStorage.setItem('localogo_pending_order', JSON.stringify(payload));
+}
+
+function clearPendingOrder() {
+  localStorage.removeItem('localogo_pending_order');
+}
+
+function restorePendingOrder() {
+  try {
+    const raw = localStorage.getItem('localogo_pending_order');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+
+    // Cek apakah masih dalam window 6 jam
+    const ageMs = Date.now() - saved.savedAt;
+    const maxMs = 6 * 60 * 60 * 1000; // 6 jam
+    if (ageMs > maxMs) { clearPendingOrder(); return; }
+
+    // Pulihkan state
+    paymentToken = saved.token || null;
+    paymentGateway = saved.gateway || 'manual';
+    currentOrder = {
+      id: saved.id,
+      order_ref: saved.order_ref,
+      full_name: saved.full_name,
+      email: saved.email,
+      whatsapp: saved.whatsapp,
+      batch_name: saved.batch_name
+    };
+
+    // Pulihkan UI modal
+    document.getElementById('pm-oid').textContent = saved.order_ref;
+    document.getElementById('pm-name').textContent = saved.full_name;
+    document.getElementById('pm-email').textContent = saved.email;
+    document.getElementById('pm-wa').textContent = saved.whatsapp;
+    document.getElementById('pm-batch').textContent = saved.batch_name;
+
+    const payBtn = document.getElementById('btn-pay-modal');
+    const manualBox = document.getElementById('manual-box');
+    const secureNote = document.getElementById('secure-note');
+    const rowUnique = document.getElementById('row-unique-nominal');
+    const rowGateway = document.getElementById('row-total-gateway');
+
+    if (paymentGateway === 'manual') {
+      if (manualBox) manualBox.style.display = 'block';
+      if (rowUnique) rowUnique.style.display = 'flex';
+      if (rowGateway) rowGateway.style.display = 'none';
+
+      const manualTotalEl = document.getElementById('pm-total-manual');
+      if (manualTotalEl) manualTotalEl.textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(saved.amount || 100000);
+
+      const bankInfoEl = document.getElementById('manual-bank-info');
+      if (bankInfoEl && saved.amount) {
+        const amountStr = String(saved.amount);
+        const uniqueCode = amountStr.slice(-3);
+        const basePart = amountStr.slice(0, -3);
+        bankInfoEl.innerHTML = `${saved.bank_info || ''}<br><span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span><span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
+      }
+
+      if (payBtn) payBtn.textContent = 'Selesaikan & Kirim Bukti';
+      const remainMs = maxMs - ageMs;
+      const remainHrs = Math.floor(remainMs / 3600000);
+      const remainMins = Math.floor((remainMs % 3600000) / 60000);
+      if (secureNote) secureNote.textContent = `🔒 Slot masih diamankan — sisa ${remainHrs} jam ${remainMins} menit`;
+    }
+
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal) confirmModal.classList.add('show');
+    setStep(3);
+    showToast('🔁 Pesanan kamu sebelumnya dipulihkan!');
+  } catch (e) {
+    console.warn('Restore failed:', e);
+    clearPendingOrder();
+  }
 }
 
 // ── GOOGLE AUTH ───────────────────────────────────────────────────
@@ -251,6 +336,12 @@ async function handleBooking() {
       batch_name: data.batch_name 
     };
 
+    // 💾 Simpan ke localStorage agar bisa dipulihkan setelah refresh
+    savePendingOrder(
+      { ...currentOrder, token: data.token, gateway: data.gateway },
+      data.amount,
+      data.bank_info
+    );
     console.log('Order Created Successfully:', currentOrder);
 
     // Show confirm modal
@@ -377,6 +468,7 @@ async function startPayment() {
       }
 
       showToast('✅ Bukti terkirim! Admin akan segera memverifikasi.');
+      clearPendingOrder(); // 🗑️ Hapus state setelah sukses
       const modal = document.getElementById('confirm-modal');
       if (modal) modal.classList.remove('show');
       
@@ -436,6 +528,7 @@ async function startPayment() {
 }
 
 async function handleSuccessPayment() {
+  clearPendingOrder(); // 🗑️ Hapus state setelah pembayaran sukses
   showToast('📡 Memverifikasi pembayaran...');
   try {
     await fetch(`${BACKEND_URL}/api/verify-payment/${currentOrder.order_ref}`);
@@ -457,9 +550,12 @@ async function handleSuccessPayment() {
 }
 
 function closeConfirm() {
+  // ⚠️ Jangan hapus localStorage saat batal — slot masih aktif di DB
+  // User bisa refresh dan modal akan muncul kembali
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.remove('show');
   setStep(2);
+  showToast('⚠️ Slot masih diamankan 6 jam. Refresh halaman untuk lanjut bayar.');
 }
 function closeSuccess() {
   const modal = document.getElementById('success-modal');
