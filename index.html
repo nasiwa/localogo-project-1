@@ -218,17 +218,30 @@
         <br>
 
         <!-- MANUAL TRANSFER BOX -->
-        <div id="manual-box" style="display:none; background:var(--tp); border:1.5px dashed var(--t); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+        <div id="manual-box" style="display:none; background:var(--tp); border:1.5px dashed var(--td); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+          <div style="background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:4px 8px; border-radius:4px; display:inline-block; margin-bottom:12px; text-transform:uppercase;">⏳ Batas waktu: 6 Jam</div>
           <div style="font-size:10px; font-weight:700; color:var(--tm); margin-bottom:10px; letter-spacing:1px; text-transform:uppercase;">Silakan Transfer Ke:</div>
           <div id="manual-bank-info" style="font-size:16px; font-weight:800; color:var(--td); line-height:1.4;">—</div>
-          <p style="font-size:11px; color:var(--txm); margin-top:12px;">Lampirkan bukti transfer saat konfirmasi ke Admin agar Invoice & Link Grup terkirim otomatis.</p>
+          <p style="font-size:11px; color:var(--txm); margin-top:12px; line-height:1.5;">Harap transfer <strong>tepat sesuai nominal unik</strong> agar verifikasi otomatis lebih cepat.</p>
+          
+          <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; text-align:left;">
+             <label style="font-size:11px; font-weight:700; color:var(--txd); margin-bottom:8px; display:block;">UPLOAD BUKTI TRANSFER</label>
+             <div class="proof-upload-zone" onclick="document.getElementById('proof-file').click()" style="border:1.5px dashed #ccc; border-radius:8px; padding:15px; text-align:center; cursor:pointer; background:#f9f9f9; transition:0.2s;" onmouseover="this.style.borderColor='var(--td)'" onmouseout="this.style.borderColor='#ccc'">
+                <div id="proof-preview" style="display:none; margin-bottom:10px;"><img src="" style="max-width:100px; border-radius:4px;"></div>
+                <div id="proof-placeholder">
+                  <span style="font-size:20px;">📸</span>
+                  <div style="font-size:11px; color:var(--txm); margin-top:5px;">Klik untuk pilih foto bukti</div>
+                </div>
+                <input type="file" id="proof-file" accept="image/*" style="display:none" onchange="previewProof(this)">
+             </div>
+          </div>
         </div>
 
         <button class="btn-open-snap" id="btn-pay-modal" onclick="startPayment()">
           Buka Halaman Pembayaran
         </button>
         <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
-        <div class="secure-note" id="secure-note">🔒 Payment Securely Processed</div>
+        <div class="secure-note" id="secure-note">🔒 Transaksi diproses melalui enkripsi aman</div>
       </div>
     </div>
   </div>

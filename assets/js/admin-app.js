@@ -242,7 +242,9 @@ function renderOrders(orders) {
       <td style="font-size:11px">${o.email}</td>
       <td style="font-size:12px">${o.whatsapp}</td>
       <td>${batchName}</td>
+      <td style="text-align:right; font-weight:700; color:var(--t)">${new Intl.NumberFormat('id-ID').format(o.amount || 0)}</td>
       <td><span class="badge-${o.status}">${o.status.toUpperCase()}</span></td>
+      <td>${o.proof_url ? `<a href="${o.proof_url}" target="_blank" style="text-decoration:none; font-size:11px; color:var(--td); border:1px solid var(--td); padding:2px 5px; border-radius:4px;">🖼️ Lihat</a>` : '<span style="opacity:0.2">—</span>'}</td>
       <td>${o.is_picked_up ? `<span class="badge-pickup">DIAMBIL</span><div style="font-size:9px;color:var(--txm);margin-top:2px;">oleh ${o.scanned_by || 'Loket'}</div>` : '<span style="opacity:0.3">—</span>'}</td>
       <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
       <td>

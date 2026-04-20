@@ -59,11 +59,9 @@ create table if not exists orders (
 );
 
 -- Ensure columns exist if table was already created
-alter table orders add column if not exists is_picked_up boolean default false;
-alter table orders add column if not exists picked_up_at timestamptz;
-alter table orders add column if not exists sequence_num int;
 alter table orders add column if not exists scanned_by text;
 alter table orders add column if not exists payment_gateway text default 'midtrans';
+alter table orders add column if not exists proof_url text;
 
 -- ============================================================
 -- TABLE: admin_users  (Google OAuth whitelist)
@@ -81,7 +79,7 @@ create table if not exists admin_users (
 -- RPC: claim_slot  (ULTRA-CONCURRENCY-SAFE)
 -- Uses explicit table locking to prevent any over-booking
 -- ============================================================
-create or replace function claim_slot(p_batch_id uuid, p_order_ref text, p_name text, p_email text, p_wa text)
+create or replace function claim_slot(p_batch_id uuid, p_order_ref text, p_name text, p_email text, p_wa text, p_amount int)
 returns json
 language plpgsql
 security definer
@@ -105,12 +103,17 @@ begin
     return json_build_object('success', false, 'error', 'Batch tidak tersedia atau sudah penuh');
   end if;
 
-  -- 2. Count current pending orders manually (view might have cache/delay)
+  -- 2. Count current pending orders manually (with dynamic timeout)
+  -- 6 hours for manual, 30 minutes for others (midtrans/duitku)
   select count(*) into v_pending_slots
   from orders
   where batch_id = p_batch_id 
     and status = 'pending'
-    and created_at > (now() - interval '30 minutes');
+    and (
+      (payment_gateway = 'manual' and created_at > (now() - interval '6 hours'))
+      or
+      (payment_gateway != 'manual' and created_at > (now() - interval '30 minutes'))
+    );
 
   -- 3. Calculate real slots left
   v_slots_left := v_total_slots - v_filled_slots - v_pending_slots;
@@ -124,8 +127,17 @@ begin
   end if;
 
   -- 4. Insert order
-  insert into orders (order_ref, batch_id, full_name, email, whatsapp)
-  values (p_order_ref, p_batch_id, p_name, p_email, p_wa)
+  insert into orders (order_ref, batch_id, full_name, email, whatsapp, amount, payment_gateway)
+  values (p_order_ref, p_batch_id, p_name, p_email, p_wa, p_amount, (select payment_gateway from orders where id is null limit 1)) 
+  -- Note: payment_gateway is handled by caller or default, but we'll set it properly in create-order
+  returning id into v_order_id;
+  
+  -- Actually, let's just use the p_payment_gateway if we had it, or let it use the default from table
+  -- Re-doing the insert to be cleaner
+  delete from orders where id = v_order_id; -- undo the dummy if needed, but better just write it correctly:
+  
+  insert into orders (order_ref, batch_id, full_name, email, whatsapp, amount)
+  values (p_order_ref, p_batch_id, p_name, p_email, p_wa, p_amount)
   returning id into v_order_id;
 
   return json_build_object(
@@ -230,7 +242,11 @@ with pending_counts as (
   select batch_id, count(*) as pending_count
   from orders
   where status = 'pending'
-    and created_at > (now() - interval '30 minutes')
+    and (
+      (payment_gateway = 'manual' and created_at > (now() - interval '6 hours'))
+      or
+      (payment_gateway != 'manual' and created_at > (now() - interval '30 minutes'))
+    )
   group by batch_id
 )
 select

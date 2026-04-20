@@ -56,9 +56,30 @@ router.post('/create-order', async (req, res) => {
 
     // 2. Choose Provider and Create Transaction
     const gateway = process.env.PAYMENT_GATEWAY || 'midtrans';
+    
+    // Calculate amount: Gateway (102500) vs Manual (100000 + last 3 WA)
+    let finalAmount = 102500;
+    if (gateway === 'manual') {
+      const last3WA = whatsapp.slice(-3).replace(/\D/g, '0'); // Safety: only digits
+      finalAmount = 100000 + parseInt(last3WA || '0');
+    }
+
+    const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
+      p_batch_id: batch_id,
+      p_order_ref: orderRef,
+      p_name: full_name,
+      p_email: email,
+      p_wa: whatsapp,
+      p_amount: finalAmount
+    });
+
+    if (claimErr || !claimData?.success) {
+      return res.status(409).json({ success: false, error: claimData?.error || 'Gagal memesan slot' });
+    }
+
     const payment = await createTransaction(gateway, {
       orderRef,
-      amount: 102500,
+      amount: finalAmount,
       full_name,
       email,
       whatsapp,
@@ -70,7 +91,8 @@ router.post('/create-order', async (req, res) => {
     // 3. Update database with token/gateway
     await supabase.from('orders').update({
       midtrans_token: payment.token || null,
-      payment_gateway: gateway
+      payment_gateway: gateway,
+      amount: finalAmount
     }).eq('order_ref', orderRef);
 
     res.json({

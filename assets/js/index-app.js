@@ -260,10 +260,28 @@ async function handleBooking() {
     
     if (paymentGateway === 'manual') {
       if (manualBox) manualBox.style.display = 'block';
+      
+      // Formatting rupiah for unique nominal
+      const formattedAmount = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        auto: 'minimal'
+      }).format(data.amount || 100000);
+
       const bankInfoEl = document.getElementById('manual-bank-info');
-      if (bankInfoEl) bankInfoEl.textContent = data.bank_info || 'Bank Info N/A';
-      if (payBtn) payBtn.textContent = 'Konfirmasi & Selesai';
-      if (secureNote) secureNote.textContent = '🔒 Pesanan dicatat, selesaikan pembayaran manual.';
+      // Highlight the last 3 digits in the UI for clarity
+      const amountStr = String(data.amount || 100000);
+      const uniqueCode = amountStr.slice(-3);
+      const basePart = amountStr.slice(0, -3);
+      
+      if (bankInfoEl) {
+        bankInfoEl.innerHTML = `${data.bank_info || 'Bank Info N/A'}<br>` +
+          `<span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>` +
+          `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
+      }
+      
+      if (payBtn) payBtn.textContent = 'Selesaikan & Kirim Bukti';
+      if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
     } else {
       if (manualBox) manualBox.style.display = 'none';
       if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
@@ -284,13 +302,64 @@ async function handleBooking() {
 }
 
 // ── START PAYMENT ─────────────────────────────────────────────
-function startPayment() {
+async function startPayment() {
+  const btn = document.getElementById('btn-pay-modal');
+  
   if (paymentGateway === 'manual') {
-    showToast('📍 Silakan hubungi admin setelah transfer!');
-    const modal = document.getElementById('confirm-modal');
-    if (modal) modal.classList.remove('show');
-    setStep(1);
-    resetForm();
+    const fileInput = document.getElementById('proof-file');
+    if (!fileInput || !fileInput.files[0]) {
+       showToast('⚠️ Harap upload bukti transfer dulu!');
+       return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>&nbsp; Mengirim...';
+    }
+
+    try {
+      const file = fileInput.files[0];
+      const compressedFile = await compressImage(file);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentOrder.order_ref}_${Date.now()}.${fileExt}`;
+      const filePath = `receipts/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data, error: uploadErr } = await _supabase.storage
+        .from('transfer_proofs')
+        .upload(filePath, compressedFile);
+
+      if (uploadErr) throw uploadErr;
+
+      // Get Public URL
+      const { data: urlData } = _supabase.storage
+        .from('transfer_proofs')
+        .getPublicUrl(filePath);
+
+      // Update Order Table
+      const { error: updateErr } = await _supabase
+        .from('orders')
+        .update({ status: 'pending', proof_url: urlData.publicUrl })
+        .eq('order_ref', currentOrder.order_ref);
+
+      if (updateErr) throw updateErr;
+
+      showToast('✅ Bukti terkirim! Admin akan segera memverifikasi.');
+      const modal = document.getElementById('confirm-modal');
+      if (modal) modal.classList.remove('show');
+      
+      handleSuccessManual();
+
+    } catch (err) {
+      console.error('Upload error:', err);
+      showToast('❌ Gagal upload bukti: ' + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Selesaikan & Kirim Bukti';
+      }
+    }
     return;
   }
   
@@ -404,6 +473,76 @@ function joinWL() {
   if (!email) return;
   showToast(`✅ ${email} berhasil masuk waiting list!`);
   el.value = '';
+}
+
+async function handleSuccessManual() {
+  showToast('📡 Mendaftarkan antrian verifikasi...');
+  
+  document.getElementById('s-name').textContent = currentOrder.full_name;
+  document.getElementById('s-oid').textContent = currentOrder.order_ref;
+  document.getElementById('s-batch').textContent = currentOrder.batch_name;
+  document.getElementById('s-email').textContent = currentOrder.email;
+  
+  // Update UI for Manual Success
+  const successTitle = document.querySelector('#success-modal .success-title');
+  const successSub = document.querySelector('#success-modal .success-sub');
+  const successStatus = document.querySelector('#success-modal .detail-val.ok');
+  
+  if(successTitle) successTitle.textContent = 'Bukti Berhasil Diupload!';
+  if(successSub) successSub.textContent = 'Admin akan memverifikasi dalam < 24 jam. Info akan masuk ke emailmu.';
+  if(successStatus) {
+    successStatus.textContent = '⏳ PENDING VERIFICATION';
+    successStatus.style.background = '#fef3c7';
+    successStatus.style.color = '#92400e';
+  }
+
+  const downloadBtn = document.getElementById('btn-download-pdf');
+  if (downloadBtn) downloadBtn.style.display = 'none'; // Hide PDF until paid
+  
+  const successModal = document.getElementById('success-modal');
+  if (successModal) successModal.classList.add('show');
+  setStep(4);
+  resetForm();
+}
+
+// ── PROOF HELPERS ──────────────────────────────────────────────────
+function previewProof(input) {
+  const preview = document.getElementById('proof-preview');
+  const placeholder = document.getElementById('proof-placeholder');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.querySelector('img').src = e.target.result;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, 'image/jpeg', 0.7); // 0.7 quality for good compression
+      };
+    };
+  });
 }
 
 // Global click handlers for backdrops
