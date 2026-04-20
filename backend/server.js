@@ -19,7 +19,6 @@ app.set('clients', { supabase });
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('..')); // Serve frontend files from root
 
 // ── ROUTES ───────────────────────────────────────────────────────
 const clientRoutes = require('./routes/client');
