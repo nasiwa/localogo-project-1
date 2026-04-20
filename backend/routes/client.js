@@ -89,6 +89,7 @@ router.post('/create-order', async (req, res) => {
       token: payment.token,
       bank_info: payment.bank_info,
       gateway: gateway,
+      amount: finalAmount,
       batch_name: claimData.batch_name
     });
 

@@ -258,16 +258,23 @@ async function handleBooking() {
     const manualBox = document.getElementById('manual-box');
     const secureNote = document.getElementById('secure-note');
     
+    const rowUnique = document.getElementById('row-unique-nominal');
+    const rowGateway = document.getElementById('row-total-gateway');
+    
     if (paymentGateway === 'manual') {
       if (manualBox) manualBox.style.display = 'block';
+      if (rowUnique) rowUnique.style.display = 'flex';
+      if (rowGateway) rowGateway.style.display = 'none';
       
-      // Formatting rupiah for unique nominal
-      const formattedAmount = new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        auto: 'minimal'
-      }).format(data.amount || 100000);
-
+      const manualTotalEl = document.getElementById('pm-total-manual');
+      if (manualTotalEl) {
+        manualTotalEl.textContent = new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          minimumFractionDigits: 0
+        }).format(data.amount || 100000);
+      }
+      
       const bankInfoEl = document.getElementById('manual-bank-info');
       // Highlight the last 3 digits in the UI for clarity
       const amountStr = String(data.amount || 100000);
@@ -284,6 +291,8 @@ async function handleBooking() {
       if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
     } else {
       if (manualBox) manualBox.style.display = 'none';
+      if (rowUnique) rowUnique.style.display = 'none';
+      if (rowGateway) rowGateway.style.display = 'flex';
       if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
       if (secureNote) secureNote.textContent = `🔒 Diproses oleh ${paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1)}`;
     }
