@@ -110,25 +110,23 @@ begin
     return json_build_object('success', false, 'error', 'Batch tidak tersedia atau sudah penuh');
   end if;
 
-  -- 2. ANTI-DUPLICATE CHECK (1 WA/Email per Batch)
-  select id into v_existing_id
-  from orders
-  where batch_id = p_batch_id
-    and (whatsapp = p_wa or email = p_email)
-    and (
+  -- 2. ANTI-DUPLICATE: 1 Nomor WA per Batch (email boleh sama)
+  SELECT id INTO v_existing_id
+  FROM orders
+  WHERE batch_id = p_batch_id
+    AND whatsapp = p_wa
+    AND (
       status = 'paid' 
-      or 
-      (status = 'pending' and (
-        (payment_gateway = 'manual' and created_at > (now() - interval '6 hours'))
-        or
-        (payment_gateway != 'manual' and created_at > (now() - interval '30 minutes'))
+      OR (status = 'pending' AND (
+        (payment_gateway = 'manual' AND created_at > (now() - interval '6 hours'))
+        OR (payment_gateway != 'manual' AND created_at > (now() - interval '30 minutes'))
       ))
     )
-  limit 1;
+  LIMIT 1;
 
-  if v_existing_id is not null then
-    return json_build_object('success', false, 'error', 'Nomor WA atau Email ini sudah terdaftar di slot aktif Batch ini.');
-  end if;
+  IF v_existing_id IS NOT NULL THEN
+    RETURN json_build_object('success', false, 'error', '⚠️ Nomor WhatsApp ini sudah memiliki slot aktif di Batch ini. 1 nomor WA hanya untuk 1 slot.');
+  END IF;
 
   -- 3. Count current pending orders manually (with dynamic timeout)
   select count(*) into v_pending_slots
