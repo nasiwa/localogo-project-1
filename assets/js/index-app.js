@@ -346,13 +346,18 @@ async function startPayment() {
         .from('transfer_proofs')
         .getPublicUrl(filePath);
 
-      // Update Order Table
-      const { error: updateErr } = await _supabase
-        .from('orders')
-        .update({ status: 'pending', proof_url: urlData.publicUrl })
-        .eq('order_ref', currentOrder.order_ref);
+      // Update Order Table via Backend (to bypass RLS)
+      const submitRes = await fetch(`${BACKEND_URL}/api/submit-proof`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_ref: currentOrder.order_ref,
+          proof_url: urlData.publicUrl
+        })
+      });
 
-      if (updateErr) throw updateErr;
+      const submitData = await submitRes.json();
+      if (!submitData.success) throw new Error(submitData.error || 'Gagal menyimpan data bukti');
 
       showToast('✅ Bukti terkirim! Admin akan segera memverifikasi.');
       const modal = document.getElementById('confirm-modal');

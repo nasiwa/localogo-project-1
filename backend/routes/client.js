@@ -100,6 +100,31 @@ router.post('/create-order', async (req, res) => {
 });
 
 /**
+ * POST /api/submit-proof
+ */
+router.post('/submit-proof', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  const { order_ref, proof_url } = req.body;
+
+  if (!order_ref || !proof_url) {
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
+  }
+
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ proof_url, status: 'pending' })
+      .eq('order_ref', order_ref);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('submit-proof error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/verify-payment/:orderRef (Fast Sync)
  */
 router.get('/verify-payment/:orderRef', async (req, res) => {
