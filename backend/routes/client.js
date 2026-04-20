@@ -85,6 +85,7 @@ router.post('/create-order', async (req, res) => {
 
     res.json({
       success: true,
+      id: claimData.id,
       order_ref: orderRef,
       token: payment.token,
       bank_info: payment.bank_info,
@@ -104,20 +105,22 @@ router.post('/create-order', async (req, res) => {
  */
 router.post('/submit-proof', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
-  const { order_ref, proof_url } = req.body;
+  const { id, order_ref, proof_url } = req.body;
 
-  console.log(`[PROOF_SUBMIT] Attempting for ${order_ref}: ${proof_url}`);
+  console.log(`[PROOF_SUBMIT] Attempting for ID: ${id} (Ref: ${order_ref}): ${proof_url}`);
 
-  if (!order_ref || !proof_url) {
+  if ((!id && !order_ref) || !proof_url) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
   }
 
   try {
-    const { data: updateData, error } = await supabase
-      .from('orders')
-      .update({ proof_url: proof_url, status: 'pending' })
-      .eq('order_ref', order_ref)
-      .select();
+    const query = supabase.from('orders').update({ proof_url: proof_url, status: 'pending' });
+    
+    // Filter by ID if available, otherwise fallback to order_ref
+    if (id) query.eq('id', id);
+    else query.eq('order_ref', order_ref);
+
+    const { data: updateData, error } = await query.select();
 
     if (error) {
        console.error('[PROOF_SUBMIT_ERROR]', error);

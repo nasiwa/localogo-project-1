@@ -244,7 +244,14 @@ async function handleBooking() {
     // Store state
     paymentToken = data.token;
     paymentGateway = data.gateway;
-    currentOrder = { ...body, order_ref: data.order_ref, batch_name: data.batch_name };
+    currentOrder = { 
+      ...body, 
+      id: data.id, 
+      order_ref: data.order_ref, 
+      batch_name: data.batch_name 
+    };
+
+    console.log('Order Created Successfully:', currentOrder);
 
     // Show confirm modal
     document.getElementById('pm-oid').textContent = data.order_ref;
@@ -351,11 +358,12 @@ async function startPayment() {
 
       console.log('Generated Proof URL:', urlData.publicUrl);
 
-      // Update Order Table via Backend (to bypass RLS)
+      // Update Order Table via Backend (to bypass RLS) using internal ID
       const submitRes = await fetch(`${BACKEND_URL}/api/submit-proof`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: currentOrder.id,
           order_ref: currentOrder.order_ref,
           proof_url: urlData.publicUrl
         })
