@@ -29,6 +29,17 @@ app.use('/api', clientRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', webhookRoutes); // Webhooks are /api/midtrans-webhook etc.
 
+// ── GLOBAL ERROR HANDLER ─────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('SERVER ERROR:', err);
+  res.status(500).json({ 
+    success: false, 
+    error: 'Internal Server Error',
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 // ── SERVER BOOT ──────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 
