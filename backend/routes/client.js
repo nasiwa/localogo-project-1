@@ -106,18 +106,26 @@ router.post('/submit-proof', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
   const { order_ref, proof_url } = req.body;
 
+  console.log(`[PROOF_SUBMIT] Attempting for ${order_ref}: ${proof_url}`);
+
   if (!order_ref || !proof_url) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
   }
 
   try {
-    const { error } = await supabase
+    const { data: updateData, error } = await supabase
       .from('orders')
-      .update({ proof_url, status: 'pending' })
-      .eq('order_ref', order_ref);
+      .update({ proof_url: proof_url, status: 'pending' })
+      .eq('order_ref', order_ref)
+      .select();
 
-    if (error) throw error;
-    res.json({ success: true });
+    if (error) {
+       console.error('[PROOF_SUBMIT_ERROR]', error);
+       throw error;
+    }
+
+    console.log(`[PROOF_SUBMIT_SUCCESS] Updated rows: ${updateData?.length}`);
+    res.json({ success: true, count: updateData?.length });
   } catch (err) {
     console.error('submit-proof error:', err);
     res.status(500).json({ success: false, error: err.message });

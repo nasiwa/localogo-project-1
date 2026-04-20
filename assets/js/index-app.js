@@ -332,19 +332,24 @@ async function startPayment() {
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentOrder.order_ref}_${Date.now()}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
+      const filePath = fileName; // Flat path is safer
 
       // Upload to Supabase Storage
-      const { data, error: uploadErr } = await _supabase.storage
+      const { data: uploadData, error: uploadErr } = await _supabase.storage
         .from('transfer_proofs')
         .upload(filePath, compressedFile);
 
-      if (uploadErr) throw uploadErr;
+      if (uploadErr) {
+        console.error('Storage Upload Error:', uploadErr);
+        throw new Error('Gagal upload ke storage: ' + uploadErr.message);
+      }
 
       // Get Public URL
       const { data: urlData } = _supabase.storage
         .from('transfer_proofs')
         .getPublicUrl(filePath);
+
+      console.log('Generated Proof URL:', urlData.publicUrl);
 
       // Update Order Table via Backend (to bypass RLS)
       const submitRes = await fetch(`${BACKEND_URL}/api/submit-proof`, {
@@ -357,7 +362,11 @@ async function startPayment() {
       });
 
       const submitData = await submitRes.json();
-      if (!submitData.success) throw new Error(submitData.error || 'Gagal menyimpan data bukti');
+      console.log('Submit Result:', submitData);
+
+      if (!submitData.success || submitData.count === 0) {
+        throw new Error(submitData.error || 'Gagal menyimpan data bukti ke database');
+      }
 
       showToast('✅ Bukti terkirim! Admin akan segera memverifikasi.');
       const modal = document.getElementById('confirm-modal');
