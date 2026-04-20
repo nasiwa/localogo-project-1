@@ -3,17 +3,25 @@ const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
-// ── APP INITIALIZATION ───────────────────────────────────────────
 const app = express();
 
-// ── CLIENTS (Centrally managed) ──────────────────────────────────
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// ── HEALTH CHECK (TOP PRIORITY) ──────────────────────────────────
+app.get('/api/health', (req, res) => res.json({ status: 'ok', node: process.version }));
 
-// Pass clients to routers via app.set
-app.set('clients', { supabase });
+// ── CLIENTS (Lazy initialization to prevent startup crash) ───────
+let supabaseClient;
+const getSupabase = () => {
+  if (!supabaseClient) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error('Supabase configuration missing');
+    }
+    supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
+  return supabaseClient;
+};
+
+// Pass getter to routers
+app.set('getSupabase', getSupabase);
 
 // ── MIDDLEWARE ───────────────────────────────────────────────────
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));

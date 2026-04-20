@@ -28,7 +28,7 @@ router.get('/check', (req, res) => {
  * GET /api/admin/batches — full batch data for admin
  */
 router.get('/batches', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { data, error } = await supabase
     .from('batches')
     .select('*')
@@ -42,7 +42,7 @@ router.get('/batches', async (req, res) => {
  * PATCH /api/admin/batch/:id — update batch settings
  */
 router.patch('/batch/:id', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { id } = req.params;
   const updates = {};
   const allowed = ['status', 'reveal_at', 'total_slots', 'name', 'wa_group_url'];
@@ -63,7 +63,7 @@ router.patch('/batch/:id', async (req, res) => {
  * GET /api/admin/orders — all orders
  */
 router.get('/orders', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { data, error } = await supabase
     .from('orders')
     .select('*, batches(name)')
@@ -78,7 +78,7 @@ router.get('/orders', async (req, res) => {
  * GET /api/admin/batch/:id/members
  */
 router.get('/batch/:id/members', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { id } = req.params;
   const { data, error } = await supabase
     .from('orders')
@@ -95,7 +95,7 @@ router.get('/batch/:id/members', async (req, res) => {
  * GET /api/admin/order/:orderRef/sync
  */
 router.get('/order/:orderRef/sync', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { orderRef } = req.params;
   try {
     const status = await snap.transaction.status(orderRef);
@@ -138,7 +138,7 @@ router.get('/order/:orderRef/sync', async (req, res) => {
  * POST /api/admin/order/:orderRef/confirm-manual
  */
 router.post('/order/:orderRef/confirm-manual', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { orderRef } = req.params;
   try {
     const { data: confirmData, error: confirmErr } = await supabase
@@ -173,7 +173,7 @@ router.post('/order/:orderRef/confirm-manual', async (req, res) => {
  * GET /api/admin/verify/:qrData (Scanner)
  */
 router.get('/verify/:qrData', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { qrData } = req.params;
   const parts = qrData.split('|');
   const orderRef = parts[0];
@@ -204,7 +204,7 @@ router.get('/verify/:qrData', async (req, res) => {
  * POST /api/admin/pickup/:orderRef
  */
 router.post('/pickup/:orderRef', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { orderRef } = req.params;
   const { loketId } = req.body || {};
 

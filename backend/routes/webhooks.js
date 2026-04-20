@@ -16,7 +16,7 @@ function verifyMidtransSignature(orderId, statusCode, grossAmount, serverKey) {
  * POST /api/midtrans-webhook
  */
 router.post('/midtrans-webhook', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   try {
     const notif = req.body;
     const { order_id, status_code, gross_amount, signature_key, transaction_status, fraud_status } = notif;
@@ -57,7 +57,7 @@ router.post('/midtrans-webhook', async (req, res) => {
  * POST /api/duitku-webhook
  */
 router.post('/duitku-webhook', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   try {
     const { amount, merchantOrderId, signature, resultCode } = req.body;
     

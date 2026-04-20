@@ -16,8 +16,8 @@ function genOrderRef() {
  * GET /api/batches — public batch status (with auto-reveal)
  */
 router.get('/batches', async (req, res) => {
-  const { supabase } = req.app.get('clients');
   try {
+    const supabase = req.app.get('getSupabase')();
     await supabase.rpc('auto_reveal_batches');
     const { data, error } = await supabase.from('public_batches').select('*');
     if (error) throw error;
@@ -31,7 +31,7 @@ router.get('/batches', async (req, res) => {
  * POST /api/create-order
  */
 router.post('/create-order', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { full_name, email, whatsapp, batch_id } = req.body;
 
   if (!full_name || !email || !whatsapp || !batch_id) {
@@ -41,29 +41,17 @@ router.post('/create-order', async (req, res) => {
   const orderRef = genOrderRef();
 
   try {
-    // 1. Claim Slot
-    const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
-      p_batch_id: batch_id,
-      p_order_ref: orderRef,
-      p_name: full_name,
-      p_email: email,
-      p_wa: whatsapp,
-    });
-
-    if (claimErr || !claimData?.success) {
-      return res.status(409).json({ success: false, error: claimData?.error || 'Gagal memesan slot' });
-    }
-
-    // 2. Choose Provider and Create Transaction
+    // 1. Choose Provider and Calculate Amount
     const gateway = process.env.PAYMENT_GATEWAY || 'midtrans';
     
-    // Calculate amount: Gateway (102500) vs Manual (100000 + last 3 WA)
+    // Gateway (102500) vs Manual (100000 + last 3 WA)
     let finalAmount = 102500;
     if (gateway === 'manual') {
-      const last3WA = whatsapp.slice(-3).replace(/\D/g, '0'); // Safety: only digits
+      const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
       finalAmount = 100000 + parseInt(last3WA || '0');
     }
 
+    // 2. Claim Slot (Single Call)
     const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
       p_batch_id: batch_id,
       p_order_ref: orderRef,
