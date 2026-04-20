@@ -776,7 +776,8 @@ input:focus {
   border-radius: 20px;
   max-width: 440px;
   width: 100%;
-  overflow: hidden;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: var(--s3);
   animation: popIn .28s cubic-bezier(.34, 1.56, .64, 1);
 }

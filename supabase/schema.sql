@@ -76,10 +76,16 @@ create table if not exists admin_users (
 -- INSERT INTO admin_users (email) VALUES ('youremail@gmail.com');
 
 -- ============================================================
--- RPC: claim_slot  (ULTRA-CONCURRENCY-SAFE)
--- Uses explicit table locking to prevent any over-booking
+-- RPC: claim_slot (DIPERKETAT: Anti-Duplicate & High Concurrency)
 -- ============================================================
-create or replace function claim_slot(p_batch_id uuid, p_order_ref text, p_name text, p_email text, p_wa text, p_amount int)
+create or replace function claim_slot(
+  p_batch_id uuid, 
+  p_order_ref text, 
+  p_name text, 
+  p_email text, 
+  p_wa text, 
+  p_amount int
+)
 returns json
 language plpgsql
 security definer
@@ -91,6 +97,7 @@ declare
   v_slots_left    int;
   v_batch_name    text;
   v_order_id      uuid;
+  v_existing_id   uuid;
 begin
   -- 1. Lock the base table row immediately to queue concurrent requests
   select name, total_slots, filled_slots 
@@ -103,8 +110,27 @@ begin
     return json_build_object('success', false, 'error', 'Batch tidak tersedia atau sudah penuh');
   end if;
 
-  -- 2. Count current pending orders manually (with dynamic timeout)
-  -- 6 hours for manual, 30 minutes for others (midtrans/duitku)
+  -- 2. ANTI-DUPLICATE CHECK (1 WA/Email per Batch)
+  select id into v_existing_id
+  from orders
+  where batch_id = p_batch_id
+    and (whatsapp = p_wa or email = p_email)
+    and (
+      status = 'paid' 
+      or 
+      (status = 'pending' and (
+        (payment_gateway = 'manual' and created_at > (now() - interval '6 hours'))
+        or
+        (payment_gateway != 'manual' and created_at > (now() - interval '30 minutes'))
+      ))
+    )
+  limit 1;
+
+  if v_existing_id is not null then
+    return json_build_object('success', false, 'error', 'Nomor WA atau Email ini sudah terdaftar di slot aktif Batch ini.');
+  end if;
+
+  -- 3. Count current pending orders manually (with dynamic timeout)
   select count(*) into v_pending_slots
   from orders
   where batch_id = p_batch_id 
@@ -115,37 +141,25 @@ begin
       (payment_gateway != 'manual' and created_at > (now() - interval '30 minutes'))
     );
 
-  -- 3. Calculate real slots left
+  -- 4. Calculate real slots left
   v_slots_left := v_total_slots - v_filled_slots - v_pending_slots;
 
   if v_slots_left <= 0 then
-    -- Double check if we should close it
     if v_filled_slots >= v_total_slots then
       update batches set status = 'closed' where id = p_batch_id;
     end if;
-    return json_build_object('success', false, 'error', 'Maaf, slot baru saja habis dibooking orang lain.');
+    return json_build_object('success', false, 'error', 'Maaf, slot baru saja habis dibooking orang lain. Cek kembali dalam 6 jam.');
   end if;
 
-  -- 4. Insert order
-  insert into orders (order_ref, batch_id, full_name, email, whatsapp, amount, payment_gateway)
-  values (p_order_ref, p_batch_id, p_name, p_email, p_wa, p_amount, (select payment_gateway from orders where id is null limit 1)) 
-  -- Note: payment_gateway is handled by caller or default, but we'll set it properly in create-order
-  returning id into v_order_id;
-  
-  -- Actually, let's just use the p_payment_gateway if we had it, or let it use the default from table
-  -- Re-doing the insert to be cleaner
-  delete from orders where id = v_order_id; -- undo the dummy if needed, but better just write it correctly:
-  
+  -- 5. Insert order
   insert into orders (order_ref, batch_id, full_name, email, whatsapp, amount)
   values (p_order_ref, p_batch_id, p_name, p_email, p_wa, p_amount)
   returning id into v_order_id;
-
+  
   return json_build_object(
-    'success',   true,
-    'order_id',  v_order_id,
-    'order_ref', p_order_ref,
-    'batch_name', v_batch_name,
-    'slots_left', v_slots_left - 1
+    'success', true, 
+    'id', v_order_id,
+    'batch_name', v_batch_name
   );
 end;
 $$;
