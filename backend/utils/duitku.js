@@ -43,15 +43,20 @@ async function createDuitkuTransaction(params) {
     merchantOrderId: orderId,
     productDetails: productDetails,
     email: email,
+    phoneNumber: params.phoneNumber || '', // Added
+    customerDetail: params.customerName || email, // Added
     callbackUrl: callbackUrl,
     returnUrl: returnUrl,
     signature: signature,
-    // Note: Duitku V2 Inquiry can take more params, but these are essential for Pop
   };
 
   try {
     const response = await axios.post(ENDPOINT, payload);
-    return response.data; // Should contain { token, paymentUrl, ... }
+    if (response.data && response.data.resultCode !== '00') {
+      console.error('Duitku API Rejection:', response.data);
+      throw new Error(response.data.message || 'Ditolak oleh Duitku');
+    }
+    return response.data; 
   } catch (error) {
     console.error('Duitku Inquiry Error:', error.response?.data || error.message);
     throw new Error(error.response?.data?.message || 'Gagal membuat transaksi Duitku');

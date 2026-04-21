@@ -27,6 +27,8 @@ async function createTransaction(gateway, params) {
       amount: amount,
       productDetails: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
       email: email,
+      phoneNumber: whatsapp,
+      customerName: full_name,
       callbackUrl: `${backendUrl || ''}/api/duitku-webhook`,
       returnUrl: `${frontendUrl || ''}/?order=${orderRef}`
     });

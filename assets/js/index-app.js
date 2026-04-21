@@ -38,6 +38,13 @@ function updateSidebarForGateway() {
   const adminRow = document.getElementById('sidebar-admin-row');
   const totalEl = document.getElementById('sidebar-total');
   const headPrice = document.querySelector('.order-price'); // Small fix: update head price too
+  const badgeEl = document.getElementById('payment-badge');
+
+  // Update dynamic branding text
+  if (badgeEl) {
+    const gatewayLabel = activeGateway.charAt(0).toUpperCase() + activeGateway.slice(1);
+    badgeEl.innerHTML = `🔒 Transaksi aman via ${gatewayLabel} · SSL Encrypted`;
+  }
 
   if (activeGateway === 'manual') {
     if (adminRow) adminRow.style.display = 'none';
