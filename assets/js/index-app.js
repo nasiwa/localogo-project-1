@@ -359,22 +359,25 @@ async function handleBooking() {
     const rowUnique = document.getElementById('row-unique-nominal');
     const rowGateway = document.getElementById('row-total-gateway');
     
+    const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+    const sidebarAdminRow = document.getElementById('sidebar-admin-row');
+    const sidebarTotal = document.getElementById('sidebar-total');
+    const pmAmount = document.getElementById('pm-amount');
+
     if (paymentGateway === 'manual') {
       if (manualBox) manualBox.style.display = 'block';
       if (rowUnique) rowUnique.style.display = 'flex';
       if (rowGateway) rowGateway.style.display = 'none';
+
+      // Sembunyikan baris Admin, update total sidebar & header modal
+      if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
+      if (sidebarTotal) sidebarTotal.textContent = fmtIDR(data.amount || 100000);
+      if (pmAmount) pmAmount.textContent = fmtIDR(data.amount || 100000);
       
       const manualTotalEl = document.getElementById('pm-total-manual');
-      if (manualTotalEl) {
-        manualTotalEl.textContent = new Intl.NumberFormat('id-ID', {
-          style: 'currency',
-          currency: 'IDR',
-          minimumFractionDigits: 0
-        }).format(data.amount || 100000);
-      }
+      if (manualTotalEl) manualTotalEl.textContent = fmtIDR(data.amount || 100000);
       
       const bankInfoEl = document.getElementById('manual-bank-info');
-      // Highlight the last 3 digits in the UI for clarity
       const amountStr = String(data.amount || 100000);
       const uniqueCode = amountStr.slice(-3);
       const basePart = amountStr.slice(0, -3);
@@ -391,6 +394,12 @@ async function handleBooking() {
       if (manualBox) manualBox.style.display = 'none';
       if (rowUnique) rowUnique.style.display = 'none';
       if (rowGateway) rowGateway.style.display = 'flex';
+
+      // Tampilkan baris Admin, update total yang sudah include admin
+      if (sidebarAdminRow) sidebarAdminRow.style.display = 'flex';
+      if (sidebarTotal) sidebarTotal.textContent = 'Rp102.500';
+      if (pmAmount) pmAmount.textContent = 'Rp102.500';
+
       if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
       if (secureNote) secureNote.textContent = `🔒 Diproses oleh ${paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1)}`;
     }
