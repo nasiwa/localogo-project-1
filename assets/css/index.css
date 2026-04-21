@@ -1382,19 +1382,6 @@ footer p {
   width: 24px;
   border-radius: 10px;
 }
-z-index: 2;
-  mask-image: linear-gradient(to bottom, black 70%, transparent);
-}
-  background: var(--t);
-  color: white;
-  padding: 8px 15px;
-  border-radius: 8px;
-  box-shadow: var(--s2);
-  text-align: right;
-  z-index: 5;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.2);
-}
 
 .pg-tag-label {
   font-size: 11px;
