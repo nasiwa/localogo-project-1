@@ -764,21 +764,19 @@ document.addEventListener('click', function(e) {
 
 // BOOT
 init();
+initCarousel();
 
 // ── CAROUSEL LOGIC ────────────────────────────────────────────────
 let slideIndex = 1;
 let slideInterval;
 
 function initCarousel() {
-  const slider = document.getElementById("product-slider");
-  if (!slider) return;
-
-  const slides = slider.querySelectorAll(".pg-slide");
+  const slides = document.querySelectorAll(".pg-slide");
   if (!slides.length) return;
   
   // Create dots
   const dotsContainer = document.getElementById("slider-dots");
-  if (dotsContainer && !dotsContainer.children.length) {
+  if (dotsContainer) {
     dotsContainer.innerHTML = Array.from(slides).map((_, i) => 
       `<span class="dot ${i === 0 ? 'active' : ''}" onclick="currentSlide(${i + 1})"></span>`
     ).join('');
@@ -792,14 +790,13 @@ function startAutoSlide() {
   stopAutoSlide();
   slideInterval = setInterval(() => {
     moveSlide(1);
-  }, 5000); // 5 detik agar user sempat melihat konten
+  }, 4000);
 }
 
 function stopAutoSlide() {
   if (slideInterval) clearInterval(slideInterval);
 }
 
-// Global exposure for HTML onclick
 window.moveSlide = function(n) {
   stopAutoSlide();
   showSlides(slideIndex += n);
@@ -814,11 +811,8 @@ window.currentSlide = function(n) {
 
 function showSlides(n) {
   let i;
-  const slider = document.getElementById("product-slider");
-  if (!slider) return;
-
-  const slides = slider.querySelectorAll(".pg-slide");
-  const dots = document.querySelectorAll(".dot");
+  let slides = document.querySelectorAll(".pg-slide");
+  let dots = document.querySelectorAll(".dot");
   
   if (!slides.length) return;
   
@@ -835,6 +829,3 @@ function showSlides(n) {
   slides[slideIndex - 1].classList.add("active");
   if (dots[slideIndex - 1]) dots[slideIndex - 1].classList.add("active");
 }
-
-// Ensure init after everything is loaded
-window.addEventListener('load', initCarousel);

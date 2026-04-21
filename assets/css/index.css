@@ -1257,17 +1257,22 @@ footer p {
   background: white;
   border: 1.5px solid var(--border);
   border-radius: var(--rl);
-  padding: 40px;
-  margin-bottom: 40px;
-  box.product-carousel {
+  padding: 30px;
+  margin: 60px auto 40px;
+  max-width: 700px; /* Sejajar dengan lebar form card */
+  box-shadow: var(--s1);
+  overflow: hidden;
+}
+
+.product-carousel {
   position: relative;
   width: 100%;
-  height: 480px;
+  height: 380px; /* Tinggi disesuaikan agar tidak terlalu dominan */
   background: var(--bg-muted);
-  border-radius: var(--rl);
+  border-radius: var(--r);
   overflow: hidden;
-  border: 1.5px solid var(--border);
-  margin-bottom: 40px;
+  border: 1px solid var(--border);
+  margin-bottom: 25px;
   box-shadow: var(--s2);
 }
 
@@ -1300,11 +1305,11 @@ footer p {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 30px 40px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 20px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
   color: white;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   text-align: center;
   z-index: 5;
 }
