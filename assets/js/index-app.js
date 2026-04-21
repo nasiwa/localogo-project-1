@@ -764,3 +764,68 @@ document.addEventListener('click', function(e) {
 
 // BOOT
 init();
+initCarousel();
+
+// ── CAROUSEL LOGIC ────────────────────────────────────────────────
+let slideIndex = 1;
+let slideInterval;
+
+function initCarousel() {
+  const slides = document.querySelectorAll(".pg-slide");
+  if (!slides.length) return;
+  
+  // Create dots
+  const dotsContainer = document.getElementById("slider-dots");
+  if (dotsContainer) {
+    dotsContainer.innerHTML = Array.from(slides).map((_, i) => 
+      `<span class="dot ${i === 0 ? 'active' : ''}" onclick="currentSlide(${i + 1})"></span>`
+    ).join('');
+  }
+
+  showSlides(slideIndex);
+  startAutoSlide();
+}
+
+function startAutoSlide() {
+  stopAutoSlide();
+  slideInterval = setInterval(() => {
+    moveSlide(1);
+  }, 4000);
+}
+
+function stopAutoSlide() {
+  if (slideInterval) clearInterval(slideInterval);
+}
+
+window.moveSlide = function(n) {
+  stopAutoSlide();
+  showSlides(slideIndex += n);
+  startAutoSlide();
+}
+
+window.currentSlide = function(n) {
+  stopAutoSlide();
+  showSlides(slideIndex = n);
+  startAutoSlide();
+}
+
+function showSlides(n) {
+  let i;
+  let slides = document.querySelectorAll(".pg-slide");
+  let dots = document.querySelectorAll(".dot");
+  
+  if (!slides.length) return;
+  
+  if (n > slides.length) { slideIndex = 1 }
+  if (n < 1) { slideIndex = slides.length }
+  
+  for (i = 0; i < slides.length; i++) {
+    slides[i].classList.remove("active");
+  }
+  for (i = 0; i < dots.length; i++) {
+    dots[i].classList.remove("active");
+  }
+  
+  slides[slideIndex - 1].classList.add("active");
+  if (dots[slideIndex - 1]) dots[slideIndex - 1].classList.add("active");
+}
