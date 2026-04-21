@@ -226,4 +226,26 @@ router.post('/pickup/:orderRef', async (req, res) => {
   res.json({ success: true, message: 'Pesanan berhasil ditandai sebagai DIAMBIL' });
 });
 
+/**
+ * POST /api/admin/auto-expire — clean up outdated pending orders manually
+ */
+router.post('/auto-expire', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  try {
+    const { data, error, count } = await supabase
+      .from('orders')
+      .update({ status: 'expired' })
+      .filter('status', 'eq', 'pending')
+      .or(`and(payment_gateway.eq.manual,created_at.lt.${new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()}),and(payment_gateway.neq.manual,created_at.lt.${new Date(Date.now() - 30 * 60 * 1000).toISOString()})`)
+      // Note: Supabase JS .or() syntax can be tricky with complex ANDs, using raw query style or separate updates if needed.
+      // Alternatively, call the RPC logic if we want to centralize it.
+      .select('id');
+
+    if (error) throw error;
+    res.json({ success: true, expired_count: data?.length || 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

@@ -94,7 +94,17 @@ async function refreshAll() {
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────
+async function triggerAutoExpire() {
+  try {
+    await fetch(`${BACKEND_URL}/api/admin/auto-expire`, { 
+      method: 'POST',
+      headers: { 'x-admin-token': getAdminToken() } 
+    });
+  } catch (e) { console.warn('Auto-expire failed:', e); }
+}
+
 async function loadDashboard() {
+  await triggerAutoExpire(); // 🧹 Bersihkan pesanan basi sebelum hitung data
   try {
     const h = { 'x-admin-token': getAdminToken() };
     const [bRes, oRes] = await Promise.all([
@@ -143,6 +153,7 @@ async function loadDashboard() {
 
 // ── BATCH MANAGEMENT ──────────────────────────────────────────────
 async function loadAdminBatches() {
+  await triggerAutoExpire(); // 🧹 Bersihkan pesanan basi sebelum hitung data
   try {
     const h = { 'x-admin-token': getAdminToken() };
     const [bRes, oRes] = await Promise.all([

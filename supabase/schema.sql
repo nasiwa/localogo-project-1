@@ -110,6 +110,16 @@ begin
     return json_build_object('success', false, 'error', 'Batch tidak tersedia atau sudah penuh');
   end if;
 
+  -- 1.1 AUTO-EXPIRE: Mark old pending orders as expired to free up slots correctly
+  UPDATE orders 
+  SET status = 'expired'
+  WHERE status = 'pending'
+    AND (
+      (payment_gateway = 'manual' AND created_at < (now() - interval '6 hours'))
+      OR
+      (payment_gateway != 'manual' AND created_at < (now() - interval '30 minutes'))
+    );
+
   -- 2. ANTI-DUPLICATE: 1 Nomor WA per Batch (email boleh sama)
   SELECT id INTO v_existing_id
   FROM orders
