@@ -1201,3 +1201,63 @@ footer p {
     transform: translateY(0)
   }
 }
+
+/* FLOATING WA SUPPORT */
+.wa-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  z-index: 9999;
+}
+
+.wa-float-text {
+  background: var(--white);
+  padding: 10px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  color: var(--tx);
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all .3s ease;
+  pointer-events: none;
+  border: 1px solid var(--border);
+  text-align: right;
+}
+
+.wa-float:hover .wa-float-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.wa-float-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+  transition: transform .3s ease;
+}
+
+.wa-float:hover .wa-float-icon {
+  transform: scale(1.08) rotate(5deg);
+}
+
+@media (max-width: 768px) {
+  .wa-float {
+    bottom: 20px;
+    right: 20px;
+  }
+  .wa-float-text {
+    display: none;
+  }
+}

@@ -13,6 +13,13 @@ function genOrderRef() {
 }
 
 /**
+ * GET /api/config — public config (gateway type)
+ */
+router.get('/config', (req, res) => {
+  res.json({ gateway: process.env.PAYMENT_GATEWAY || 'midtrans' });
+});
+
+/**
  * GET /api/batches — public batch status (with auto-reveal)
  */
 router.get('/batches', async (req, res) => {

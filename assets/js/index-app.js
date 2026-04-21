@@ -12,13 +12,68 @@ let activeBatch = null;
 let paymentToken = null;
 let paymentGateway = 'midtrans';
 let currentOrder = {};
+let activeGateway = 'midtrans'; // akan di-update dari /api/config
 
 // ── INITIAL LOAD ──────────────────────────────────────────────────
 async function init() {
   await checkAuthSession();
+  await loadConfig();    // 🔧 Ambil gateway type dari server
   await loadBatches();
   setupRealtime();
   restorePendingOrder(); // 🔁 Pulihkan modal jika user refresh
+}
+
+async function loadConfig() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/config`);
+    const data = await res.json();
+    activeGateway = data.gateway || 'midtrans';
+    updateSidebarForGateway();
+  } catch (e) {
+    console.warn('loadConfig failed:', e);
+  }
+}
+
+function updateSidebarForGateway() {
+  const adminRow = document.getElementById('sidebar-admin-row');
+  const totalEl = document.getElementById('sidebar-total');
+  const headPrice = document.querySelector('.order-price'); // Small fix: update head price too
+
+  if (activeGateway === 'manual') {
+    if (adminRow) adminRow.style.display = 'none';
+    if (headPrice) headPrice.textContent = 'Rp100.xxx';
+    onWaInput(); // initial update
+  } else {
+    if (adminRow) adminRow.style.display = 'flex';
+    if (totalEl) totalEl.textContent = 'Rp102.500';
+    if (headPrice) headPrice.textContent = 'Rp100.000';
+  }
+}
+
+function onWaInput() {
+  const waField = document.getElementById('f-wa');
+  if (!waField) return;
+
+  // Filter: Hanya angka saja
+  waField.value = waField.value.replace(/\D/g, '');
+
+  // Jika manual, update sidebar total live
+  if (activeGateway === 'manual') {
+    const totalEl = document.getElementById('sidebar-total');
+    const headPrice = document.querySelector('.order-price');
+    const wa = waField.value;
+    
+    let displayTotal = 'Rp100.xxx';
+    if (wa.length >= 3) {
+      const code = wa.slice(-3);
+      displayTotal = `Rp100.${code}`;
+    } else if (wa.length > 0) {
+      displayTotal = `Rp100.${wa.padStart(3, '0')}`;
+    }
+
+    if (totalEl) totalEl.textContent = displayTotal;
+    if (headPrice) headPrice.textContent = displayTotal;
+  }
 }
 
 // ── LOCALSTORAGE: SIMPAN & PULIHKAN PESANAN PENDING ────────────────

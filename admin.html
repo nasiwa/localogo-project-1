@@ -161,8 +161,9 @@
                 <th>Batch</th>
                 <th>Status</th>
                 <th>Quota</th>
-                <th>Progress</th>
-                <th>WhatsApp Link</th>
+                <th>Lunas (Paid)</th>
+                <th>Menunggu (Pending)</th>
+                <th>Link WA</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -178,9 +179,18 @@
             <div class="page-title">Daftar Order</div>
             <div class="page-sub">Semua transaksi pre-order OSPEK 2026</div>
           </div>
-          <div style="display:flex;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select id="filter-batch" onchange="filterOrders()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px;outline:none;">
+              <option value="all">Sua Batch</option>
+            </select>
+            <select id="filter-status" onchange="filterOrders()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px;outline:none;">
+              <option value="all">Semua Status</option>
+              <option value="paid">Paid (Lunas)</option>
+              <option value="pending">Pending (Menunggu)</option>
+              <option value="expired">Expired (Kadaluarsa)</option>
+            </select>
             <input type="text" id="order-search" placeholder="Cari nama / email / order ID..." oninput="filterOrders()"
-              style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px 14px;outline:none;width:260px;">
+              style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px 14px;outline:none;width:200px;">
           </div>
         </div>
 

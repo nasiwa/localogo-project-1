@@ -144,25 +144,45 @@ async function loadDashboard() {
 // ── BATCH MANAGEMENT ──────────────────────────────────────────────
 async function loadAdminBatches() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
-    const { batches } = await res.json();
+    const h = { 'x-admin-token': getAdminToken() };
+    const [bRes, oRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
+      fetch(`${BACKEND_URL}/api/admin/orders`, { headers: h })
+    ]);
+    const { batches } = await bRes.json();
+    const { orders } = await oRes.json();
+
+    // Pulihkan dropdown filter batch di halaman Orders
+    const filterBatchSelect = document.getElementById('filter-batch');
+    if (filterBatchSelect) {
+      filterBatchSelect.innerHTML = '<option value="all">Semua Batch</option>' + 
+        batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    }
+
     const tbody = document.getElementById('batch-tbody');
     if (tbody) {
-      tbody.innerHTML = batches.map(b => `
-        <tr>
-          <td style="font-weight:700">${b.name}</td>
-          <td><span class="pill ${b.status}">${b.status}</span></td>
-          <td>${b.total_slots}</td>
-          <td>${b.filled_slots}</td>
-          <td style="font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px">${b.wa_group_url || '—'}</td>
-          <td>
-            <div style="display:flex; gap:5px;">
-              <button class="btn-sm btn-edit" onclick='openEditModal(${JSON.stringify(b)})'>Edit</button>
-              <button class="btn-sm btn-primary" onclick="openMembersModal('${b.id}', '${b.name}')">Lihat</button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = batches.map(b => {
+        const batchOrders = orders.filter(o => o.batch_id === b.id);
+        const paidCount = batchOrders.filter(o => o.status === 'paid').length;
+        const pendingCount = batchOrders.filter(o => o.status === 'pending').length;
+
+        return `
+          <tr>
+            <td style="font-weight:700">${b.name}</td>
+            <td><span class="pill ${b.status}">${b.status}</span></td>
+            <td>${b.total_slots}</td>
+            <td style="color:var(--t); font-weight:700">${paidCount}</td>
+            <td style="color:#f59e0b; font-weight:700">${pendingCount}</td>
+            <td style="font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px">${b.wa_group_url || '—'}</td>
+            <td>
+              <div style="display:flex; gap:5px;">
+                <button class="btn-sm btn-edit" onclick='openEditModal(${JSON.stringify(b)})'>Edit</button>
+                <button class="btn-sm btn-primary" onclick="openMembersModal('${b.id}', '${b.name}')">Lihat</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
   } catch (e) {
     console.error('loadAdminBatches error:', e);
@@ -331,9 +351,25 @@ function closeMembersModal() {
 // ── UTILS ──────────────────────────────────────────────────────────
 function filterOrders() {
   const qEl = document.getElementById('order-search');
-  if (!qEl) return;
+  const bEl = document.getElementById('filter-batch');
+  const sEl = document.getElementById('filter-status');
+  if (!qEl || !bEl || !sEl) return;
+
   const q = qEl.value.toLowerCase();
-  renderOrders(allOrders.filter(o => o.full_name.toLowerCase().includes(q) || o.order_ref.toLowerCase().includes(q)));
+  const batchId = bEl.value;
+  const status = sEl.value;
+
+  const filtered = allOrders.filter(o => {
+    const matchSearch = o.full_name.toLowerCase().includes(q) || 
+                       o.order_ref.toLowerCase().includes(q) || 
+                       o.email.toLowerCase().includes(q);
+    const matchBatch = (batchId === 'all' || o.batch_id === batchId);
+    const matchStatus = (status === 'all' || o.status === status);
+    
+    return matchSearch && matchBatch && matchStatus;
+  });
+
+  renderOrders(filtered);
 }
 
 function showToast(msg) {
