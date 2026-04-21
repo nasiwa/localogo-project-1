@@ -59,6 +59,8 @@ function restorePendingOrder() {
       batch_name: saved.batch_name
     };
 
+    const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+
     // Pulihkan UI modal
     document.getElementById('pm-oid').textContent = saved.order_ref;
     document.getElementById('pm-name').textContent = saved.full_name;
@@ -71,14 +73,22 @@ function restorePendingOrder() {
     const secureNote = document.getElementById('secure-note');
     const rowUnique = document.getElementById('row-unique-nominal');
     const rowGateway = document.getElementById('row-total-gateway');
+    const sidebarAdminRow = document.getElementById('sidebar-admin-row');
+    const sidebarTotal = document.getElementById('sidebar-total');
+    const pmAmount = document.getElementById('pm-amount');
 
     if (paymentGateway === 'manual') {
       if (manualBox) manualBox.style.display = 'block';
       if (rowUnique) rowUnique.style.display = 'flex';
       if (rowGateway) rowGateway.style.display = 'none';
 
+      // Update sidebar & modal header dengan nominal unik
+      if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
+      if (sidebarTotal) sidebarTotal.textContent = fmtIDR(saved.amount || 100000);
+      if (pmAmount) pmAmount.textContent = fmtIDR(saved.amount || 100000);
+
       const manualTotalEl = document.getElementById('pm-total-manual');
-      if (manualTotalEl) manualTotalEl.textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(saved.amount || 100000);
+      if (manualTotalEl) manualTotalEl.textContent = fmtIDR(saved.amount || 100000);
 
       const bankInfoEl = document.getElementById('manual-bank-info');
       if (bankInfoEl && saved.amount) {
@@ -93,6 +103,14 @@ function restorePendingOrder() {
       const remainHrs = Math.floor(remainMs / 3600000);
       const remainMins = Math.floor((remainMs % 3600000) / 60000);
       if (secureNote) secureNote.textContent = `🔒 Slot masih diamankan — sisa ${remainHrs} jam ${remainMins} menit`;
+    } else {
+      if (manualBox) manualBox.style.display = 'none';
+      if (rowUnique) rowUnique.style.display = 'none';
+      if (rowGateway) rowGateway.style.display = 'flex';
+      if (sidebarAdminRow) sidebarAdminRow.style.display = 'flex';
+      if (sidebarTotal) sidebarTotal.textContent = 'Rp102.500';
+      if (pmAmount) pmAmount.textContent = 'Rp102.500';
+      if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
     }
 
     const confirmModal = document.getElementById('confirm-modal');
