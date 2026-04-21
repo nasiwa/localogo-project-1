@@ -1310,6 +1310,24 @@ footer p {
   opacity: 1;
   transform: translateY(0);
 }
+
+.pg-obscure {
+  position: relative;
+}
+
+.pg-obscure::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  z-index: 2;
+  mask-image: linear-gradient(to bottom, black 70%, transparent);
+}
   background: var(--t);
   color: white;
   padding: 8px 15px;
