@@ -780,6 +780,12 @@ input:focus {
   overflow-y: auto;
   box-shadow: var(--s3);
   animation: popIn .28s cubic-bezier(.34, 1.56, .64, 1);
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.pay-box::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .pay-top {
