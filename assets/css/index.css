@@ -1260,11 +1260,13 @@ footer p {
   padding: 40px;
   margin-bottom: 40px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .product-gallery {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
   margin-bottom: 30px;
 }
@@ -1276,11 +1278,6 @@ footer p {
   border: 1px solid var(--border);
   height: 250px;
   background: var(--bg-muted);
-}
-
-.pg-main {
-  grid-column: span 1;
-  grid-row: span 1;
 }
 
 .pg-img {
@@ -1300,7 +1297,7 @@ footer p {
   left: 0;
   right: 0;
   padding: 10px 15px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
   color: white;
   font-size: 11px;
   font-weight: 500;
@@ -1313,11 +1310,6 @@ footer p {
   opacity: 1;
   transform: translateY(0);
 }
-
-.pg-price-tag {
-  position: absolute;
-  top: 15px;
-  right: 15px;
   background: var(--t);
   color: white;
   padding: 8px 15px;
@@ -1385,15 +1377,20 @@ footer p {
   color: var(--tp);
   padding: 80px 40px 40px;
   margin-top: 80px;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .footer-grid {
   max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr 1.5fr;
   gap: 50px;
   margin-bottom: 60px;
+  box-sizing: border-box;
 }
 
 .footer-logo {
@@ -1409,7 +1406,8 @@ footer p {
 .footer-logo img {
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  mix-blend-mode: multiply;
+  opacity: 0.9;
 }
 
 .footer-desc {
