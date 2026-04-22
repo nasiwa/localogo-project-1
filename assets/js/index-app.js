@@ -418,12 +418,72 @@ async function handleBooking() {
     batch_name: activeBatch.batch_name
   };
 
-  // Pre-fill modal details
-  document.getElementById('pm-oid').textContent = 'Generating...';
-  document.getElementById('pm-name').textContent = body.full_name;
-  document.getElementById('pm-email').textContent = body.email;
-  document.getElementById('pm-wa').textContent = body.whatsapp;
-  document.getElementById('pm-batch').textContent = body.batch_name;
+  const btnLanjut = document.querySelector('[onclick="handleBooking()"]');
+  const originalLanjutText = btnLanjut ? btnLanjut.innerHTML : 'Lanjut ke Pembayaran &rarr;';
+
+  if (activeGateway === 'manual') {
+    if (btnLanjut) { btnLanjut.disabled = true; btnLanjut.innerHTML = 'Memproses...'; }
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        if (res.status === 409) showToast('⚠️ Email atau WhatsApp Anda sudah terdaftar atau Batch Penuh.');
+        else showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
+        if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
+        return;
+      }
+      
+      // Update global order state for Manual
+      currentOrder = { ...body, id: data.id, order_ref: data.order_ref, amount: data.amount };
+      paymentGateway = 'manual';
+      paymentToken = null; // No token for manual
+      
+      // Pre-fill modal details with generated data
+      document.getElementById('pm-oid').textContent = data.order_ref;
+      document.getElementById('pm-name').textContent = body.full_name;
+      document.getElementById('pm-email').textContent = body.email;
+      document.getElementById('pm-wa').textContent = body.whatsapp;
+      document.getElementById('pm-batch').textContent = body.batch_name;
+      
+      // Update manual payment unique nominal
+      const manualTotalEl = document.getElementById('pm-total-manual');
+      if (manualTotalEl) {
+        manualTotalEl.textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(data.amount);
+      }
+      
+      const bankInfoEl = document.getElementById('manual-bank-info');
+      if (bankInfoEl) {
+        const amountStr = String(data.amount);
+        const uniqueCode = amountStr.slice(-3);
+        const basePart = amountStr.slice(0, -3);
+        bankInfoEl.innerHTML = `${data.bank_info || 'Trf ke Rekening'}<br>` +
+          `<span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>` +
+          `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
+      }
+      
+      if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
+      
+      // Simpan backup agar jika refresh 6 jam, data ini kembali
+      savePendingOrder({ ...currentOrder, gateway: 'manual' }, data.amount, data.bank_info);
+
+    } catch (err) {
+      console.error(err);
+      showToast('⚠️ Gagal terhubung ke server');
+      if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
+      return;
+    }
+  } else {
+    // Duitku Flow: show popup first, generate order later
+    document.getElementById('pm-oid').textContent = 'Generating...';
+    document.getElementById('pm-name').textContent = body.full_name;
+    document.getElementById('pm-email').textContent = body.email;
+    document.getElementById('pm-wa').textContent = body.whatsapp;
+    document.getElementById('pm-batch').textContent = body.batch_name;
+  }
 
   // Handle Manual vs Gateway Layout in Modal
   const manualBox = document.getElementById('manual-box');
