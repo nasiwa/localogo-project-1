@@ -560,6 +560,24 @@ async function startPayment() {
         errorEvent: result => { showToast('⚠️ Pembayaran Gagal'); },
         closeEvent: result => { console.log('Duitku Closed'); }
       });
+    } else if (window.snap) {
+      // Midtrans Snap
+      window.snap.pay(paymentToken, {
+        onSuccess: async result => {
+          handleSuccessPayment();
+        },
+        onPending: result => {
+          showToast('⏳ Pembayaran pending — selesaikan dalam 30 menit');
+        },
+        onError: result => {
+          showToast('⚠ Pembayaran gagal, coba lagi');
+          setStep(2);
+        },
+        onClose: () => {
+          showToast('Pembayaran dibatalkan');
+          setStep(2);
+        },
+      });
     }
 
   } catch (err) {
@@ -568,33 +586,6 @@ async function startPayment() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
-  }
-}
-  
-  if (!paymentToken) return;
-  const modal = document.getElementById('confirm-modal');
-  if (modal) modal.classList.remove('show');
-
-  if (paymentGateway === 'duitku' && typeof checkout !== 'undefined') {
-    // Moved inside startPayment
-  } else if (window.snap) {
-    // Midtrans Snap
-    window.snap.pay(paymentToken, {
-      onSuccess: async result => {
-        handleSuccessPayment();
-      },
-      onPending: result => {
-        showToast('⏳ Pembayaran pending — selesaikan dalam 30 menit');
-      },
-      onError: result => {
-        showToast('⚠ Pembayaran gagal, coba lagi');
-        setStep(2);
-      },
-      onClose: () => {
-        showToast('Pembayaran dibatalkan');
-        setStep(2);
-      },
-    });
   }
 }
 
