@@ -586,9 +586,8 @@ async function startPayment() {
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.remove('show');
 
-  if (paymentGateway === 'duitku' && typeof duitkuPop !== 'undefined') {
-    duitkuPop.show(paymentToken, {
-      callbackUrl: `${BACKEND_URL}/api/duitku-webhook`,
+  if (paymentGateway === 'duitku' && typeof checkout !== 'undefined') {
+    checkout.process(paymentToken, {
       onSuccess: function (result) {
         handleSuccessPayment();
       },
