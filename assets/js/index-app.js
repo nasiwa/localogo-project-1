@@ -421,7 +421,7 @@ async function handleBooking() {
   // Trigger default highlight for VC (Virtual Account) if using Duitku
   if (activeGateway !== 'manual') {
     const vcCard = document.querySelector('.method-card.active');
-    if (vcCard) highlightMethod('VC', vcCard);
+    if (vcCard) highlightMethod('', vcCard);
   }
 }
 
@@ -440,8 +440,8 @@ window.highlightMethod = function(methodCode, el) {
     payBtnModal.style.display = 'block';
     
     // Map code to readable name for button
-    const names = { 'QR': 'QRIS', 'SP': 'ShopeePay', 'OV': 'OVO', 'DA': 'DANA', 'VC': 'Virtual Account' };
-    payBtnModal.innerHTML = `<span class="icon">💳</span> Bayar Sekarang via ${names[methodCode] || 'Gateway'}`;
+    const names = { 'QR': 'QRIS', 'SP': 'ShopeePay', 'OV': 'OVO', 'DA': 'DANA', '': 'Virtual Account' };
+    payBtnModal.innerHTML = `<span class="icon">💳</span> Bayar Sekarang via ${names[methodCode] || 'Virtual Account'}`;
   }
 };
 
