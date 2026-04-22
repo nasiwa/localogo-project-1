@@ -588,17 +588,21 @@ async function startPayment() {
 
   if (paymentGateway === 'duitku' && typeof checkout !== 'undefined') {
     checkout.process(paymentToken, {
-      onSuccess: function (result) {
+      successEvent: function (result) {
+        console.log('Duitku Success:', result);
         handleSuccessPayment();
       },
-      onPending: function (result) {
-        showToast('⏳ Pembayaran Pending');
+      pendingEvent: function (result) {
+        console.log('Duitku Pending:', result);
+        showToast('⏳ Pembayaran Sedang Diproses');
       },
-      onError: function (result) {
-        showToast('⚠ Pembayaran Gagal');
+      errorEvent: function (result) {
+        console.log('Duitku Error:', result);
+        showToast('⚠️ Pembayaran Gagal');
       },
-      onClose: function () {
-        showToast('Pembayaran Dibatalkan');
+      closeEvent: function (result) {
+        console.log('Duitku Closed');
+        // Tidak perlu toast batal jika user hanya menutup
       }
     });
   } else if (window.snap) {
@@ -645,12 +649,9 @@ async function handleSuccessPayment() {
 }
 
 function closeConfirm() {
-  // ⚠️ Jangan hapus localStorage saat batal — slot masih aktif di DB
-  // User bisa refresh dan modal akan muncul kembali
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.remove('show');
   setStep(2);
-  showToast('⚠️ Slot masih diamankan 6 jam. Refresh halaman untuk lanjut bayar.');
 }
 function closeSuccess() {
   const modal = document.getElementById('success-modal');
