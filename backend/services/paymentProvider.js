@@ -31,7 +31,7 @@ async function createTransaction(gateway, params) {
       productDetails: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
       email: email,
       phoneNumber: whatsapp,
-      customerName: full_name,
+      paymentMethod: 'QR', // Set default to QRIS for testing (mandatory in some Sandbox accounts)
       callbackUrl: `${cleanBackendUrl}/api/duitku-webhook`,
       returnUrl: `${cleanFrontendUrl}/?order=${orderRef}`,
       itemDetails: [

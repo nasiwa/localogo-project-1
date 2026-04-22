@@ -44,7 +44,7 @@ async function createDuitkuTransaction(params) {
     productDetails: productDetails,
     email: email,
     phoneNumber: params.phoneNumber || '', 
-    customerDetail: params.customerName || email, 
+    paymentMethod: params.paymentMethod || '', // Added mandatory field
     callbackUrl: callbackUrl,
     returnUrl: returnUrl,
     signature: signature,
