@@ -30,7 +30,19 @@ async function createTransaction(gateway, params) {
       phoneNumber: whatsapp,
       customerName: full_name,
       callbackUrl: `${backendUrl || ''}/api/duitku-webhook`,
-      returnUrl: `${frontendUrl || ''}/?order=${orderRef}`
+      returnUrl: `${frontendUrl || ''}/?order=${orderRef}`,
+      itemDetails: [
+        {
+          name: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
+          price: 100000,
+          quantity: 1
+        },
+        {
+          name: 'Biaya Layanan',
+          price: 2500,
+          quantity: 1
+        }
+      ]
     });
 
     return {

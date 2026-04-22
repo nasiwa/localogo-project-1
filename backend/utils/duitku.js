@@ -33,7 +33,7 @@ function generateCallbackSignature(amount, merchantOrderId) {
  * Request Payment Token from Duitku (Inquiry)
  */
 async function createDuitkuTransaction(params) {
-  const { orderId, amount, productDetails, email, callbackUrl, returnUrl } = params;
+  const { orderId, amount, productDetails, email, callbackUrl, returnUrl, itemDetails } = params;
   
   const signature = generateRequestSignature(orderId, amount);
 
@@ -43,23 +43,26 @@ async function createDuitkuTransaction(params) {
     merchantOrderId: orderId,
     productDetails: productDetails,
     email: email,
-    phoneNumber: params.phoneNumber || '', // Added
-    customerDetail: params.customerName || email, // Added
+    phoneNumber: params.phoneNumber || '', 
+    customerDetail: params.customerName || email, 
     callbackUrl: callbackUrl,
     returnUrl: returnUrl,
     signature: signature,
+    itemDetails: itemDetails || [] // Added support for detailed items
   };
 
   try {
     const response = await axios.post(ENDPOINT, payload);
     if (response.data && response.data.resultCode !== '00') {
       console.error('Duitku API Rejection:', response.data);
-      throw new Error(response.data.message || 'Ditolak oleh Duitku');
+      const errorMsg = response.data.reference || response.data.message || 'Ditolak oleh Duitku';
+      throw new Error(errorMsg);
     }
     return response.data; 
   } catch (error) {
-    console.error('Duitku Inquiry Error:', error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || 'Gagal membuat transaksi Duitku');
+    const remoteError = error.response?.data?.message || error.response?.data?.reference || error.message;
+    console.error('Duitku Inquiry Error:', remoteError);
+    throw new Error(remoteError);
   }
 }
 
