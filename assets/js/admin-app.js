@@ -207,6 +207,17 @@ function openEditModal(b) {
   document.getElementById('edit-wa-link').value = b.wa_group_url || '';
   document.getElementById('edit-status').value = b.status;
   
+  const revealInput = document.getElementById('edit-reveal');
+  if (revealInput) {
+    if (b.reveal_at) {
+      const d = new Date(b.reveal_at);
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      revealInput.value = d.toISOString().slice(0, 16);
+    } else {
+      revealInput.value = '';
+    }
+  }
+
   const modal = document.getElementById('edit-modal');
   if (modal) modal.classList.add('show');
 }
@@ -218,11 +229,18 @@ function closeEditModal() {
 
 async function saveBatch() {
   const id = document.getElementById('edit-batch-id').value;
+  const revealVal = document.getElementById('edit-reveal').value;
+  let revealISO = null;
+  if (revealVal) {
+    revealISO = new Date(revealVal).toISOString();
+  }
+
   const payload = {
     name: document.getElementById('edit-name').value,
     total_slots: parseInt(document.getElementById('edit-slots').value),
     wa_group_url: document.getElementById('edit-wa-link').value,
-    status: document.getElementById('edit-status').value
+    status: document.getElementById('edit-status').value,
+    reveal_at: revealISO
   };
   try {
     await fetch(`${BACKEND_URL}/api/admin/batch/${id}`, {
