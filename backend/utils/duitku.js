@@ -55,14 +55,18 @@ async function createDuitkuTransaction(params) {
     const response = await axios.post(ENDPOINT, payload);
     if (response.data && response.data.resultCode !== '00') {
       console.error('Duitku API Rejection:', response.data);
+      // Duitku often sends error details in 'reference' or 'message'
       const errorMsg = response.data.reference || response.data.message || 'Ditolak oleh Duitku';
       throw new Error(errorMsg);
     }
     return response.data; 
   } catch (error) {
-    const remoteError = error.response?.data?.message || error.response?.data?.reference || error.message;
-    console.error('Duitku Inquiry Error:', remoteError);
-    throw new Error(remoteError);
+    // Catch Axios errors or our custom throw
+  } catch (error) {
+    const remoteData = error.response?.data;
+    const remoteMsg = remoteData?.reference || remoteData?.message || error.message;
+    console.error('Duitku Inquiry Error:', remoteMsg);
+    throw new Error(remoteMsg);
   }
 }
 

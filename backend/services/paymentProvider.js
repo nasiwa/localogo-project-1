@@ -22,6 +22,9 @@ async function createTransaction(gateway, params) {
   }
 
   if (gateway === 'duitku') {
+    const cleanBackendUrl = (backendUrl || '').trim().replace(/\/+$/, '');
+    const cleanFrontendUrl = (frontendUrl || '').trim().replace(/\/+$/, '');
+    
     const duitkuRes = await createDuitkuTransaction({
       orderId: orderRef,
       amount: amount,
@@ -29,8 +32,8 @@ async function createTransaction(gateway, params) {
       email: email,
       phoneNumber: whatsapp,
       customerName: full_name,
-      callbackUrl: `${backendUrl || ''}/api/duitku-webhook`,
-      returnUrl: `${frontendUrl || ''}/?order=${orderRef}`,
+      callbackUrl: `${cleanBackendUrl}/api/duitku-webhook`,
+      returnUrl: `${cleanFrontendUrl}/?order=${orderRef}`,
       itemDetails: [
         {
           name: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
