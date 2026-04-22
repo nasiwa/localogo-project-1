@@ -31,7 +31,7 @@ async function createTransaction(gateway, params) {
       productDetails: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
       email: email,
       phoneNumber: whatsapp,
-      paymentMethod: 'VC', // Switched from 'QR' because 'VC' is confirmed active in your Sandbox
+      paymentMethod: params.paymentMethod || 'QR', // Support dynamic method from frontend
       callbackUrl: `${cleanBackendUrl}/api/duitku-webhook`,
       returnUrl: `${cleanFrontendUrl}/?order=${orderRef}`,
       itemDetails: [

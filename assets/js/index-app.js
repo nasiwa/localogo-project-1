@@ -10,9 +10,10 @@ if (snapScript) {
 // ── STATE ─────────────────────────────────────────────────────────
 let activeBatch = null;
 let paymentToken = null;
-let paymentGateway = 'midtrans';
+let paymentGateway = 'manual';
+let selectedPaymentMethod = 'QR'; // Default (QRIS)
 let currentOrder = {};
-let activeGateway = 'midtrans'; // akan di-update dari /api/config
+let activeGateway = 'manual';
 
 // ── INITIAL LOAD ──────────────────────────────────────────────────
 async function init() {
@@ -392,6 +393,7 @@ async function handleBooking() {
       email: document.getElementById('f-email').value.trim(),
       whatsapp: document.getElementById('f-wa').value.trim(),
       batch_id: activeBatch.id,
+      payment_method: selectedPaymentMethod,
     };
 
     const res = await fetch(`${BACKEND_URL}/api/create-order`, {
@@ -474,6 +476,9 @@ async function handleBooking() {
       if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
     } else {
       if (manualBox) manualBox.style.display = 'none';
+      const duitkuSelector = document.getElementById('duitku-selector');
+      if (duitkuSelector) duitkuSelector.style.display = 'block';
+
       if (rowUnique) rowUnique.style.display = 'none';
       if (rowGateway) rowGateway.style.display = 'flex';
 
@@ -847,3 +852,14 @@ function showSlides(n) {
 
 // Ensure init after everything is loaded
 window.addEventListener('load', initCarousel);
+// ── HELPER: SELECT PAYMENT METHOD ──────────────────────────
+window.selectMethod = function(code, el) {
+  selectedPaymentMethod = code;
+  
+  // Update UI
+  const cards = document.querySelectorAll('.method-card');
+  cards.forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  
+  console.log('Payment method selected:', code);
+};

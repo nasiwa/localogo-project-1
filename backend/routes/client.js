@@ -39,7 +39,7 @@ router.get('/batches', async (req, res) => {
  */
 router.post('/create-order', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
-  const { full_name, email, whatsapp, batch_id } = req.body;
+  const { full_name, email, whatsapp, batch_id, payment_method } = req.body;
 
   if (!full_name || !email || !whatsapp || !batch_id) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
@@ -78,6 +78,7 @@ router.post('/create-order', async (req, res) => {
       full_name,
       email,
       whatsapp,
+      paymentMethod: payment_method, // Dynamically selected
       batchName: claimData.batch_name,
       backendUrl: process.env.BACKEND_URL,
       frontendUrl: process.env.FRONTEND_URL_OVERRIDE || process.env.FRONTEND_URL
