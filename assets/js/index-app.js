@@ -11,6 +11,7 @@ if (snapScript) {
 let activeBatch = null;
 let paymentToken = null;
 let paymentGateway = 'manual';
+let selectedPaymentMethod = 'VC';
 let currentOrder = {};
 let activeGateway = 'manual';
 
@@ -376,15 +377,59 @@ function validate() {
 }
 
 // ── HANDLE BOOKING ─────────────────────────────────────────────────
+// ── STEP 1: SHOW CONFIRMATION MODAL ──────────────────────────
 async function handleBooking() {
   if (!validate()) return;
   if (!activeBatch) { showToast('⚠ Tidak ada batch aktif'); return; }
 
-  const btn = document.getElementById('btn-pay');
-  if (!btn) return;
-  btn.disabled = true;
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = '<span class="spinner"></span>&nbsp; Memproses...';
+  const body = {
+    full_name: document.getElementById('f-name').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    whatsapp: document.getElementById('f-wa').value.trim(),
+    batch_id: activeBatch.id,
+    batch_name: activeBatch.batch_name
+  };
+
+  // Pre-fill modal details
+  document.getElementById('pm-oid').textContent = 'Generating...';
+  document.getElementById('pm-name').textContent = body.full_name;
+  document.getElementById('pm-email').textContent = body.email;
+  document.getElementById('pm-wa').textContent = body.whatsapp;
+  document.getElementById('pm-batch').textContent = body.batch_name;
+
+  // Handle Manual vs Gateway Layout in Modal
+  const manualBox = document.getElementById('manual-box');
+  const duitkuSelector = document.getElementById('duitku-selector');
+  const payBtnModal = document.getElementById('btn-pay-modal');
+  const secureNote = document.getElementById('secure-note');
+
+  if (activeGateway === 'manual') {
+    if (manualBox) manualBox.style.display = 'block';
+    if (duitkuSelector) duitkuSelector.style.display = 'none';
+    if (payBtnModal) payBtnModal.style.display = 'block'; // Manual needs final submit
+    if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
+  } else {
+    if (manualBox) manualBox.style.display = 'none';
+    if (duitkuSelector) duitkuSelector.style.display = 'block';
+    if (payBtnModal) payBtnModal.style.display = 'none'; // Will trigger on grid click
+    if (secureNote) secureNote.textContent = '🔒 Pembayaran aman melalui Duitku.';
+  }
+
+  const modal = document.getElementById('confirm-modal');
+  if (modal) modal.classList.add('show');
+}
+
+// ── STEP 2: PROCESS ACTUAL BOOKING & OPEN PAYMENT ───────────
+window.selectAndPay = async function(methodCode, el) {
+  selectedPaymentMethod = methodCode;
+  
+  // Visual feedback on card
+  const cards = document.querySelectorAll('.method-card');
+  cards.forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+
+  const btn = el; // Show spinner in card if possible, but for now just toast
+  showToast('📡 Menyiapkan pembayaran...');
 
   try {
     const body = {
@@ -392,6 +437,7 @@ async function handleBooking() {
       email: document.getElementById('f-email').value.trim(),
       whatsapp: document.getElementById('f-wa').value.trim(),
       batch_id: activeBatch.id,
+      payment_method: methodCode
     };
 
     const res = await fetch(`${BACKEND_URL}/api/create-order`, {
@@ -402,44 +448,33 @@ async function handleBooking() {
     const data = await res.json();
 
     if (!data.success) {
-      const errorMsg = data.error || 'Gagal membuat order';
-      console.error('Order Creation Failed:', errorMsg);
-      showToast('⚠️ ' + errorMsg);
+      showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
       return;
     }
 
     // Store state
     paymentToken = data.token;
     paymentGateway = data.gateway;
-    currentOrder = { 
-      ...body, 
-      id: data.id, 
-      order_ref: data.order_ref, 
-      batch_name: data.batch_name 
-    };
+    currentOrder = { ...body, id: data.id, order_ref: data.order_ref, batch_name: data.batch_name };
 
-    // 💾 Simpan ke localStorage agar bisa dipulihkan setelah refresh
+    // Update modal with real order ID just in case
+    document.getElementById('pm-oid').textContent = data.order_ref;
+
+    // Save to localStorage
     savePendingOrder(
       { ...currentOrder, token: data.token, gateway: data.gateway },
       data.amount,
       data.bank_info
     );
-    console.log('Order Created Successfully:', currentOrder);
 
-    // Show confirm modal
-    document.getElementById('pm-oid').textContent = data.order_ref;
-    document.getElementById('pm-name').textContent = body.full_name;
-    document.getElementById('pm-email').textContent = body.email;
-    document.getElementById('pm-wa').textContent = body.whatsapp;
-    document.getElementById('pm-batch').textContent = data.batch_name;
-    
-    // Handle Gateway Layout
-    const payBtn = document.getElementById('btn-pay-modal');
-    const manualBox = document.getElementById('manual-box');
-    const secureNote = document.getElementById('secure-note');
-    
-    const rowUnique = document.getElementById('row-unique-nominal');
-    const rowGateway = document.getElementById('row-total-gateway');
+    // IMMEDIATELY START PAYMENT
+    startPayment();
+
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ Gagal terhubung ke server');
+  }
+};
     
     const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
     const sidebarAdminRow = document.getElementById('sidebar-admin-row');
