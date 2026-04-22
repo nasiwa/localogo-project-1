@@ -53,10 +53,9 @@ async function createDuitkuTransaction(params) {
 
   try {
     const response = await axios.post(ENDPOINT, payload);
-    if (response.data && response.data.resultCode !== '00') {
+    if (response.data && response.data.resultCode && response.data.resultCode !== '00') {
       console.error('Duitku API Rejection:', response.data);
-      // Duitku often sends error details in 'reference' or 'message'
-      const errorMsg = response.data.reference || response.data.message || 'Ditolak oleh Duitku';
+      const errorMsg = response.data.statusMessage || response.data.Message || 'Ditolak oleh Duitku';
       throw new Error(errorMsg);
     }
     return response.data; 
