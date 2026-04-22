@@ -450,11 +450,24 @@ async function handleBooking() {
       document.getElementById('pm-batch').textContent = body.batch_name;
       
       // Update manual payment unique nominal
-      const manualTotalEl = document.getElementById('pm-total-manual');
-      if (manualTotalEl) {
-        manualTotalEl.textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(data.amount);
-      }
+      const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
       
+      const manualTotalEl = document.getElementById('pm-total-manual');
+      if (manualTotalEl) manualTotalEl.textContent = fmtIDR(data.amount);
+
+      const pmAmount = document.getElementById('pm-amount');
+      if (pmAmount) pmAmount.textContent = fmtIDR(data.amount);
+
+      const sidebarAdminRow = document.getElementById('sidebar-admin-row');
+      const sidebarTotal = document.getElementById('sidebar-total');
+      if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
+      if (sidebarTotal) sidebarTotal.textContent = fmtIDR(data.amount);
+
+      const rowUnique = document.getElementById('row-unique-nominal');
+      const rowGateway = document.getElementById('row-total-gateway');
+      if (rowUnique) rowUnique.style.display = 'flex';
+      if (rowGateway) rowGateway.style.display = 'none';
+
       const bankInfoEl = document.getElementById('manual-bank-info');
       if (bankInfoEl) {
         const amountStr = String(data.amount);
