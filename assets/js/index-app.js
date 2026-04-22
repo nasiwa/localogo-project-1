@@ -449,7 +449,7 @@ async function handleBooking() {
   // Trigger default highlight for VC (Virtual Account) if using Duitku
   if (activeGateway !== 'manual') {
     const vcCard = document.querySelector('.method-card.active');
-    if (vcCard) highlightMethod('', vcCard);
+    if (vcCard) highlightMethod('BC', vcCard);
   }
 }
 
@@ -468,7 +468,7 @@ window.highlightMethod = function(methodCode, el) {
     payBtnModal.style.display = 'block';
     
     // Map code to readable name for button
-    const names = { 'QR': 'QRIS', 'SP': 'ShopeePay', 'OV': 'OVO', 'DA': 'DANA', '': 'Virtual Account' };
+    const names = { 'QR': 'QRIS', 'SP': 'ShopeePay', 'OV': 'OVO', 'DA': 'DANA', 'BC': 'Virtual Account' };
     payBtnModal.innerHTML = `<span class="icon">💳</span> Bayar Sekarang via ${names[methodCode] || 'Virtual Account'}`;
   }
 };
@@ -557,14 +557,13 @@ async function startPayment() {
       body: JSON.stringify(body),
     });
     
-    if (res.status === 409) {
-      showToast('⚠️ Data Anda sudah terdaftar. Silakan selesaikan pembayaran sebelumnya atau gunakan WhatsApp lain.');
-      return;
-    }
-
     const data = await res.json();
     if (!data.success) {
-      showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
+      if (res.status === 409) {
+        showToast('⚠️ Email atau WhatsApp Anda sudah terdaftar. Gunakan data lain atau selesaikan pembayaran sebelumnya.');
+      } else {
+        showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
+      }
       return;
     }
 
