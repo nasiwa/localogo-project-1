@@ -475,65 +475,6 @@ window.selectAndPay = async function(methodCode, el) {
     showToast('⚠️ Gagal terhubung ke server');
   }
 };
-    
-    const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
-    const sidebarAdminRow = document.getElementById('sidebar-admin-row');
-    const sidebarTotal = document.getElementById('sidebar-total');
-    const pmAmount = document.getElementById('pm-amount');
-
-    if (paymentGateway === 'manual') {
-      if (manualBox) manualBox.style.display = 'block';
-      if (rowUnique) rowUnique.style.display = 'flex';
-      if (rowGateway) rowGateway.style.display = 'none';
-
-      // Sembunyikan baris Admin, update total sidebar & header modal
-      if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
-      if (sidebarTotal) sidebarTotal.textContent = fmtIDR(data.amount || 100000);
-      if (pmAmount) pmAmount.textContent = fmtIDR(data.amount || 100000);
-      
-      const manualTotalEl = document.getElementById('pm-total-manual');
-      if (manualTotalEl) manualTotalEl.textContent = fmtIDR(data.amount || 100000);
-      
-      const bankInfoEl = document.getElementById('manual-bank-info');
-      const amountStr = String(data.amount || 100000);
-      const uniqueCode = amountStr.slice(-3);
-      const basePart = amountStr.slice(0, -3);
-      
-      if (bankInfoEl) {
-        bankInfoEl.innerHTML = `${data.bank_info || 'Bank Info N/A'}<br>` +
-          `<span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>` +
-          `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
-      }
-      
-      if (payBtn) payBtn.textContent = 'Selesaikan & Kirim Bukti';
-      if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
-    } else {
-      if (manualBox) manualBox.style.display = 'none';
-
-      if (rowUnique) rowUnique.style.display = 'none';
-      if (rowGateway) rowGateway.style.display = 'flex';
-
-      // Tampilkan baris Admin, update total yang sudah include admin
-      if (sidebarAdminRow) sidebarAdminRow.style.display = 'flex';
-      if (sidebarTotal) sidebarTotal.textContent = 'Rp102.500';
-      if (pmAmount) pmAmount.textContent = 'Rp102.500';
-
-      if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
-      if (secureNote) secureNote.textContent = `🔒 Diproses oleh ${paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1)}`;
-    }
-    
-    const confirmModal = document.getElementById('confirm-modal');
-    if (confirmModal) confirmModal.classList.add('show');
-    setStep(3);
-
-  } catch (e) {
-    showToast('⚠ Koneksi gagal, coba lagi');
-    console.error(e);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalHtml;
-  }
-}
 
 // ── START PAYMENT ─────────────────────────────────────────────
 async function startPayment() {
