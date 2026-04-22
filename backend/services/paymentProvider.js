@@ -50,7 +50,8 @@ async function createTransaction(gateway, params) {
 
     return {
       gateway: 'duitku',
-      token: duitkuRes.token,
+      token: duitkuRes.reference, // Map Duitku reference to token for the frontend
+      reference: duitkuRes.reference
     };
   }
 
