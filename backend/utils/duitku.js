@@ -63,8 +63,9 @@ async function createDuitkuTransaction(params) {
   } catch (error) {
     // Catch Axios errors or our custom throw
     const remoteData = error.response?.data;
-    const remoteMsg = remoteData?.reference || remoteData?.message || error.message;
-    console.error('Duitku Inquiry Error:', remoteMsg);
+    // Duitku V2 often uses statusMessage, reference, or Message
+    const remoteMsg = remoteData?.statusMessage || remoteData?.Message || remoteData?.reference || remoteData?.message || error.message;
+    console.error('Duitku Inquiry Error:', remoteData || error.message);
     throw new Error(remoteMsg);
   }
 }

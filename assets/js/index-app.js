@@ -402,7 +402,9 @@ async function handleBooking() {
     const data = await res.json();
 
     if (!data.success) {
-      showToast('⚠ ' + (data.error || 'Gagal membuat order'));
+      const errorMsg = data.error || 'Gagal membuat order';
+      console.error('Order Creation Failed:', errorMsg);
+      showToast('⚠️ ' + errorMsg);
       return;
     }
 
