@@ -62,7 +62,6 @@ async function createDuitkuTransaction(params) {
     return response.data; 
   } catch (error) {
     // Catch Axios errors or our custom throw
-  } catch (error) {
     const remoteData = error.response?.data;
     const remoteMsg = remoteData?.reference || remoteData?.message || error.message;
     console.error('Duitku Inquiry Error:', remoteMsg);
