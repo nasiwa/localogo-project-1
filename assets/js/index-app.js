@@ -417,10 +417,16 @@ async function handleBooking() {
 
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.add('show');
+
+  // Trigger default highlight for VC (Virtual Account) if using Duitku
+  if (activeGateway !== 'manual') {
+    const vcCard = document.querySelector('.method-card.active');
+    if (vcCard) highlightMethod('VC', vcCard);
+  }
 }
 
-// ── STEP 2: PROCESS ACTUAL BOOKING & OPEN PAYMENT ───────────
-window.selectAndPay = async function(methodCode, el) {
+// ── STEP 2: HIGHLIGHT SELECTION ─────────────────────────────
+window.highlightMethod = function(methodCode, el) {
   selectedPaymentMethod = methodCode;
   
   // Visual feedback on card
@@ -428,58 +434,25 @@ window.selectAndPay = async function(methodCode, el) {
   cards.forEach(c => c.classList.remove('active'));
   el.classList.add('active');
 
-  const btn = el; // Show spinner in card if possible, but for now just toast
-  showToast('📡 Menyiapkan pembayaran...');
-
-  try {
-    const body = {
-      full_name: document.getElementById('f-name').value.trim(),
-      email: document.getElementById('f-email').value.trim(),
-      whatsapp: document.getElementById('f-wa').value.trim(),
-      batch_id: activeBatch.id,
-      payment_method: methodCode
-    };
-
-    const res = await fetch(`${BACKEND_URL}/api/create-order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-
-    if (!data.success) {
-      showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
-      return;
-    }
-
-    // Store state
-    paymentToken = data.token;
-    paymentGateway = data.gateway;
-    currentOrder = { ...body, id: data.id, order_ref: data.order_ref, batch_name: data.batch_name };
-
-    // Update modal with real order ID just in case
-    document.getElementById('pm-oid').textContent = data.order_ref;
-
-    // Save to localStorage
-    savePendingOrder(
-      { ...currentOrder, token: data.token, gateway: data.gateway },
-      data.amount,
-      data.bank_info
-    );
-
-    // IMMEDIATELY START PAYMENT
-    startPayment();
-
-  } catch (err) {
-    console.error(err);
-    showToast('⚠️ Gagal terhubung ke server');
+  // Show and update the Big Payment Button
+  const payBtnModal = document.getElementById('btn-pay-modal');
+  if (payBtnModal) {
+    payBtnModal.style.display = 'block';
+    
+    // Map code to readable name for button
+    const names = { 'QR': 'QRIS', 'SP': 'ShopeePay', 'OV': 'OVO', 'DA': 'DANA', 'VC': 'Virtual Account' };
+    payBtnModal.innerHTML = `<span class="icon">💳</span> Bayar Sekarang via ${names[methodCode] || 'Gateway'}`;
   }
 };
 
-// ── START PAYMENT ─────────────────────────────────────────────
+// ── STEP 3: PROCESS ACTUAL BOOKING & OPEN PAYMENT ───────────
 async function startPayment() {
   const btn = document.getElementById('btn-pay-modal');
+  if (!btn) return;
   
+  const originalHtml = btn.innerHTML;
+
+  // CASE 1: MANUAL PAYMENT (PROOF UPLOAD)
   if (paymentGateway === 'manual') {
     const fileInput = document.getElementById('proof-file');
     if (!fileInput || !fileInput.files[0]) {
@@ -487,10 +460,8 @@ async function startPayment() {
        return;
     }
 
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>&nbsp; Mengirim...';
-    }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>&nbsp; Mengirim...';
 
     try {
       const file = fileInput.files[0];
@@ -498,26 +469,18 @@ async function startPayment() {
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentOrder.order_ref}_${Date.now()}.${fileExt}`;
-      const filePath = fileName; // Flat path is safer
+      const filePath = fileName;
 
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadErr } = await _supabase.storage
         .from('transfer_proofs')
         .upload(filePath, compressedFile);
 
-      if (uploadErr) {
-        console.error('Storage Upload Error:', uploadErr);
-        throw new Error('Gagal upload ke storage: ' + uploadErr.message);
-      }
+      if (uploadErr) throw new Error('Gagal upload: ' + uploadErr.message);
 
-      // Get Public URL
-      const { data: urlData } = _supabase.storage
-        .from('transfer_proofs')
-        .getPublicUrl(filePath);
+      const { data: urlData } = _supabase.storage.from('transfer_proofs').getPublicUrl(filePath);
 
-      console.log('Generated Proof URL:', urlData.publicUrl);
-
-      // Update Order Table via Backend (to bypass RLS) using internal ID
+      // Save proof to DB via Backend
       const submitRes = await fetch(`${BACKEND_URL}/api/submit-proof`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -529,54 +492,91 @@ async function startPayment() {
       });
 
       const submitData = await submitRes.json();
-      console.log('Submit Result:', submitData);
-
-      if (!submitData.success || submitData.count === 0) {
-        throw new Error(submitData.error || 'Gagal menyimpan data bukti ke database');
-      }
+      if (!submitData.success) throw new Error(submitData.error || 'Database save failed');
 
       showToast('✅ Bukti terkirim! Admin akan segera memverifikasi.');
-      clearPendingOrder(); // 🗑️ Hapus state setelah sukses
+      clearPendingOrder();
       const modal = document.getElementById('confirm-modal');
       if (modal) modal.classList.remove('show');
-      
       handleSuccessManual();
 
     } catch (err) {
-      console.error('Upload error:', err);
-      showToast('❌ Gagal upload bukti: ' + err.message);
+      console.error('Manual upload error:', err);
+      showToast('❌ Gagal: ' + err.message);
     } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Selesaikan & Kirim Bukti';
-      }
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
     }
     return;
   }
+
+  // CASE 2: DUITKU / GATEWAY FLOW (BOOK THEN POPUP)
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>&nbsp; Memproses Pembayaran...';
+
+  try {
+    const body = {
+      full_name: document.getElementById('f-name').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      whatsapp: document.getElementById('f-wa').value.trim(),
+      batch_id: activeBatch.id,
+      payment_method: selectedPaymentMethod
+    };
+
+    const res = await fetch(`${BACKEND_URL}/api/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    
+    if (res.status === 409) {
+      showToast('⚠️ Data Anda sudah terdaftar. Silakan selesaikan pembayaran sebelumnya atau gunakan WhatsApp lain.');
+      return;
+    }
+
+    const data = await res.json();
+    if (!data.success) {
+      showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
+      return;
+    }
+
+    // Update state & localStorage
+    paymentToken = data.token;
+    paymentGateway = data.gateway;
+    currentOrder = { ...body, id: data.id, order_ref: data.order_ref, batch_name: data.batch_name };
+    document.getElementById('pm-oid').textContent = data.order_ref;
+    
+    savePendingOrder(
+      { ...currentOrder, token: data.token, gateway: data.gateway },
+      data.amount,
+      data.bank_info
+    );
+
+    // Trigger SDK Pop-up
+    if (paymentGateway === 'duitku' && typeof checkout !== 'undefined') {
+      checkout.process(paymentToken, {
+        successEvent: result => { handleSuccessPayment(); },
+        pendingEvent: result => { showToast('⏳ Pembayaran Sedang Diproses'); },
+        errorEvent: result => { showToast('⚠️ Pembayaran Gagal'); },
+        closeEvent: result => { console.log('Duitku Closed'); }
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ Gagal terhubung ke server');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
   
   if (!paymentToken) return;
   const modal = document.getElementById('confirm-modal');
   if (modal) modal.classList.remove('show');
 
   if (paymentGateway === 'duitku' && typeof checkout !== 'undefined') {
-    checkout.process(paymentToken, {
-      successEvent: function (result) {
-        console.log('Duitku Success:', result);
-        handleSuccessPayment();
-      },
-      pendingEvent: function (result) {
-        console.log('Duitku Pending:', result);
-        showToast('⏳ Pembayaran Sedang Diproses');
-      },
-      errorEvent: function (result) {
-        console.log('Duitku Error:', result);
-        showToast('⚠️ Pembayaran Gagal');
-      },
-      closeEvent: function (result) {
-        console.log('Duitku Closed');
-        // Tidak perlu toast batal jika user hanya menutup
-      }
-    });
+    // Moved inside startPayment
   } else if (window.snap) {
     // Midtrans Snap
     window.snap.pay(paymentToken, {

@@ -306,29 +306,32 @@
 
         <!-- PAYMENT METHOD SELECTOR (Duitku) -->
         <div id="duitku-selector" style="display:none;">
-          <div class="pay-methods-title">Pilih Metode Pembayaran</div>
+          <div class="pay-methods-title">Langkah Terakhir: Pilih Metode Pembayaran</div>
+          <p style="text-align:center; font-size:14px; color:var(--txm); margin-bottom:15px; opacity:0.8;">
+            Silakan pilih salah satu logo di bawah ini untuk melihat detail instruksi pembayaran.
+          </p>
           <div class="methods-grid" id="methods-grid">
-            <div class="method-card" onclick="selectAndPay('QR', this)">
+            <div class="method-card" onclick="highlightMethod('QR', this)">
               <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" class="method-icon" alt="QRIS">
               <div class="method-name">QRIS</div>
               <div class="method-fee">Fee 0.7%</div>
             </div>
-            <div class="method-card" onclick="selectAndPay('SP', this)">
+            <div class="method-card" onclick="highlightMethod('SP', this)">
               <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/ShopeePay_logo.svg" class="method-icon" alt="ShopeePay">
               <div class="method-name">ShopeePay</div>
               <div class="method-fee">Fee 2%</div>
             </div>
-            <div class="method-card" onclick="selectAndPay('OV', this)">
+            <div class="method-card" onclick="highlightMethod('OV', this)">
               <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" class="method-icon" alt="OVO">
               <div class="method-name">OVO</div>
               <div class="method-fee">Fee 3%</div>
             </div>
-            <div class="method-card" onclick="selectAndPay('DA', this)">
+            <div class="method-card" onclick="highlightMethod('DA', this)">
               <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" class="method-icon" alt="DANA">
               <div class="method-name">DANA</div>
               <div class="method-fee">Fee 1.6%</div>
             </div>
-            <div class="method-card" onclick="selectAndPay('VC', this)">
+            <div class="method-card active" onclick="highlightMethod('VC', this)">
               <div style="font-size:24px; margin-bottom:8px;">🏦</div>
               <div class="method-name">Virtual Account</div>
               <div class="method-fee">Gratis / Rp 2.500</div>
@@ -336,8 +339,8 @@
           </div>
         </div>
 
-        <button class="btn-open-snap" id="btn-pay-modal" onclick="startPayment()" style="display:none;">
-          Buka Halaman Pembayaran
+        <button class="btn-open-snap" id="btn-pay-modal" onclick="startPayment()" style="display:none; margin-top:20px;">
+          Bayar Sekarang
         </button>
         <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
         <div class="secure-note" id="secure-note">🔒 Transaksi diproses melalui enkripsi aman</div>
