@@ -308,7 +308,7 @@
         <div id="duitku-selector" style="display:none;">
           <div class="pay-methods-title">Pilih Metode Pembayaran</div>
           <div class="methods-grid" id="methods-grid">
-            <div class="method-card active" onclick="selectMethod('QR', this)">
+            <div class="method-card" onclick="selectMethod('QR', this)">
               <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" class="method-icon" alt="QRIS">
               <div class="method-name">QRIS</div>
               <div class="method-fee">Fee 0.7%</div>
@@ -328,10 +328,10 @@
               <div class="method-name">DANA</div>
               <div class="method-fee">Fee 1.6%</div>
             </div>
-            <div class="method-card" onclick="selectMethod('VC', this)">
+            <div class="method-card active" onclick="selectMethod('VC', this)">
               <div style="font-size:24px; margin-bottom:8px;">🏦</div>
               <div class="method-name">Virtual Account</div>
-              <div class="method-fee">Rp 2.500</div>
+              <div class="method-fee">Gratis / Rp2.500</div>
             </div>
           </div>
         </div>
@@ -399,9 +399,6 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://app-sandbox.duitku.com/lib/js/duitku.js"></script>
-  <!-- Midtrans Snap.js (sandbox) -->
-  <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key=""></script>
-  <!-- For production: https://app.midtrans.com/snap/snap.js -->
 
 
   <footer class="app-footer">

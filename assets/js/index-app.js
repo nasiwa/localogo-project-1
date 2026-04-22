@@ -11,7 +11,7 @@ if (snapScript) {
 let activeBatch = null;
 let paymentToken = null;
 let paymentGateway = 'manual';
-let selectedPaymentMethod = 'QR'; // Default (QRIS)
+let selectedPaymentMethod = 'VC'; // Default (VA)
 let currentOrder = {};
 let activeGateway = 'manual';
 
