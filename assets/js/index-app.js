@@ -456,7 +456,7 @@ async function handleBooking() {
 // ── STEP 2: HIGHLIGHT SELECTION ─────────────────────────────
 window.highlightMethod = function(methodCode, el) {
   selectedPaymentMethod = methodCode;
-  paymentGateway = 'duitku'; // Force gateway to duitku when a card is clicked
+  paymentGateway = activeGateway !== 'manual' ? activeGateway : 'duitku'; 
   
   // Visual feedback on card
   const cards = document.querySelectorAll('.method-card');
