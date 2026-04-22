@@ -31,7 +31,7 @@ async function createTransaction(gateway, params) {
       productDetails: `DP Perlengkapan OSPEK 2026 — ${batchName}`,
       email: email,
       phoneNumber: whatsapp,
-      paymentMethod: params.paymentMethod || 'VC', // Use selected, fallback to VC
+      paymentMethod: (params.paymentMethod !== undefined) ? params.paymentMethod : '', // Don't force VC
       callbackUrl: `${cleanBackendUrl}/api/duitku-webhook`,
       returnUrl: `${cleanFrontendUrl}/?order=${orderRef}`,
       itemDetails: [

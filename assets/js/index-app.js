@@ -145,46 +145,74 @@ function restorePendingOrder() {
       if (rowUnique) rowUnique.style.display = 'flex';
       if (rowGateway) rowGateway.style.display = 'none';
 
-      // Update sidebar & modal header dengan nominal unik
       if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
       if (sidebarTotal) sidebarTotal.textContent = fmtIDR(saved.amount || 100000);
       if (pmAmount) pmAmount.textContent = fmtIDR(saved.amount || 100000);
-
+      
       const manualTotalEl = document.getElementById('pm-total-manual');
       if (manualTotalEl) manualTotalEl.textContent = fmtIDR(saved.amount || 100000);
 
       const bankInfoEl = document.getElementById('manual-bank-info');
-      if (bankInfoEl && saved.amount) {
-        const amountStr = String(saved.amount);
-        const uniqueCode = amountStr.slice(-3);
-        const basePart = amountStr.slice(0, -3);
-        bankInfoEl.innerHTML = `${saved.bank_info || ''}<br><span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span><span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
+      const amountStr = String(saved.amount || 100000);
+      const uniqueCode = amountStr.slice(-3);
+      const basePart = amountStr.slice(0, -3);
+      
+      if (bankInfoEl) {
+        bankInfoEl.innerHTML = `${saved.bank_info || 'Bank Info N/A'}<br>` +
+          `<span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>` +
+          `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
       }
-
       if (payBtn) payBtn.textContent = 'Selesaikan & Kirim Bukti';
-      const remainMs = maxMs - ageMs;
-      const remainHrs = Math.floor(remainMs / 3600000);
-      const remainMins = Math.floor((remainMs % 3600000) / 60000);
-      if (secureNote) secureNote.textContent = `🔒 Slot masih diamankan — sisa ${remainHrs} jam ${remainMins} menit`;
+      if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
     } else {
       if (manualBox) manualBox.style.display = 'none';
       if (rowUnique) rowUnique.style.display = 'none';
       if (rowGateway) rowGateway.style.display = 'flex';
+
       if (sidebarAdminRow) sidebarAdminRow.style.display = 'flex';
       if (sidebarTotal) sidebarTotal.textContent = 'Rp102.500';
       if (pmAmount) pmAmount.textContent = 'Rp102.500';
+
       if (payBtn) payBtn.textContent = 'Buka Halaman Pembayaran';
+      if (secureNote) secureNote.textContent = `🔒 Diproses oleh ${paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1)}`;
     }
 
-    const confirmModal = document.getElementById('confirm-modal');
-    if (confirmModal) confirmModal.classList.add('show');
-    setStep(3);
-    showToast('🔁 Pesanan kamu sebelumnya dipulihkan!');
-  } catch (e) {
-    console.warn('Restore failed:', e);
-    clearPendingOrder();
+    // Instead of auto-showing full modal, show a small restoration toast
+    showRestorationToast();
+
+  } catch (err) {
+    console.error('Restore Error:', err);
   }
 }
+
+function showRestorationToast() {
+  const toast = document.createElement('div');
+  toast.id = 'restore-toast';
+  toast.innerHTML = `
+    <div style="background:var(--td); color:#fff; padding:12px 20px; border-radius:50px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 30px rgba(0,0,0,0.2); font-size:13px; font-weight:600;">
+      <span>📑 Pesanan tertunda ditemukan</span>
+      <button onclick="openRestoredModal()" style="background:#fff; color:var(--td); border:none; padding:4px 12px; border-radius:20px; font-weight:800; cursor:pointer;">LIHAT</button>
+      <button onclick="discardRestoredOrder()" style="background:rgba(255,255,255,0.2); color:#fff; border:none; padding:4px 12px; border-radius:20px; font-weight:600; cursor:pointer;">HAPUS</button>
+    </div>
+  `;
+  toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:9999; animation: slideUp 0.5s ease-out;';
+  document.body.appendChild(toast);
+}
+
+window.openRestoredModal = function() {
+  const modal = document.getElementById('confirm-modal');
+  if (modal) modal.classList.add('show');
+  setStep(3); // Go to summary
+  const toast = document.getElementById('restore-toast');
+  if (toast) toast.remove();
+};
+
+window.discardRestoredOrder = function() {
+  clearPendingOrder();
+  const toast = document.getElementById('restore-toast');
+  if (toast) toast.remove();
+  showToast('Sesi pendaftaran lama telah dihapus.');
+};
 
 // ── GOOGLE AUTH ───────────────────────────────────────────────────
 async function checkAuthSession() {
