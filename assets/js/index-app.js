@@ -27,19 +27,32 @@ async function init() {
 
 function checkMaintenance() {
   const params = new URLSearchParams(window.location.search);
-  const isPreview = params.get('preview') === 'ospek2026';
-  const hasAccess = sessionStorage.getItem('localogo_admin_access') === 'true';
-  const qOverlay = document.getElementById('queue-overlay');
+  const isPreview = params.get('preview') === 'ospek2026'; // UNTUK TEST ANTREAN
+  const isAdmin = params.get('admin') === 'true' || sessionStorage.getItem('localogo_admin_access') === 'true'; // UNTUK KERJA
   
-  if (isPreview) {
+  const mOverlay = document.getElementById('maintenance-overlay');
+  const qOverlay = document.getElementById('queue-overlay');
+
+  // 1. Jika Admin -> Langsung Masuk (Bypass)
+  if (isAdmin) {
     sessionStorage.setItem('localogo_admin_access', 'true');
+    if (mOverlay) mOverlay.classList.remove('show');
     if (qOverlay) qOverlay.classList.remove('show');
     document.body.style.overflow = '';
     return;
   }
-  
-  if (!hasAccess && qOverlay) {
+
+  // 2. Jika Preview -> Tampilkan Antrean (Testing War)
+  if (isPreview) {
+    if (mOverlay) mOverlay.classList.remove('show');
     initRealQueue();
+    return;
+  }
+
+  // 3. Jika Publik (Tanpa Param) -> Tampilkan Maintenance
+  if (mOverlay) {
+    mOverlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
   }
 }
 
