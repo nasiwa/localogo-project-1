@@ -1,8 +1,5 @@
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allOrders = [];
-let currentPage = 1;
-let totalOrders = 0;
-const ordersPerPage = 100;
 
 function getAdminToken() { 
   return sessionStorage.getItem('lok_admin_token') || ''; 
@@ -260,50 +257,15 @@ async function saveBatch() {
 }
 
 // ── ORDER MANAGEMENT ──────────────────────────────────────────────
-async function loadOrders(page = 1) {
-  currentPage = page;
+async function loadOrders() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}`, { 
-      headers: { 'x-admin-token': getAdminToken() } 
-    });
-    const { orders, total } = await res.json();
+    const res = await fetch(`${BACKEND_URL}/api/admin/orders`, { headers: { 'x-admin-token': getAdminToken() } });
+    const { orders } = await res.json();
     allOrders = orders;
-    totalOrders = total;
     renderOrders(orders);
-    buildPagination(total);
   } catch (e) {
     console.error('loadOrders error:', e);
   }
-}
-
-function buildPagination(total) {
-  const container = document.getElementById('pagination-container');
-  if (!container) return;
-  
-  const totalPages = Math.ceil(total / ordersPerPage);
-  let html = '';
-  
-  if (totalPages <= 1) {
-    container.innerHTML = '';
-    return;
-  }
-
-  // Prev
-  html += `<button class="btn-sm" ${currentPage === 1 ? 'disabled style="opacity:0.5"' : `onclick="loadOrders(${currentPage - 1})"`}>« Prev</button>`;
-  
-  // Page numbers (simplified: show current, first, last and 2 around current)
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-      html += `<button class="btn-sm ${i === currentPage ? 'btn-primary' : ''}" onclick="loadOrders(${i})">${i}</button>`;
-    } else if (i === currentPage - 3 || i === currentPage + 3) {
-      html += `<span style="color:var(--txm)">...</span>`;
-    }
-  }
-
-  // Next
-  html += `<button class="btn-sm" ${currentPage === totalPages ? 'disabled style="opacity:0.5"' : `onclick="loadOrders(${currentPage + 1})"`}>Next »</button>`;
-  
-  container.innerHTML = html;
 }
 
 function renderOrders(orders) {
