@@ -232,17 +232,38 @@ router.post('/pickup/:orderRef', async (req, res) => {
 router.post('/auto-expire', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
   try {
-    const { data, error, count } = await supabase
+    const { data: pendingOrders, error: fetchErr } = await supabase
       .from('orders')
-      .update({ status: 'expired' })
-      .filter('status', 'eq', 'pending')
-      .or(`and(payment_gateway.eq.manual,created_at.lt.${new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()}),and(payment_gateway.neq.manual,created_at.lt.${new Date(Date.now() - 30 * 60 * 1000).toISOString()})`)
-      // Note: Supabase JS .or() syntax can be tricky with complex ANDs, using raw query style or separate updates if needed.
-      // Alternatively, call the RPC logic if we want to centralize it.
-      .select('id');
+      .select('id, created_at, payment_gateway')
+      .eq('status', 'pending');
 
-    if (error) throw error;
-    res.json({ success: true, expired_count: data?.length || 0 });
+    if (fetchErr) throw fetchErr;
+
+    const idsToExpire = [];
+    const now = Date.now();
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    const THIRTY_MINS = 30 * 60 * 1000;
+
+    (pendingOrders || []).forEach(o => {
+      const age = now - new Date(o.created_at).getTime();
+      const isManual = o.payment_gateway === 'manual';
+      
+      if (isManual && age > SIX_HOURS) {
+        idsToExpire.push(o.id);
+      } else if (!isManual && age > THIRTY_MINS) {
+        idsToExpire.push(o.id);
+      }
+    });
+
+    if (idsToExpire.length > 0) {
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update({ status: 'expired' })
+        .in('id', idsToExpire);
+      if (updateErr) throw updateErr;
+    }
+
+    res.json({ success: true, expired_count: idsToExpire.length });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
