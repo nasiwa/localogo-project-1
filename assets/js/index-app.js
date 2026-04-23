@@ -28,17 +28,19 @@ async function init() {
 function checkMaintenance() {
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'ospek2026';
   const hasAccess = localStorage.getItem('localogo_admin_access') === 'true';
-  const overlay = document.getElementById('maintenance-overlay');
+  const mOverlay = document.getElementById('maintenance-overlay');
+  const qOverlay = document.getElementById('queue-overlay');
   
   if (isPreview) {
     localStorage.setItem('localogo_admin_access', 'true');
-    if (overlay) overlay.classList.remove('show');
+    if (mOverlay) mOverlay.classList.remove('show');
+    if (qOverlay) qOverlay.classList.remove('show');
+    document.body.style.overflow = '';
     return;
   }
   
-  if (!hasAccess && overlay) {
-    overlay.classList.add('show');
-    // Block scrolling while maintenance is on
+  if (!hasAccess && mOverlay) {
+    mOverlay.classList.add('show');
     document.body.style.overflow = 'hidden';
   }
 }
