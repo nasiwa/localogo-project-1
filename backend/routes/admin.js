@@ -60,18 +60,23 @@ router.patch('/batch/:id', async (req, res) => {
 });
 
 /**
- * GET /api/admin/orders — all orders
+ * GET /api/admin/orders — all orders with pagination
  */
 router.get('/orders', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
-  const { data, error } = await supabase
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from('orders')
-    .select('*, batches(name)')
+    .select('*, batches(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(500);
+    .range(from, to);
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true, orders: data });
+  res.json({ success: true, orders: data, total: count });
 });
 
 /**

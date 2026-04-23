@@ -1,5 +1,8 @@
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allOrders = [];
+let currentPage = 1;
+let totalOrders = 0;
+const ordersPerPage = 100;
 
 function getAdminToken() { 
   return sessionStorage.getItem('lok_admin_token') || ''; 
@@ -257,15 +260,82 @@ async function saveBatch() {
 }
 
 // ── ORDER MANAGEMENT ──────────────────────────────────────────────
-async function loadOrders() {
+async function loadOrders(page = 1) {
+  currentPage = page;
   try {
-    const res = await fetch(`${BACKEND_URL}/api/admin/orders`, { headers: { 'x-admin-token': getAdminToken() } });
-    const { orders } = await res.json();
+    const res = await fetch(`${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}`, { 
+      headers: { 'x-admin-token': getAdminToken() } 
+    });
+    const { orders, total } = await res.json();
     allOrders = orders;
+    totalOrders = total;
     renderOrders(orders);
+    buildPagination(total);
   } catch (e) {
     console.error('loadOrders error:', e);
   }
+}
+
+function buildPagination(total) {
+  const container = document.getElementById('pagination-container');
+  if (!container) return;
+  
+  const totalPages = Math.ceil(total / ordersPerPage);
+  let html = '';
+  
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // Prev
+  html += `<button class="btn-sm" ${currentPage === 1 ? 'disabled style="opacity:0.5"' : `onclick="loadOrders(${currentPage - 1})"`}>« Prev</button>`;
+  
+  // Page numbers
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i <= 3 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      html += `<button class="btn-sm ${i === currentPage ? 'btn-primary' : ''}" onclick="loadOrders(${i})">${i}</button>`;
+    } else if (i === 4 && currentPage > 5) {
+      html += `<span style="color:var(--txm)">...</span>`;
+    }
+  }
+
+  // Next
+  html += `<button class="btn-sm" ${currentPage === totalPages ? 'disabled style="opacity:0.5"' : `onclick="loadOrders(${currentPage + 1})"`}>Next »</button>`;
+  
+  container.innerHTML = `
+    <div style="color:var(--txm); font-size:12px; margin-bottom:8px;">Menampilkan ${allOrders.length} dari ${total} data</div>
+    <div style="display:flex; gap:5px; align-items:center;">${html}</div>
+  `;
+}
+
+function exportToCSV() {
+  if (!allOrders || allOrders.length === 0) return showToast('Tidak ada data untuk diexport');
+  
+  // Format headers
+  const headers = ['Order Ref', 'Nama', 'Email', 'WhatsApp', 'Batch', 'Nominal', 'Status', 'Waktu'];
+  
+  // Format rows
+  const csvRows = allOrders.map(o => [
+    o.order_ref,
+    `"${o.full_name.replace(/"/g, '""')}"`,
+    o.email,
+    `'${o.whatsapp}`, // prevent excel from stripping leading zero
+    o.batches?.name || '-',
+    o.amount,
+    o.status,
+    new Date(o.created_at).toLocaleString('id-ID')
+  ]);
+
+  const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Rekap_Order_Localogo_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function renderOrders(orders) {
@@ -415,4 +485,8 @@ function subscribeAdmin() {
 
 window.onload = () => { 
   if (checkAuth()) enterApp(); 
+  
+  // Bind export button
+  const btnExport = document.getElementById('btn-export-csv');
+  if (btnExport) btnExport.onclick = exportToCSV;
 };
