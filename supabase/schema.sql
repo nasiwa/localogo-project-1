@@ -156,7 +156,7 @@ begin
     if v_filled_slots >= v_total_slots then
       update batches set status = 'closed' where id = p_batch_id;
     end if;
-    return json_build_object('success', false, 'error', 'Maaf, slot baru saja habis dibooking orang lain. Cek kembali dalam 6 jam.');
+    return json_build_object('success', false, 'error', 'Maaf, slot baru saja habis dibooking orang lain. Cek kembali dalam 24 jam.');
   end if;
 
   -- 5. Insert order

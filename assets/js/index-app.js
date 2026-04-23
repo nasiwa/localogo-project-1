@@ -105,9 +105,9 @@ function restorePendingOrder() {
     if (!raw) return;
     const saved = JSON.parse(raw);
 
-    // Cek apakah masih dalam window 6 jam
+    // Cek apakah masih dalam window 24 jam
     const ageMs = Date.now() - saved.savedAt;
-    const maxMs = 6 * 60 * 60 * 1000; // 6 jam
+    const maxMs = 24 * 60 * 60 * 1000; // 24 jam
     if (ageMs > maxMs) { clearPendingOrder(); return; }
 
     // Pulihkan state
@@ -163,7 +163,7 @@ function restorePendingOrder() {
           `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
       }
       if (payBtn) payBtn.textContent = 'Selesaikan & Kirim Bukti';
-      if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
+      if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (24 jam).';
     } else {
       if (manualBox) manualBox.style.display = 'none';
       if (rowUnique) rowUnique.style.display = 'none';
@@ -490,7 +490,7 @@ async function handleBooking() {
       
       if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
       
-      // Simpan backup agar jika refresh 6 jam, data ini kembali
+      // Simpan backup agar jika refresh 24 jam, data ini kembali
       savePendingOrder({ ...currentOrder, gateway: 'manual' }, data.amount, data.bank_info);
 
     } catch (err) {
@@ -518,7 +518,7 @@ async function handleBooking() {
     if (manualBox) manualBox.style.display = 'block';
     if (duitkuSelector) duitkuSelector.style.display = 'none';
     if (payBtnModal) payBtnModal.style.display = 'block'; // Manual needs final submit
-    if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (6 jam).';
+    if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (24 jam).';
   } else {
     if (manualBox) manualBox.style.display = 'none';
     if (duitkuSelector) duitkuSelector.style.display = 'block';

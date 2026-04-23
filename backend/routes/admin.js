@@ -241,14 +241,14 @@ router.post('/auto-expire', async (req, res) => {
 
     const idsToExpire = [];
     const now = Date.now();
-    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
     const THIRTY_MINS = 30 * 60 * 1000;
 
     (pendingOrders || []).forEach(o => {
       const age = now - new Date(o.created_at).getTime();
       const isManual = o.payment_gateway === 'manual';
       
-      if (isManual && age > SIX_HOURS) {
+      if (isManual && age > TWENTY_FOUR_HOURS) {
         idsToExpire.push(o.id);
       } else if (!isManual && age > THIRTY_MINS) {
         idsToExpire.push(o.id);
