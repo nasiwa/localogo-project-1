@@ -2,7 +2,7 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 let allOrders = [];
 let currentPage = 1;
 let totalOrders = 0;
-const ordersPerPage = 100;
+const ordersPerPage = 500;
 
 function getAdminToken() { 
   return sessionStorage.getItem('lok_admin_token') || ''; 
