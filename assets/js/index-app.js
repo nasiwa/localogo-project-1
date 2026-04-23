@@ -26,25 +26,91 @@ async function init() {
 }
 
 function checkMaintenance() {
-  const isPreview = new URLSearchParams(window.location.search).get('preview') === 'ospek2026';
-  const hasAccess = localStorage.getItem('localogo_admin_access') === 'true';
-  const mOverlay = document.getElementById('maintenance-overlay');
+  const params = new URLSearchParams(window.location.search);
+  const isPreview = params.get('preview') === 'ospek2026';
+  const hasAccess = sessionStorage.getItem('localogo_admin_access') === 'true';
   const qOverlay = document.getElementById('queue-overlay');
   
   if (isPreview) {
-    localStorage.setItem('localogo_admin_access', 'true');
-    if (mOverlay) mOverlay.classList.remove('show');
+    sessionStorage.setItem('localogo_admin_access', 'true');
     if (qOverlay) qOverlay.classList.remove('show');
     document.body.style.overflow = '';
     return;
   }
   
-  // IF NOT PREVIEW, TRIGGER VIRTUAL WAITING ROOM FOR EVERYONE
-  if (!hasAccess && mOverlay) {
-    // Check if maintenance is actually on (we can add a DB toggle later, 
-    // for now we'll just show the Queue/Waiting Room for Scenario 2)
-    startWaitingRoom();
+  if (!hasAccess && qOverlay) {
+    initRealQueue();
   }
+}
+
+async function initRealQueue() {
+  const qOverlay = document.getElementById('queue-overlay');
+  const qNum = document.getElementById('queue-number');
+  const statusTxt = document.getElementById('queue-status-text');
+  const bar = document.getElementById('queue-progress');
+  const percentTxt = document.getElementById('queue-percent');
+
+  if (!qOverlay) return;
+  qOverlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  let myQueueId = sessionStorage.getItem('localogo_queue_id');
+  if (!myQueueId) {
+    try {
+      const { data } = await _supabase
+        .from('waiting_room')
+        .upsert({ session_id: getFingerprint() }, { onConflict: 'session_id' })
+        .select('id')
+        .single();
+      if (data) {
+        myQueueId = data.id;
+        sessionStorage.setItem('localogo_queue_id', myQueueId);
+      }
+    } catch (e) {
+      myQueueId = Math.floor(Math.random() * 100);
+    }
+  }
+
+  if (qNum) qNum.textContent = '#' + String(myQueueId || 0).padStart(6, '0');
+
+  // START TIME: 2026-04-23 21:00
+  const startTime = new Date('2026-04-23T21:00:00').getTime(); 
+  
+  const checkInterval = setInterval(() => {
+    const now = Date.now();
+    const elapsedMinutes = Math.max(0, (now - startTime) / (1000 * 60));
+    const currentBatch = Math.floor(elapsedMinutes / 5); 
+    const allowedMaxId = (currentBatch + 1) * 10; 
+
+    if (myQueueId <= allowedMaxId) {
+      clearInterval(checkInterval);
+      if (bar) bar.style.width = '100%';
+      if (percentTxt) percentTxt.textContent = '100%';
+      if (statusTxt) statusTxt.textContent = 'Giliran Anda! Masuk...';
+      
+      setTimeout(() => {
+        qOverlay.classList.remove('show');
+        document.body.style.overflow = '';
+      }, 1500);
+    } else {
+      const peopleAhead = myQueueId - allowedMaxId;
+      const waitMinutes = Math.ceil(peopleAhead / 10) * 5;
+      if (statusTxt) statusTxt.textContent = `Menunggu... ±${waitMinutes} menit lagi`;
+      
+      const progress = Math.min((allowedMaxId / myQueueId) * 100, 95);
+      if (bar) bar.style.width = progress + '%';
+      if (percentTxt) percentTxt.textContent = Math.floor(progress) + '%';
+    }
+  }, 5000);
+}
+
+function getFingerprint() {
+  let f = localStorage.getItem('localogo_fingerprint');
+  if (!f) {
+    f = 'f-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+    localStorage.setItem('localogo_fingerprint', f);
+  }
+  return f;
 }
 
 async function startWaitingRoom() {
