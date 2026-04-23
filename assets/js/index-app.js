@@ -95,8 +95,11 @@ async function initRealQueue() {
   
   const checkInterval = setInterval(() => {
     const now = Date.now();
-    const elapsedMinutes = Math.max(0, (now - startTime) / (1000 * 60));
-    const currentBatch = Math.floor(elapsedMinutes / 5); 
+    const elapsedSeconds = Math.max(0, (now - startTime) / 1000);
+    
+    // FAST FORWARD: 10 people every 10 seconds for simulation
+    const intervalSeconds = isLiveTest ? 10 : 300; // 10s vs 5m
+    const currentBatch = Math.floor(elapsedSeconds / intervalSeconds); 
     const allowedMaxId = (currentBatch + 1) * 10; 
 
     if (myQueueId <= allowedMaxId) {
