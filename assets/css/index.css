@@ -54,6 +54,8 @@ body {
 .ticker-track {
   display: inline-block;
   animation: ticker 30s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .ticker-track span {
@@ -1288,6 +1290,7 @@ footer p {
   transition: opacity 0.8s ease-in-out, visibility 0.8s;
   z-index: 1;
   background: white; /* Prevent transparent bleed-through */
+  will-change: opacity, visibility;
 }
 
 .pg-slide.active {
@@ -1322,12 +1325,15 @@ footer p {
   top: 0;
   left: 0;
   right: 0;
-  height: 50%;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  height: 45%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 3;
-  mask-image: linear-gradient(to bottom, black 60%, transparent);
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* CAROUSEL CONTROLS */

@@ -281,6 +281,16 @@ async function logoutGoogle(e) {
 }
 
 // ── SUPABASE REALTIME (Auto-refresh UI) ───────────────────────────
+let batchDebounceTimer;
+function debouncedLoadBatches() {
+  clearTimeout(batchDebounceTimer);
+  // Tambahkan jitter acak (0-3000ms) agar semua client tidak request berbarengan
+  const jitter = Math.floor(Math.random() * 3000);
+  batchDebounceTimer = setTimeout(() => {
+    loadBatches();
+  }, jitter + 1000);
+}
+
 function setupRealtime() {
   // Listen for any changes in the 'batches' table
   _supabase
@@ -290,7 +300,7 @@ function setupRealtime() {
       { event: '*', schema: 'public', table: 'batches' },
       (payload) => {
         console.log('Realtime update:', payload);
-        loadBatches(); // Refresh UI data
+        debouncedLoadBatches(); // Refresh UI data safely
       }
     )
     .on(
@@ -298,7 +308,7 @@ function setupRealtime() {
       { event: '*', schema: 'public', table: 'orders' },
       (payload) => {
         console.log('Order update:', payload);
-        loadBatches();
+        debouncedLoadBatches();
       }
     )
     .subscribe();
