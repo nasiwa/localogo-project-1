@@ -39,10 +39,54 @@ function checkMaintenance() {
     return;
   }
   
+  // IF NOT PREVIEW, TRIGGER VIRTUAL WAITING ROOM FOR EVERYONE
   if (!hasAccess && mOverlay) {
-    mOverlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
+    // Check if maintenance is actually on (we can add a DB toggle later, 
+    // for now we'll just show the Queue/Waiting Room for Scenario 2)
+    startWaitingRoom();
   }
+}
+
+async function startWaitingRoom() {
+  const qOverlay = document.getElementById('queue-overlay');
+  const qNum = document.getElementById('queue-number');
+  const bar = document.getElementById('queue-progress');
+  const percentTxt = document.getElementById('queue-percent');
+  const statusTxt = document.getElementById('queue-status-text');
+
+  if (!qOverlay) return;
+  qOverlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Generate random realistic queue number
+  const myQueue = Math.floor(1000 + Math.random() * 9000);
+  if (qNum) qNum.textContent = '#' + String(myQueue).padStart(6, '0');
+
+  // Throttling duration (simulated 4-10 seconds)
+  const duration = 4000 + Math.random() * 6000;
+  const start = Date.now();
+
+  const itv = setInterval(() => {
+    const elapsed = Date.now() - start;
+    const progress = Math.min((elapsed / duration) * 100, 99);
+    if (bar) bar.style.width = progress + '%';
+    if (percentTxt) percentTxt.textContent = Math.floor(progress) + '%';
+    
+    if (progress > 80) statusTxt.textContent = 'Mempersiapkan Formulir...';
+    else if (progress > 40) statusTxt.textContent = 'Menghitung Slot Sisa...';
+
+    if (elapsed >= duration) {
+       clearInterval(itv);
+       if (bar) bar.style.width = '100%';
+       if (percentTxt) percentTxt.textContent = '100%';
+       statusTxt.textContent = 'Akses Diberikan!';
+       
+       setTimeout(() => {
+         qOverlay.classList.remove('show');
+         document.body.style.overflow = '';
+       }, 800);
+    }
+  }, 100);
 }
 
 async function loadConfig() {
