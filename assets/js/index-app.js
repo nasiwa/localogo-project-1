@@ -425,8 +425,38 @@ async function handleBooking() {
     email: document.getElementById('f-email').value.trim(),
     whatsapp: document.getElementById('f-wa').value.trim(),
     batch_id: activeBatch.id,
-    batch_name: activeBatch.batch_name
+    batch_name: activeBatch.name // Fixed: ensure correct field name
   };
+
+  // ── VIRTUAL QUEUE FOR BATCH 2 ONLY ──
+  const isBatch2 = (activeBatch.name || '').includes('Batch 2');
+  if (isBatch2) {
+    const overlay = document.getElementById('queue-overlay');
+    const bar = document.getElementById('queue-progress');
+    const percentTxt = document.getElementById('queue-percent');
+    if (overlay && bar && percentTxt) {
+      overlay.classList.add('show');
+      // Simulate progress over random 3-7 seconds
+      const duration = 3000 + Math.random() * 4000;
+      const start = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const progress = Math.min((elapsed / duration) * 100, 99);
+        bar.style.width = progress + '%';
+        percentTxt.textContent = Math.floor(progress) + '%';
+        if (elapsed >= duration) clearInterval(interval);
+      }, 100);
+      
+      // Wait for the simulated duration
+      await new Promise(r => setTimeout(r, duration));
+      
+      // Complete bar
+      bar.style.width = '100%';
+      percentTxt.textContent = '100%';
+      await new Promise(r => setTimeout(r, 500));
+      overlay.classList.remove('show');
+    }
+  }
 
   const btnLanjut = document.querySelector('[onclick="handleBooking()"]');
   const originalLanjutText = btnLanjut ? btnLanjut.innerHTML : 'Lanjut ke Pembayaran &rarr;';

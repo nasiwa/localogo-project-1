@@ -436,6 +436,34 @@
   </footer>
 
   <script src="assets/js/index-app.js"></script>
-</body>
+  <!-- VIRTUAL QUEUE OVERLAY -->
+  <div id="queue-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:'Poppins', sans-serif; backdrop-filter:blur(10px);">
+    <div style="width:90%; max-width:400px; text-align:center;">
+      <!-- COOL ANIMATED ICON -->
+      <div class="queue-spinner" style="width:80px; height:80px; border:4px solid rgba(255,255,255,0.1); border-top:4px solid var(--td); border-radius:50%; margin:0 auto 30px; animation: q-spin 1s linear infinite; box-shadow: 0 0 20px var(--td);"></div>
+      
+      <h2 style="font-size:24px; font-weight:800; margin-bottom:10px; letter-spacing:1px;">MENGANTRE...</h2>
+      <p id="queue-msg" style="font-size:14px; opacity:0.8; line-height:1.6; margin-bottom:30px;">Mohon tunggu sebentar, kami sedang menyiapkan jalur pendaftaran khusus untuk Anda agar sistem tetap lancar.</p>
+      
+      <!-- PROGRESS BAR -->
+      <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; margin-bottom:15px;">
+        <div id="queue-progress" style="width:0%; height:100%; background:linear-gradient(90deg, var(--td), #fff); transition: width 0.3s ease;"></div>
+      </div>
+      
+      <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; text-transform:uppercase; opacity:0.6;">
+        <span>Status Antrean: Aktif</span>
+        <span id="queue-percent">0%</span>
+      </div>
+      
+      <div style="margin-top:40px; font-size:10px; opacity:0.4; letter-spacing:2px; text-transform:uppercase;">Localogo Gatekeeper System v2.0</div>
+    </div>
+  </div>
 
+  <style>
+    @keyframes q-spin { to { transform: rotate(360deg); } }
+    #queue-overlay.show { display: flex !important; animation: q-fade 0.5s ease; }
+    @keyframes q-fade { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+
+</body>
 </html>
