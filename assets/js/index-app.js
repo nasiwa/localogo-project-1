@@ -67,6 +67,8 @@ async function initRealQueue() {
   qOverlay.classList.add('show');
   document.body.style.overflow = 'hidden';
 
+  if (qNum) qNum.textContent = 'Mendaftarkan...';
+
   let myQueueId = sessionStorage.getItem('localogo_queue_id');
   if (!myQueueId) {
     try {
@@ -86,8 +88,10 @@ async function initRealQueue() {
 
   if (qNum) qNum.textContent = '#' + String(myQueueId || 0).padStart(6, '0');
 
-  // START TIME: 2026-04-23 21:00
-  const startTime = new Date('2026-04-23T21:00:00').getTime(); 
+  // 2. Logic: 10 people every 5 minutes
+  // Jika ada param &test=true, gunakan "sekarang" sebagai waktu mulai agar bisa lihat LIVE progress
+  const isLiveTest = new URLSearchParams(window.location.search).get('test') === 'true';
+  const startTime = isLiveTest ? Date.now() : new Date('2026-04-23T21:00:00').getTime(); 
   
   const checkInterval = setInterval(() => {
     const now = Date.now();
