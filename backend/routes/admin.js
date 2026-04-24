@@ -27,6 +27,69 @@ router.get('/check', (req, res) => {
 /**
  * GET /api/admin/batches — full batch data for admin
  */
+const { generateInvoicePDF, sendInvoiceEmail } = require('../utils/invoice');
+
+// Helper to generate manual order ref
+function genManualRef() {
+  return `MANUAL-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+}
+
+/**
+ * POST /api/admin/order/manual
+ */
+router.post('/order/manual', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  const { full_name, email, whatsapp, batch_id, amount, status } = req.body;
+
+  if (!full_name || !email || !batch_id) {
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
+  }
+
+  const orderRef = genManualRef();
+
+  try {
+    // 1. Claim Slot
+    const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
+      p_batch_id: batch_id,
+      p_order_ref: orderRef,
+      p_name: full_name,
+      p_email: email,
+      p_wa: whatsapp || 'Manual',
+      p_amount: parseInt(amount || 100000)
+    });
+
+    if (claimErr || !claimData?.success) {
+      return res.status(400).json({ success: false, error: claimData?.error || 'Gagal membuat order manual' });
+    }
+
+    // 2. If status is paid, confirm it immediately
+    if (status === 'paid') {
+      const { data: confData, error: confErr } = await supabase.rpc('confirm_payment', { p_order_ref: orderRef });
+      
+      if (!confErr && confData.success) {
+        // Send email
+        const orderInfo = {
+          order_ref: orderRef,
+          full_name,
+          email,
+          whatsapp: whatsapp || 'N/A',
+          batch_name: confData.batch_name,
+          batch_num: confData.batch_num,
+          sequence: confData.sequence,
+          wa_group_url: confData.wa_group_url,
+          paid_at: new Date().toISOString()
+        };
+        const pdfBuffer = await generateInvoicePDF(orderInfo);
+        await sendInvoiceEmail(orderInfo, pdfBuffer);
+      }
+    }
+
+    res.json({ success: true, order_ref: orderRef });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.get('/batches', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
   const { data, error } = await supabase
@@ -66,12 +129,19 @@ router.get('/orders', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 100;
+  const q = req.query.q || '';
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('orders')
-    .select('*, batches(name)', { count: 'exact' })
+    .select('*, batches(name)', { count: 'exact' });
+
+  if (q) {
+    query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,order_ref.ilike.%${q}%`);
+  }
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to);
 

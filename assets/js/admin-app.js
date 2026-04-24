@@ -262,8 +262,9 @@ async function saveBatch() {
 // ── ORDER MANAGEMENT ──────────────────────────────────────────────
 async function loadOrders(page = 1) {
   currentPage = page;
+  const q = document.getElementById('order-search')?.value || '';
   try {
-    const res = await fetch(`${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}`, { 
+    const res = await fetch(`${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}&q=${encodeURIComponent(q)}`, { 
       headers: { 'x-admin-token': getAdminToken() } 
     });
     const { orders, total } = await res.json();
@@ -442,33 +443,73 @@ async function openMembersModal(id, name) {
   }
 }
 
+async function openManualModal() {
+  const modal = document.getElementById('manual-order-modal');
+  // Load batches for the dropdown
+  const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
+  const { batches } = await res.json();
+  const select = document.getElementById('man-batch');
+  if (select) {
+    select.innerHTML = batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  }
+  if (modal) modal.classList.add('show');
+}
+
+function closeManualModal() {
+  const modal = document.getElementById('manual-order-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+async function submitManualOrder() {
+  const btn = document.getElementById('btn-save-manual');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  const payload = {
+    full_name: document.getElementById('man-name').value,
+    email: document.getElementById('man-email').value,
+    whatsapp: document.getElementById('man-wa').value,
+    batch_id: document.getElementById('man-batch').value,
+    amount: document.getElementById('man-amount').value,
+    status: document.getElementById('man-status').value
+  };
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/order/manual`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Order manual berhasil dibuat!');
+      closeManualModal();
+      loadOrders(1);
+    } else {
+      showToast('❌ Gagal: ' + data.error);
+    }
+  } catch (e) {
+    showToast('❌ Terjadi kesalahan');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 function closeMembersModal() { 
   const modal = document.getElementById('members-modal');
   if (modal) modal.classList.remove('show'); 
 }
 
 // ── UTILS ──────────────────────────────────────────────────────────
+// Global search with debounce
+let searchTimeout;
 function filterOrders() {
-  const qEl = document.getElementById('order-search');
-  const bEl = document.getElementById('filter-batch');
-  const sEl = document.getElementById('filter-status');
-  if (!qEl || !bEl || !sEl) return;
-
-  const q = qEl.value.toLowerCase();
-  const batchId = bEl.value;
-  const status = sEl.value;
-
-  const filtered = allOrders.filter(o => {
-    const matchSearch = o.full_name.toLowerCase().includes(q) || 
-                       o.order_ref.toLowerCase().includes(q) || 
-                       o.email.toLowerCase().includes(q);
-    const matchBatch = (batchId === 'all' || o.batch_id === batchId);
-    const matchStatus = (status === 'all' || o.status === status);
-    
-    return matchSearch && matchBatch && matchStatus;
-  });
-
-  renderOrders(filtered);
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    loadOrders(1); // Reset ke halaman 1 saat mencari
+  }, 500);
 }
 
 function showToast(msg) {

@@ -180,6 +180,7 @@
             <div class="page-sub">Semua transaksi pre-order OSPEK 2026</div>
           </div>
           <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-sm btn-primary" onclick="openManualModal()" style="background:var(--td)">+ Tambah Manual</button>
             <select id="filter-batch" onchange="filterOrders()" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--tx);font-family:'Poppins',sans-serif;font-size:12px;padding:9px;outline:none;">
               <option value="all">Sua Batch</option>
             </select>
@@ -282,6 +283,45 @@
       <div class="modal-actions">
         <button class="btn-cancel-m" onclick="closeMembersModal()">Tutup</button>
         <button class="btn-save-m" id="btn-export-csv">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL ORDER MODAL -->
+  <div class="modal-backdrop" id="manual-order-modal">
+    <div class="modal-box">
+      <div class="modal-title">Tambah Order Manual</div>
+      <div class="modal-sub">Input data pendaftar yang sudah bayar secara manual.</div>
+      <div class="modal-field">
+        <label>Nama Lengkap</label>
+        <input type="text" id="man-name" placeholder="Nama Mahasiswa" />
+      </div>
+      <div class="modal-field">
+        <label>Email</label>
+        <input type="email" id="man-email" placeholder="email@student.ub.ac.id" />
+      </div>
+      <div class="modal-field">
+        <label>WhatsApp</label>
+        <input type="text" id="man-wa" placeholder="08123456789" />
+      </div>
+      <div class="modal-field">
+        <label>Batch</label>
+        <select id="man-batch"></select>
+      </div>
+      <div class="modal-field">
+        <label>Nominal Bayar</label>
+        <input type="number" id="man-amount" value="100000" />
+      </div>
+      <div class="modal-field">
+        <label>Status</label>
+        <select id="man-status">
+          <option value="paid">Langsung Lunas (Paid)</option>
+          <option value="pending">Menunggu (Pending)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel-m" onclick="closeManualModal()">Batal</button>
+        <button class="btn-save-m" id="btn-save-manual" onclick="submitManualOrder()">Simpan Data</button>
       </div>
     </div>
   </div>

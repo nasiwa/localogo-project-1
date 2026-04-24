@@ -97,8 +97,8 @@ async function initRealQueue() {
     const now = Date.now();
     const elapsedSeconds = Math.max(0, (now - startTime) / 1000);
     
-    // FAST FORWARD: 10 people every 10 seconds for simulation
-    const intervalSeconds = isLiveTest ? 10 : 300; // 10s vs 5m
+    // REAL WORLD MODE: 10 people every 5 minutes (300s)
+    const intervalSeconds = 300; 
     const currentBatch = Math.floor(elapsedSeconds / intervalSeconds); 
     const allowedMaxId = (currentBatch + 1) * 10; 
 
