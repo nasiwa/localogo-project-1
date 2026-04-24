@@ -183,7 +183,7 @@ router.get('/verify-payment/:orderRef', async (req, res) => {
  * GET /api/invoice/:orderRef (Download PDF)
  */
 router.get('/invoice/:orderRef', async (req, res) => {
-  const { supabase } = req.app.get('clients');
+  const supabase = req.app.get('getSupabase')();
   const { orderRef } = req.params;
   try {
     const { data: order, error } = await supabase
