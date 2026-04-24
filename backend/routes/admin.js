@@ -130,6 +130,8 @@ router.get('/orders', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 100;
   const q = req.query.q || '';
+  const batchId = req.query.batch_id || 'all';
+  const status = req.query.status || 'all';
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -139,6 +141,12 @@ router.get('/orders', async (req, res) => {
 
   if (q) {
     query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,order_ref.ilike.%${q}%`);
+  }
+  if (batchId !== 'all') {
+    query = query.eq('batch_id', batchId);
+  }
+  if (status !== 'all') {
+    query = query.eq('status', status);
   }
 
   const { data, error, count } = await query

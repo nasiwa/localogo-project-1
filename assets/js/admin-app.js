@@ -263,8 +263,12 @@ async function saveBatch() {
 async function loadOrders(page = 1) {
   currentPage = page;
   const q = document.getElementById('order-search')?.value || '';
+  const batchId = document.getElementById('filter-batch')?.value || 'all';
+  const status = document.getElementById('filter-status')?.value || 'all';
+  
   try {
-    const res = await fetch(`${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}&q=${encodeURIComponent(q)}`, { 
+    const url = `${BACKEND_URL}/api/admin/orders?page=${page}&limit=${ordersPerPage}&q=${encodeURIComponent(q)}&batch_id=${batchId}&status=${status}`;
+    const res = await fetch(url, { 
       headers: { 'x-admin-token': getAdminToken() } 
     });
     const { orders, total } = await res.json();
