@@ -374,7 +374,7 @@ function renderOrders(orders) {
       <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
       <td>
          <div style="display:flex; gap:4px; justify-content:flex-end;">
-           ${o.status === 'pending' ? `<button class="btn-sm btn-activate" onclick="confirmManual('${o.order_ref}')">Konfirmasi</button>` : ''}
+           ${(o.status === 'pending' || o.status === 'expired') ? `<button class="btn-sm btn-activate" onclick="confirmManual('${o.order_ref}')">Konfirmasi</button>` : ''}
            <button class="btn-sm btn-edit" onclick="syncOrder('${o.order_ref}')">Sync</button>
            ${o.status === 'paid' ? `<a href="${BACKEND_URL}/api/invoice/${o.order_ref}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none; text-align:center; display:inline-block;">PDF</a>` : ''}
          </div>
