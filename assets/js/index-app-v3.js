@@ -1106,4 +1106,7 @@ function showSlides(n) {
 }
 
 // Ensure init after everything is loaded
-window.addEventListener('load', initCarousel);
+window.addEventListener('load', () => {
+  init();
+  initCarousel();
+});
