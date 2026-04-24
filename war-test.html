@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOCALOGO — Pre-Order Perlengkapan OSPEK 2026</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap"
+    rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="assets/css/index.css">
+</head>
+
+<body>
+
+  <script src="assets/js/config.js"></script>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
+      <span>·</span><span>Slot Terbatas</span><span>·</span>
+      <span>DP Rp100.000</span><span>·</span>
+      <span>QRIS · GoPay · ShopeePay</span><span>·</span>
+      <span>Invoice PDF Otomatis via Email</span><span>·</span>
+      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
+      <span>·</span><span>Slot Terbatas</span><span>·</span>
+      <span>DP Rp100.000</span><span>·</span>
+      <span>QRIS · GoPay · ShopeePay</span><span>·</span>
+      <span>Invoice PDF Otomatis via Email</span><span>·</span>
+    </div>
+  </div>
+
+  <nav>
+    <a class="logo" href="#">
+      <div class="logo-text">Localogo</div>
+    </a>
+    <div class="live-chip">
+      <div class="dot"></div><span id="nav-status">Booking Open</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge fade-up" style="animation-delay:.05s">🎒 Perlengkapan Resmi OSPEK 2026</div>
+      <h1 class="hero-title fade-up" style="animation-delay:.1s">
+        <em>Pre-Order</em>
+        Amankan<br>Slot Kamu
+      </h1>
+      <p class="hero-sub fade-up" style="animation-delay:.15s">Bayar DP Rp100.000 sekarang untuk mengamankan slot PO perlengkapan OSPEK di localogo. Kuota terbatas — cepat sebelum habis</p>
+      <div class="hero-stats fade-up" style="animation-delay:.2s">
+        <div class="hero-stat">
+          <div class="hero-stat-val" id="h-batch">—</div>
+          <div class="hero-stat-label">Batch Aktif</div>
+        </div>
+        <div class="hero-stat" style="opacity: 0.5">
+          <div class="hero-stat-val">Rp100K</div>
+          <div class="hero-stat-label">Down Payment</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="main-wrap">
+    <div class="steps-nav fade-up" style="animation-delay:.25s">
+      <div class="step-item active" id="step1">
+        <div class="step-circle" id="sc1">1</div>
+        <div>
+          <div class="step-label">Cek Slot</div>
+          <div class="step-desc">Lihat batch tersedia</div>
+        </div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-circle" id="sc2">2</div>
+        <div>
+          <div class="step-label">Isi Data</div>
+          <div class="step-desc">Lengkapi form diri</div>
+        </div>
+      </div>
+      <div class="step-item" id="step3">
+        <div class="step-circle" id="sc3">3</div>
+        <div>
+          <div class="step-label">Bayar DP</div>
+          <div class="step-desc">Via Midtrans</div>
+        </div>
+      </div>
+      <div class="step-item" id="step4">
+        <div class="step-circle" id="sc4">4</div>
+        <div>
+          <div class="step-label">Slot Aman</div>
+          <div class="step-desc">Invoice ke email</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BATCH STATUS -->
+    <div class="fade-up" style="animation-delay:.28s;margin-bottom:40px;">
+      <div class="section-header">
+        <div class="section-title">Status Batch</div>
+        <div class="section-note" id="slots-remain">Memuat...</div>
+      </div>
+      <div class="batch-grid" id="batch-grid">
+        <div
+          style="padding:32px;text-align:center;color:var(--txd);font-size:13px;border:1.5px solid var(--border);border-radius:var(--rl);grid-column:1/-1;">
+          Memuat status batch...</div>
+      </div>
+    </div>
+
+
+
+    <!-- FORM + SIDEBAR -->
+    <div class="booking-layout fade-up" style="animation-delay:.32s" id="booking-main">
+      <div class="form-card">
+        <div class="form-card-head">
+          <div class="form-card-title">Form Pendaftaran</div>
+          <div class="form-card-sub">Lengkapi data diri kamu. Invoice PDF dan instruksi penting akan dikirim otomatis ke email ini.</div>
+        </div>
+
+        <!-- Google Auth Overlay -->
+        <div id="google-auth-overlay" style="padding: 40px 20px; text-align: center; border-radius:8px;">
+          <div style="font-size:36px; margin-bottom:14px;">🛡️</div>
+          <h3 style="margin-bottom:12px; color:var(--txd); font-size:20px;">Verifikasi Email Pendaftaran</h3>
+          <p style="font-size:13px; color:var(--txm); margin-bottom:28px; line-height:1.6; padding: 0 10px;">
+            Demi mencegah kegagalan pengiriman tiket akibat <i>typo</i>, <strong>panitia mewajibkan pendaftaran menggunakan Akun Google SSO</strong>.<br><br>
+            <span style="color:var(--txd); font-weight:600;">⚠️ PENTING: Invoice dan Link Grup WA otomatis terkirim hanya ke alamat email yang kamu pilih di bawah.</span>
+          </p>
+          <button onclick="loginGoogle()" style="background:#fff; border:1.5px solid #eaeaea; padding:12px 24px; border-radius:8px; font-weight:600; color:#555; display:inline-flex; align-items:center; gap:12px; cursor:pointer; font-family:inherit; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin:0 auto; width:100%; justify-content:center; transition:0.2s;">
+            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+            Lanjutkan dengan Google
+          </button>
+        </div>
+
+        <div class="form-body" id="the-form-body" style="display:none;">
+          <div class="batch-assign-box" id="batch-assign">
+            <div class="ba-icon">🎯</div>
+            <div>
+              <div class="ba-label">Kamu akan masuk ke</div>
+              <div class="ba-val" id="ba-val">Memuat...</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field full" id="fi-name">
+              <label>Nama Lengkap <span class="req">*</span></label>
+              <input type="text" id="f-name" placeholder="Nama sesuai KTM" oninput="onInput()" />
+            </div>
+            <div class="field full" id="fi-email">
+              <label>Email Aktif <span class="req">*</span></label>
+              <input type="email" id="f-email" placeholder="email@mahasiswa.ac.id" oninput="onInput()" />
+            </div>
+            <div class="field full" id="fi-wa">
+              <label>No. WhatsApp <span class="req">*</span></label>
+              <input type="tel" id="f-wa" placeholder="08xxxxxxxxxx" inputmode="numeric" oninput="onWaInput()" />
+            </div>
+          </div>
+          <button class="btn-pay" id="btn-pay" onclick="handleBooking()">
+            <span>Lanjut ke Pembayaran</span><span>→</span>
+          </button>
+          <div class="ssl-note" id="payment-badge">🔒 Transaksi aman · SSL Encrypted</div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="order-card">
+          <div class="order-head">
+            <div class="order-head-label">Ringkasan Pesanan</div>
+            <div class="order-price">Rp100.000</div>
+            <div class="order-price-sub">Down Payment — Perlengkapan OSPEK 2026</div>
+          </div>
+          <div class="order-body">
+            <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
+            <div class="order-row"><span class="k">Tipe</span><span class="v">Down Payment (DP)</span></div>
+            <div class="order-row" id="sidebar-admin-row"><span class="k">Admin</span><span class="v" style="color:var(--td)">Rp2.500</span></div>
+            <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">—</span></div>
+            <div class="order-row" style="padding-top:12px;border-top:1.5px solid var(--border);margin-top:4px;">
+              <span class="k"
+                style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.08em;">Total</span>
+              <span class="v" id="sidebar-total" style="font-size:20px;font-weight:800;color:var(--td);">Rp102.500</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOLD OUT (Replaces booking main in JS logic) -->
+    <div class="sold-out-card" id="sold-out">
+      <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+      <div class="so-title">Slot Pre-Order Penuh</div>
+      <div class="so-desc">Semua batch yang tersedia saat ini sudah terisi penuh. Nantikan info penambahan batch di media sosial kami.</div>
+    </div>
+  </div>
+
+  <!-- PRODUCT SHOWCASE (Carousel) -->
+  <div class="product-showcase fade-up" style="animation-delay:.3s;">
+    <div class="section-header" style="text-align:center; margin-bottom: 25px;">
+      <div class="section-note" style="color:var(--red); font-weight:710; font-size:14px;">⚠️ LIST DI BAWAH ADALAH CONTOH ATRIBUT TAHUN LALU SEBAGAI GAMBARAN</div>
+    </div>
+    
+    <div class="product-carousel" id="product-slider">
+      <div class="pg-slide pg-obscure active">
+        <img src="real_proof_student_1_raw.jpeg" alt="Bukti Penyerahan 1" class="pg-img">
+        <div class="pg-caption">Real Proof: Bukti Nyata Penyerahan Paket OSPEK</div>
+      </div>
+      <div class="pg-slide pg-obscure">
+        <img src="real_proof_student_2_raw.jpeg" alt="Bukti Penyerahan 2" class="pg-img">
+        <div class="pg-caption">Layanan Terpercaya Sejak 2021</div>
+      </div>
+      <div class="pg-slide pg-obscure">
+        <img src="real_proof_student_3_raw.jpeg" alt="Bukti Penyerahan 3" class="pg-img">
+        <div class="pg-caption">Kepuasan Ribuan Mahasiswa Baru</div>
+      </div>
+      <div class="pg-slide">
+        <img src="raja_brawijaya_gear_layout_1776763771838.png" alt="Flatlay Atribut RAJA Brawijaya" class="pg-img">
+        <div class="pg-caption">Contoh Kelengkapan Atribut (Gambaran 2025)</div>
+      </div>
+      <div class="pg-slide">
+        <img src="real_id_cards_gallery_clean_1776765149520.png" alt="Atribut Resmi ABISHEVA" class="pg-img">
+        <div class="pg-caption">Detail Official Kit & Attributes</div>
+      </div>
+      
+      <!-- Controls -->
+      <button class="slider-btn prev" onclick="moveSlide(-1)">❮</button>
+      <button class="slider-btn next" onclick="moveSlide(1)">❯</button>
+      
+      <!-- Dots -->
+      <div class="slider-dots" id="slider-dots"></div>
+    </div>
+
+    <div class="product-details-grid">
+      <div class="pd-column">
+        <div class="pd-list-title" style="font-size:13px; line-height:1.4;">Contoh peralatan yang disediakan sesuai panduan ospek tahun 2025 lalu:</div>
+        <ul class="pd-list">
+          <li><span>✓</span> Tote bag kain (Spunbond)</li>
+          <li><span>✓</span> Pita Sakit (Lengan Kiri)</li>
+          <li><span>✓</span> Pita Gerbong (Lengan Kanan)</li>
+          <li><span>✓</span> Pita Merah Putih (Sleeve)</li>
+          <li><span>✓</span> Name Tag (Laminated) + Lanyard Putih</li>
+          <li><span>✓</span> Bag Tag (Laminated A7) + Pita</li>
+          <li><span>✓</span> Pin Cluster (Laminated)</li>
+          <li><span>✓</span> Peniti Cadangan</li>
+          <li><span>✓</span> Buku Catatan & Alat Tulis</li>
+        </ul>
+      </div>
+      <div class="pd-column">
+        <div class="pd-list-title" style="font-size:13px; line-height:1.4;">Lanjutan contoh barang bawaan & kit sesuai panduan tahun 2025:</div>
+        <ul class="pd-list">
+          <li><span>✓</span> Jas Hujan</li>
+          <li><span>✓</span> Hand Sanitizer</li>
+          <li><span>✓</span> Tisu (Dry & Wet)</li>
+          <li><span>✓</span> Kaos Kaki Putih & Hitam</li>
+          <li><span>✓</span> Alat Sholat</li>
+          <li><span>✓</span> Obat-obatan Pribadi</li>
+          <li><span>✓</span> Perlengkapan Kebersihan</li>
+          <li><span>✓</span> Dan Lain-Lain Sesuai Panduan</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- CONFIRM MODAL (before Payment opens) -->
+  <div class="modal-backdrop" id="confirm-modal">
+    <div class="pay-box">
+      <div class="pay-top">
+        <div class="pay-brand">Localogo · Konfirmasi Pesanan</div>
+        <div class="pay-amount" id="pm-amount">Rp102.500</div>
+        <div class="pay-oid" id="pm-oid">ORDER-XXXXXXXX</div>
+      </div>
+      <div class="pay-info-body">
+        <div
+          style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txm);margin-bottom:14px;">
+          Detail Pesanan</div>
+        <div class="pay-info-row"><span class="k">Nama</span><span class="v" id="pm-name">—</span></div>
+        <div class="pay-info-row"><span class="k">Email</span><span class="v" id="pm-email">—</span></div>
+        <div class="pay-info-row"><span class="k">WhatsApp</span><span class="v" id="pm-wa">—</span></div>
+        <div class="pay-info-row"><span class="k">Batch</span><span class="v" id="pm-batch">—</span></div>
+        <div class="pay-info-row" id="row-unique-nominal" style="display:none; background:var(--tp); padding:6px 10px; border-radius:6px; margin-top:5px;">
+           <span class="k" style="color:var(--td)">Nominal Unik</span>
+           <span class="v" id="pm-total-manual" style="color:var(--td); font-weight:800; font-size:16px;">Rp100.000</span>
+        </div>
+        <div class="pay-info-row" id="row-total-gateway"><span class="k">Total (+ Admin)</span><span class="v"
+            style="color:var(--td);font-weight:800;">Rp102.500</span></div>
+        <br>
+
+        <!-- MANUAL TRANSFER BOX -->
+        <div id="manual-box" style="display:none; background:var(--tp); border:1.5px dashed var(--td); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+          <div style="background:var(--red); color:#fff; font-size:12px; font-weight:900; padding:8px 16px; border-radius:30px; display:inline-block; margin-bottom:15px; text-transform:uppercase; box-shadow: 0 4px 10px rgba(220,10,10,0.3); animation: pulse 2s infinite;">⚠️ SELESAIKAN DALAM 24 JAM</div>
+          <style>@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }</style>
+          <div style="font-size:10px; font-weight:700; color:var(--tm); margin-bottom:10px; letter-spacing:1px; text-transform:uppercase;">Silakan Transfer Ke:</div>
+          <div id="manual-bank-info" style="font-size:16px; font-weight:800; color:var(--td); line-height:1.4;">—</div>
+          <p style="font-size:11px; color:var(--txm); margin-top:12px; line-height:1.5;">Harap transfer <strong>tepat sesuai nominal unik</strong> agar verifikasi otomatis lebih cepat.</p>
+          
+          <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; text-align:left;">
+             <label style="font-size:11px; font-weight:700; color:var(--txd); margin-bottom:8px; display:block;">UPLOAD BUKTI TRANSFER</label>
+             <div class="proof-upload-zone" onclick="document.getElementById('proof-file').click()" style="border:1.5px dashed #ccc; border-radius:8px; padding:15px; text-align:center; cursor:pointer; background:#f9f9f9; transition:0.2s;" onmouseover="this.style.borderColor='var(--td)'" onmouseout="this.style.borderColor='#ccc'">
+                <div id="proof-preview" style="display:none; margin-bottom:10px;"><img src="" style="max-width:100px; border-radius:4px;"></div>
+                <div id="proof-placeholder">
+                  <span style="font-size:20px;">📸</span>
+                  <div style="font-size:11px; color:var(--txm); margin-top:5px;">Klik untuk pilih foto bukti</div>
+                </div>
+                <input type="file" id="proof-file" accept="image/*" style="display:none" onchange="previewProof(this)">
+             </div>
+          </div>
+        </div>
+
+        <!-- PAYMENT METHOD SELECTOR (Duitku) -->
+        <div id="duitku-selector" style="display:none;">
+          <div class="pay-methods-title">Langkah Terakhir: Pilih Metode Pembayaran</div>
+          <p style="text-align:center; font-size:14px; color:var(--txm); margin-bottom:15px; opacity:0.8;">
+            Silakan pilih salah satu logo di bawah ini untuk melihat detail instruksi pembayaran.
+          </p>
+          <div class="methods-grid" id="methods-grid">
+            <div class="method-card" onclick="highlightMethod('QR', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" class="method-icon" alt="QRIS">
+              <div class="method-name">QRIS</div>
+              <div class="method-fee">Fee 0.7%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('SP', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/ShopeePay_logo.svg" class="method-icon" alt="ShopeePay">
+              <div class="method-name">ShopeePay</div>
+              <div class="method-fee">Fee 2%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('OV', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" class="method-icon" alt="OVO">
+              <div class="method-name">OVO</div>
+              <div class="method-fee">Fee 3%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('DA', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" class="method-icon" alt="DANA">
+              <div class="method-name">DANA</div>
+              <div class="method-fee">Fee 1.6%</div>
+            </div>
+            <div class="method-card active" onclick="highlightMethod('BC', this)">
+              <div style="font-size:24px; margin-bottom:8px;">🏦</div>
+              <div class="method-name">Virtual Account</div>
+              <div class="method-fee">Gratis / Rp 2.500</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-open-snap" id="btn-pay-modal" onclick="startPayment()" style="display:none; margin-top:20px;">
+          Bayar Sekarang
+        </button>
+        <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
+        <div class="secure-note" id="secure-note">🔒 Transaksi diproses melalui enkripsi aman</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING WA SUPPORT -->
+  <a href="https://wa.me/6289653405239?text=Halo%20Admin%20Localogo,%20saya%20butuh%20bantuan%20mengenai%20pembayaran%20PO%20OSPEK." 
+     class="wa-float" target="_blank">
+    <div class="wa-float-text">
+      <strong>Butuh Bantuan?</strong><br>
+      Klik jika bingung/error
+    </div>
+    <div class="wa-float-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+  </a>
+
+  <!-- SUCCESS MODAL -->
+  <div class="modal-backdrop" id="success-modal">
+    <div class="success-box">
+      <div class="success-top">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Slot Berhasil Diamankan!</div>
+        <div class="success-sub">Pembayaran diterima. Invoice PDF sudah dikirim ke emailmu.</div>
+      </div>
+      <div class="success-body">
+        <div class="email-note" style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <span style="font-size:18px;flex-shrink:0">📧</span>
+            <span>Cek inbox emailmu. Terdapat <strong>Link Grup WhatsApp Wajib</strong> di dalam email tersebut.</span>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <span style="font-size:18px;flex-shrink:0">📂</span>
+            <span>Tidak ada di inbox? Wajib cek folder <strong>Spam / Promotions</strong>.</span>
+          </div>
+        </div>
+        <div class="detail-rows">
+          <div class="detail-row"><span class="detail-key">Nama</span><span class="detail-val" id="s-name">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Order ID</span><span class="detail-val" id="s-oid">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Batch</span><span class="detail-val" id="s-batch">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val" id="s-email">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val ok">✓ SETTLED</span>
+          </div>
+        </div>
+        <a id="btn-download-pdf" href="#" target="_blank" class="btn-close-success" style="background:#24999b; margin-bottom:12px; display:block; text-align:center; text-decoration:none;">📥 Download Invoice PDF</a>
+        <button class="btn-close-success" onclick="closeSuccess()">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://app-sandbox.duitku.com/lib/js/duitku.js"></script>
+
+
+  <footer class="app-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <img src="favicon.png" alt="Localogo Logo">
+          <span>Localogo</span>
+        </div>
+        <p class="footer-desc">Official supplier perlengkapan mahasiswa baru di Malang. Aman, Lengkap, dan Cepat.</p>
+      </div>
+      <div class="footer-contact">
+        <div class="footer-title">Pusat Bantuan</div>
+        <a href="mailto:localogo01@gmail.com" class="footer-link">📧 localogo01@gmail.com</a>
+        <div class="footer-wa-note">Atau klik tombol WhatsApp di pojok kanan bawah</div>
+      </div>
+      <div class="footer-stores">
+        <div class="footer-title">Official Store (Malang)</div>
+        <div class="store-item">
+          <strong>Localogo 1:</strong><br>
+          Jl. Kerto Raharjo No.42a, Ketawanggede, Kec. Lowokwaru, Kota Malang
+        </div>
+        <div class="store-item" style="margin-top:12px;">
+          <li><span>✓</span> Tote bag kain (Spunbond)</li>
+          <li><span>✓</span> Pita Sakit (Lengan Kiri)</li>
+          <li><span>✓</span> Pita Gerbong (Lengan Kanan)</li>
+          <li><span>✓</span> Pita Merah Putih (Sleeve)</li>
+          <li><span>✓</span> Name Tag (Laminated) + Lanyard Putih</li>
+          <li><span>✓</span> Bag Tag (Laminated A7) + Pita</li>
+          <li><span>✓</span> Pin Cluster (Laminated)</li>
+          <li><span>✓</span> Peniti Cadangan</li>
+          <li><span>✓</span> Buku Catatan & Alat Tulis</li>
+        </ul>
+      </div>
+      <div class="pd-column">
+        <div class="pd-list-title" style="font-size:13px; line-height:1.4;">Lanjutan contoh barang bawaan & kit sesuai panduan tahun 2025:</div>
+        <ul class="pd-list">
+          <li><span>✓</span> Jas Hujan</li>
+          <li><span>✓</span> Hand Sanitizer</li>
+          <li><span>✓</span> Tisu (Dry & Wet)</li>
+          <li><span>✓</span> Kaos Kaki Putih & Hitam</li>
+          <li><span>✓</span> Alat Sholat</li>
+          <li><span>✓</span> Obat-obatan Pribadi</li>
+          <li><span>✓</span> Perlengkapan Kebersihan</li>
+          <li><span>✓</span> Dan Lain-Lain Sesuai Panduan</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- CONFIRM MODAL (before Payment opens) -->
+  <div class="modal-backdrop" id="confirm-modal">
+    <div class="pay-box">
+      <div class="pay-top">
+        <div class="pay-brand">Localogo · Konfirmasi Pesanan</div>
+        <div class="pay-amount" id="pm-amount">Rp102.500</div>
+        <div class="pay-oid" id="pm-oid">ORDER-XXXXXXXX</div>
+      </div>
+      <div class="pay-info-body">
+        <div
+          style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txm);margin-bottom:14px;">
+          Detail Pesanan</div>
+        <div class="pay-info-row"><span class="k">Nama</span><span class="v" id="pm-name">—</span></div>
+        <div class="pay-info-row"><span class="k">Email</span><span class="v" id="pm-email">—</span></div>
+        <div class="pay-info-row"><span class="k">WhatsApp</span><span class="v" id="pm-wa">—</span></div>
+        <div class="pay-info-row"><span class="k">Batch</span><span class="v" id="pm-batch">—</span></div>
+        <div class="pay-info-row" id="row-unique-nominal" style="display:none; background:var(--tp); padding:6px 10px; border-radius:6px; margin-top:5px;">
+           <span class="k" style="color:var(--td)">Nominal Unik</span>
+           <span class="v" id="pm-total-manual" style="color:var(--td); font-weight:800; font-size:16px;">Rp100.000</span>
+        </div>
+        <div class="pay-info-row" id="row-total-gateway"><span class="k">Total (+ Admin)</span><span class="v"
+            style="color:var(--td);font-weight:800;">Rp102.500</span></div>
+        <br>
+
+        <!-- MANUAL TRANSFER BOX -->
+        <div id="manual-box" style="display:none; background:var(--tp); border:1.5px dashed var(--td); border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+          <div style="background:var(--red); color:#fff; font-size:12px; font-weight:900; padding:8px 16px; border-radius:30px; display:inline-block; margin-bottom:15px; text-transform:uppercase; box-shadow: 0 4px 10px rgba(220,10,10,0.3); animation: pulse 2s infinite;">⚠️ SELESAIKAN DALAM 24 JAM</div>
+          <style>@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }</style>
+          <div style="font-size:10px; font-weight:700; color:var(--tm); margin-bottom:10px; letter-spacing:1px; text-transform:uppercase;">Silakan Transfer Ke:</div>
+          <div id="manual-bank-info" style="font-size:16px; font-weight:800; color:var(--td); line-height:1.4;">—</div>
+          <p style="font-size:11px; color:var(--txm); margin-top:12px; line-height:1.5;">Harap transfer <strong>tepat sesuai nominal unik</strong> agar verifikasi otomatis lebih cepat.</p>
+          
+          <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; text-align:left;">
+             <label style="font-size:11px; font-weight:700; color:var(--txd); margin-bottom:8px; display:block;">UPLOAD BUKTI TRANSFER</label>
+             <div class="proof-upload-zone" onclick="document.getElementById('proof-file').click()" style="border:1.5px dashed #ccc; border-radius:8px; padding:15px; text-align:center; cursor:pointer; background:#f9f9f9; transition:0.2s;" onmouseover="this.style.borderColor='var(--td)'" onmouseout="this.style.borderColor='#ccc'">
+                <div id="proof-preview" style="display:none; margin-bottom:10px;"><img src="" style="max-width:100px; border-radius:4px;"></div>
+                <div id="proof-placeholder">
+                  <span style="font-size:20px;">📸</span>
+                  <div style="font-size:11px; color:var(--txm); margin-top:5px;">Klik untuk pilih foto bukti</div>
+                </div>
+                <input type="file" id="proof-file" accept="image/*" style="display:none" onchange="previewProof(this)">
+             </div>
+          </div>
+        </div>
+
+        <!-- PAYMENT METHOD SELECTOR (Duitku) -->
+        <div id="duitku-selector" style="display:none;">
+          <div class="pay-methods-title">Langkah Terakhir: Pilih Metode Pembayaran</div>
+          <p style="text-align:center; font-size:14px; color:var(--txm); margin-bottom:15px; opacity:0.8;">
+            Silakan pilih salah satu logo di bawah ini untuk melihat detail instruksi pembayaran.
+          </p>
+          <div class="methods-grid" id="methods-grid">
+            <div class="method-card" onclick="highlightMethod('QR', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" class="method-icon" alt="QRIS">
+              <div class="method-name">QRIS</div>
+              <div class="method-fee">Fee 0.7%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('SP', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/ShopeePay_logo.svg" class="method-icon" alt="ShopeePay">
+              <div class="method-name">ShopeePay</div>
+              <div class="method-fee">Fee 2%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('OV', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" class="method-icon" alt="OVO">
+              <div class="method-name">OVO</div>
+              <div class="method-fee">Fee 3%</div>
+            </div>
+            <div class="method-card" onclick="highlightMethod('DA', this)">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" class="method-icon" alt="DANA">
+              <div class="method-name">DANA</div>
+              <div class="method-fee">Fee 1.6%</div>
+            </div>
+            <div class="method-card active" onclick="highlightMethod('BC', this)">
+              <div style="font-size:24px; margin-bottom:8px;">🏦</div>
+              <div class="method-name">Virtual Account</div>
+              <div class="method-fee">Gratis / Rp 2.500</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-open-snap" id="btn-pay-modal" onclick="startPayment()" style="display:none; margin-top:20px;">
+          Bayar Sekarang
+        </button>
+        <button class="btn-cancel-modal" onclick="closeConfirm()">Batalkan</button>
+        <div class="secure-note" id="secure-note">🔒 Transaksi diproses melalui enkripsi aman</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING WA SUPPORT -->
+  <a href="https://wa.me/6289653405239?text=Halo%20Admin%20Localogo,%20saya%20butuh%20bantuan%20mengenai%20pembayaran%20PO%20OSPEK." 
+     class="wa-float" target="_blank">
+    <div class="wa-float-text">
+      <strong>Butuh Bantuan?</strong><br>
+      Klik jika bingung/error
+    </div>
+    <div class="wa-float-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+  </a>
+
+  <!-- SUCCESS MODAL -->
+  <div class="modal-backdrop" id="success-modal">
+    <div class="success-box">
+      <div class="success-top">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Slot Berhasil Diamankan!</div>
+        <div class="success-sub">Pembayaran diterima. Invoice PDF sudah dikirim ke emailmu.</div>
+      </div>
+      <div class="success-body">
+        <div class="email-note" style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <span style="font-size:18px;flex-shrink:0">📧</span>
+            <span>Cek inbox emailmu. Terdapat <strong>Link Grup WhatsApp Wajib</strong> di dalam email tersebut.</span>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <span style="font-size:18px;flex-shrink:0">📂</span>
+            <span>Tidak ada di inbox? Wajib cek folder <strong>Spam / Promotions</strong>.</span>
+          </div>
+        </div>
+        <div class="detail-rows">
+          <div class="detail-row"><span class="detail-key">Nama</span><span class="detail-val" id="s-name">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Order ID</span><span class="detail-val" id="s-oid">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Batch</span><span class="detail-val" id="s-batch">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val" id="s-email">—</span>
+          </div>
+          <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val ok">✓ SETTLED</span>
+          </div>
+        </div>
+        <a id="btn-download-pdf" href="#" target="_blank" class="btn-close-success" style="background:#24999b; margin-bottom:12px; display:block; text-align:center; text-decoration:none;">📥 Download Invoice PDF</a>
+        <button class="btn-close-success" onclick="closeSuccess()">Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://app-sandbox.duitku.com/lib/js/duitku.js"></script>
+
+
+  <footer class="app-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <img src="favicon.png" alt="Localogo Logo">
+          <span>Localogo</span>
+        </div>
+        <p class="footer-desc">Official supplier perlengkapan mahasiswa baru di Malang. Aman, Lengkap, dan Cepat.</p>
+      </div>
+      <div class="footer-contact">
+        <div class="footer-title">Pusat Bantuan</div>
+        <a href="mailto:localogo01@gmail.com" class="footer-link">📧 localogo01@gmail.com</a>
+        <div class="footer-wa-note">Atau klik tombol WhatsApp di pojok kanan bawah</div>
+      </div>
+      <div class="footer-stores">
+        <div class="footer-title">Official Store (Malang)</div>
+        <div class="store-item">
+          <strong>Localogo 1:</strong><br>
+          Jl. Kerto Raharjo No.42a, Ketawanggede, Kec. Lowokwaru, Kota Malang
+        </div>
+        <div class="store-item" style="margin-top:12px;">
+          <strong>Localogo 2:</strong><br>
+          Jl. Kertosentono No.23, Ketawanggede, Kec. Lowokwaru, Kota Malang
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2026 LOCALOGO &middot; Pre-Order OSPEK
+    </div>
+  </footer>
+
+  <!-- VIRTUAL WAITING ROOM (SCENARIO 2) -->
+  <div id="queue-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(11,17,17,0.98); z-index:10000; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:'Poppins', sans-serif; backdrop-filter:blur(15px);">
+    <div style="width:90%; max-width:450px; text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:24px; position:relative; overflow:hidden;">
+      <!-- DECORATIVE PULSE -->
+      <div style="position:absolute; top:-50px; left:-50px; width:150px; height:150px; background:var(--td); filter:blur(100px); opacity:0.15; border-radius:50%;"></div>
+      
+      <div style="font-size:10px; font-weight:800; color:var(--td); letter-spacing:3px; text-transform:uppercase; margin-bottom:20px; animation: q-glow 2s infinite alternate;">REGISTRATION QUEUE ACTIVE</div>
+      
+      <!-- TICKET UI -->
+      <div style="background:#fff; color:#000; padding:20px; border-radius:16px; margin-bottom:30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+        <div style="font-size:11px; font-weight:700; opacity:0.5; text-transform:uppercase; margin-bottom:5px;">Nomor Antrean Anda</div>
+        <div id="queue-number" style="font-size:36px; font-weight:900; letter-spacing:-1px; font-family:monospace; color:var(--td);">MEMUAT...</div>
+        <div style="border-top:2px dashed #eee; margin:15px 0;"></div>
+        <div style="font-size:12px; font-weight:600; color:#666;">Status: <span style="color:#24999b" id="queue-status-text">Menunggu Giliran...</span></div>
+      </div>
+
+      <p id="queue-msg" style="font-size:13px; opacity:0.7; line-height:1.6; margin-bottom:25px; color:#eee;">Mohon jangan tutup halaman ini. Kami sedang memvalidasi slot pendaftaran untuk ribuan mahasiswa yang masuk bersamaan.</p>
+      
+      <!-- PROGRESS BAR -->
+      <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; margin-bottom:12px;">
+        <div id="queue-progress" style="width:0%; height:100%; background:var(--td); box-shadow: 0 0 10px var(--td); transition: width 0.4s ease;"></div>
+      </div>
+      
+      <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; opacity:0.5; text-transform:uppercase;">
+        <span>Processing Power: High</span>
+        <span id="queue-percent">0%</span>
+      </div>
+      
+      <div style="margin-top:40px; font-size:9px; opacity:0.3; letter-spacing:1px;">LOCALOGO GATEKEEPER SYSTEM v2.0</div>
+    </div>
+  </div>
+
+  <!-- MAINTENANCE OVERLAY -->
+  <div id="maintenance-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:20000; flex-direction:column; align-items:center; justify-content:center; color:var(--td); font-family:'Poppins', sans-serif;">
+    <div style="text-align:center; padding:40px;">
+       <img src="favicon.png" style="width:80px; margin-bottom:30px; opacity:0.8;">
+       <h1 style="font-size:32px; font-weight:900; letter-spacing:-1px; margin-bottom:10px; background:linear-gradient(to right, #fff, var(--td)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">SISTEM SEDANG DIKALIBRASI</h1>
+       <p style="color:var(--tm); font-size:14px; max-width:400px; margin:0 auto 30px; line-height:1.6;">Halo pendaftar OSPEK! Saat ini kami sedang mengoptimalkan server untuk Batch selanjutnya agar pendaftaran Anda lebih lancar. Cek kembali nanti ya!</p>
+       <div style="display:inline-block; padding:8px 20px; border:1px solid var(--border); border-radius:30px; font-size:11px; font-weight:700; color:var(--td); letter-spacing:1px; text-transform:uppercase;">Status: Maintenance Mode</div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes q-spin { to { transform: rotate(360deg); } }
+    @keyframes q-glow { from { opacity: 0.5; text-shadow: 0 0 0 var(--td); } to { opacity: 1; text-shadow: 0 0 10px var(--td); } }
+    #queue-overlay.show, #maintenance-overlay.show { display: flex !important; animation: q-fade 0.5s ease; }
+    @keyframes q-fade { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+
+  <script src="assets/js/index-app-v3.js"></script>
+</body>
+</html>
