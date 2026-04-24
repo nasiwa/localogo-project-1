@@ -44,6 +44,13 @@ function checkMaintenance() {
 
   // 2. Jika Preview -> Tampilkan Antrean (Testing War)
   if (isPreview) {
+    const hasPassed = sessionStorage.getItem('localogo_queue_passed');
+    if (hasPassed === 'true') {
+      if (mOverlay) mOverlay.classList.remove('show');
+      if (qOverlay) qOverlay.classList.remove('show');
+      document.body.style.overflow = '';
+      return;
+    }
     if (mOverlay) mOverlay.classList.remove('show');
     initRealQueue();
     return;
@@ -109,6 +116,7 @@ async function initRealQueue() {
       if (statusTxt) statusTxt.textContent = 'Giliran Anda! Masuk...';
       
       setTimeout(() => {
+        sessionStorage.setItem('localogo_queue_passed', 'true');
         qOverlay.classList.remove('show');
         document.body.style.overflow = '';
       }, 1500);
@@ -328,8 +336,13 @@ function restorePendingOrder() {
       if (secureNote) secureNote.textContent = `🔒 Diproses oleh ${paymentGateway.charAt(0).toUpperCase() + paymentGateway.slice(1)}`;
     }
 
-    // Instead of auto-showing full modal, show a small restoration toast
-    showRestorationToast();
+    // Auto-show the modal if it's a valid pending order
+    const modal = document.getElementById('confirm-modal');
+    if (modal) modal.classList.add('show');
+    setStep(3); // Go to summary/payment step
+    
+    // Also show toast as a small notification
+    showToast('📑 Melanjutkan sesi pendaftaran Anda...');
 
   } catch (err) {
     console.error('Restore Error:', err);
@@ -579,35 +592,7 @@ async function handleBooking() {
     batch_name: activeBatch.name // Fixed: ensure correct field name
   };
 
-  // ── VIRTUAL QUEUE FOR BATCH 2 ONLY ──
-  const isBatch2 = (activeBatch.name || '').includes('Batch 2');
-  if (isBatch2) {
-    const overlay = document.getElementById('queue-overlay');
-    const bar = document.getElementById('queue-progress');
-    const percentTxt = document.getElementById('queue-percent');
-    if (overlay && bar && percentTxt) {
-      overlay.classList.add('show');
-      // Simulate progress over random 3-7 seconds
-      const duration = 3000 + Math.random() * 4000;
-      const start = Date.now();
-      const interval = setInterval(() => {
-        const elapsed = Date.now() - start;
-        const progress = Math.min((elapsed / duration) * 100, 99);
-        bar.style.width = progress + '%';
-        percentTxt.textContent = Math.floor(progress) + '%';
-        if (elapsed >= duration) clearInterval(interval);
-      }, 100);
-      
-      // Wait for the simulated duration
-      await new Promise(r => setTimeout(r, duration));
-      
-      // Complete bar
-      bar.style.width = '100%';
-      percentTxt.textContent = '100%';
-      await new Promise(r => setTimeout(r, 500));
-      overlay.classList.remove('show');
-    }
-  }
+  // (Artificial Batch 2 Delay Removed for better UX)
 
   const btnLanjut = document.querySelector('[onclick="handleBooking()"]');
   const originalLanjutText = btnLanjut ? btnLanjut.innerHTML : 'Lanjut ke Pembayaran &rarr;';

@@ -28,6 +28,10 @@ app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── SERVE FRONTEND (STATIC) ──────────────────────────────────────
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../')));
+
 // ── ROUTES ───────────────────────────────────────────────────────
 const clientRoutes = require('./routes/client');
 const adminRoutes = require('./routes/admin');

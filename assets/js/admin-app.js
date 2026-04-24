@@ -314,33 +314,59 @@ function buildPagination(total) {
   `;
 }
 
-function exportToCSV() {
-  if (!allOrders || allOrders.length === 0) return showToast('Tidak ada data untuk diexport');
-  
-  // Format headers
-  const headers = ['Order Ref', 'Nama', 'Email', 'WhatsApp', 'Batch', 'Nominal', 'Status', 'Waktu'];
-  
-  // Format rows
-  const csvRows = allOrders.map(o => [
-    o.order_ref,
-    `"${o.full_name.replace(/"/g, '""')}"`,
-    o.email,
-    `'${o.whatsapp}`, // prevent excel from stripping leading zero
-    o.batches?.name || '-',
-    o.amount,
-    o.status,
-    new Date(o.created_at).toLocaleString('id-ID')
-  ]);
+async function exportToCSV() {
+  const btnExport = document.getElementById('btn-export-csv');
+  const originalHtml = btnExport ? btnExport.innerHTML : 'Export CSV';
+  if (btnExport) btnExport.textContent = 'Mengekspor...';
 
-  const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `Rekap_Order_Localogo_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    const q = document.getElementById('order-search')?.value || '';
+    const batchId = document.getElementById('filter-batch')?.value || 'all';
+    const status = document.getElementById('filter-status')?.value || 'all';
+    
+    // Fetch ALL matching orders without pagination limit
+    const url = `${BACKEND_URL}/api/admin/orders?page=1&limit=99999&q=${encodeURIComponent(q)}&batch_id=${batchId}&status=${status}`;
+    const res = await fetch(url, { 
+      headers: { 'x-admin-token': getAdminToken() } 
+    });
+    
+    const { orders } = await res.json();
+    
+    if (!orders || orders.length === 0) {
+      if (btnExport) btnExport.innerHTML = originalHtml;
+      return showToast('Tidak ada data untuk diexport');
+    }
+    
+    // Format headers
+    const headers = ['Order Ref', 'Nama', 'Email', 'WhatsApp', 'Batch', 'Nominal', 'Status', 'Waktu'];
+    
+    // Format rows
+    const csvRows = orders.map(o => [
+      o.order_ref,
+      `"${o.full_name.replace(/"/g, '""')}"`,
+      o.email,
+      `'${o.whatsapp}`, // prevent excel from stripping leading zero
+      o.batches?.name || '-',
+      o.amount,
+      o.status,
+      new Date(o.created_at).toLocaleString('id-ID')
+    ]);
+
+    const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', blobUrl);
+    link.setAttribute('download', `Rekap_Order_Localogo_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (e) {
+    console.error('Export error:', e);
+    showToast('Gagal melakukan export data');
+  } finally {
+    if (btnExport) btnExport.innerHTML = originalHtml;
+  }
 }
 
 function renderOrders(orders) {
