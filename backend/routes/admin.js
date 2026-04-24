@@ -27,8 +27,6 @@ router.get('/check', (req, res) => {
 /**
  * GET /api/admin/batches — full batch data for admin
  */
-const { generateInvoicePDF, sendInvoiceEmail } = require('../utils/invoice');
-
 // Helper to generate manual order ref
 function genManualRef() {
   return `MANUAL-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
