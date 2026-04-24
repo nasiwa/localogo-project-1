@@ -322,9 +322,11 @@ async function exportToCSV() {
   try {
     const q = document.getElementById('order-search')?.value || '';
     const batchId = document.getElementById('filter-batch')?.value || 'all';
-    const status = document.getElementById('filter-status')?.value || 'all';
     
-    // Fetch ALL matching orders without pagination limit
+    // Force status 'paid' for export, regardless of the UI filter
+    const status = 'paid';
+    
+    // Fetch ALL matching paid orders without pagination limit
     const url = `${BACKEND_URL}/api/admin/orders?page=1&limit=99999&q=${encodeURIComponent(q)}&batch_id=${batchId}&status=${status}`;
     const res = await fetch(url, { 
       headers: { 'x-admin-token': getAdminToken() } 
