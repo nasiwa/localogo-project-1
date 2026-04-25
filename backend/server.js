@@ -31,9 +31,9 @@ const queueCache = new NodeCache({ stdTTL: 10 }); // 10 detik TTL
 app.set('queueCache', queueCache); 
 
 const apiLimiter = rateLimit({
-  windowMs: 3000, // 3 detik
-  max: 1, // 1 request per IP per 3 detik
-  message: { success: false, error: 'Too many requests, please try again in a few seconds' },
+  windowMs: 60 * 1000, // 1 menit
+  max: 100, // 100 request per menit per IP (Sangat longgar)
+  message: { success: false, error: 'Terlalu banyak permintaan, silakan coba lagi nanti.' },
   standardHeaders: true,
   legacyHeaders: false,
 });

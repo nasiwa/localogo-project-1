@@ -16,7 +16,7 @@ function genOrderRef() {
  * GET /api/config — public config (gateway type)
  */
 router.get('/config', (req, res) => {
-  res.json({ gateway: process.env.PAYMENT_GATEWAY || 'midtrans' });
+  res.json({ gateway: process.env.PAYMENT_GATEWAY || 'manual' });
 });
 
 /**

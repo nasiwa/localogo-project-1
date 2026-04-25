@@ -482,17 +482,19 @@ function debouncedLoadBatches() {
 }
 
 function setupRealtime() {
-  // Listen for any changes in the 'batches' table
-  _supabase
-    .channel('schema-db-changes')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'batches' },
-      (payload) => {
-        console.log('Realtime update:', payload);
-        debouncedLoadBatches(); // Refresh UI data safely
+  const channel = _supabase.channel('public:batches');
+  
+  channel
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'batches' }, (payload) => {
+      if (activeBatch && payload.new.id === activeBatch.id) {
+        activeBatch = payload.new;
+        updateBatchUI();
       }
-    )
+    })
+    .subscribe();
+
+  _supabase
+    .channel('orders-channel')
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'orders' },
@@ -669,55 +671,6 @@ async function handleBooking() {
     showToast('⚠️ ' + err.message);
     btnLanjut.disabled = false; 
     btnLanjut.innerHTML = originalLanjutText;
-  }
-}
-      }
-      
-      if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
-      
-      // Simpan backup agar jika refresh 24 jam, data ini kembali
-      savePendingOrder({ ...currentOrder, gateway: 'manual' }, data.amount, data.bank_info);
-
-    } catch (err) {
-      console.error(err);
-      showToast('⚠️ Gagal terhubung ke server');
-      if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
-      return;
-    }
-  } else {
-    // Duitku Flow: show popup first, generate order later
-    document.getElementById('pm-oid').textContent = 'Generating...';
-    document.getElementById('pm-name').textContent = body.full_name;
-    document.getElementById('pm-email').textContent = body.email;
-    document.getElementById('pm-wa').textContent = body.whatsapp;
-    document.getElementById('pm-batch').textContent = body.batch_name;
-  }
-
-  // Handle Manual vs Gateway Layout in Modal
-  const manualBox = document.getElementById('manual-box');
-  const duitkuSelector = document.getElementById('duitku-selector');
-  const payBtnModal = document.getElementById('btn-pay-modal');
-  const secureNote = document.getElementById('secure-note');
-
-  if (activeGateway === 'manual') {
-    if (manualBox) manualBox.style.display = 'block';
-    if (duitkuSelector) duitkuSelector.style.display = 'none';
-    if (payBtnModal) payBtnModal.style.display = 'block'; // Manual needs final submit
-    if (secureNote) secureNote.textContent = '🔒 Slot diamankan sementara (24 jam).';
-  } else {
-    if (manualBox) manualBox.style.display = 'none';
-    if (duitkuSelector) duitkuSelector.style.display = 'block';
-    if (payBtnModal) payBtnModal.style.display = 'none'; // Will trigger on grid click
-    if (secureNote) secureNote.textContent = '🔒 Pembayaran aman melalui Duitku.';
-  }
-
-  const modal = document.getElementById('confirm-modal');
-  if (modal) modal.classList.add('show');
-
-  // Trigger default highlight for VC (Virtual Account) if using Duitku
-  if (activeGateway !== 'manual') {
-    const vcCard = document.querySelector('.method-card.active');
-    if (vcCard) highlightMethod('BC', vcCard);
   }
 }
 
@@ -1000,6 +953,11 @@ function previewProof(input) {
     };
     reader.readAsDataURL(input.files[0]);
   }
+}
+
+function formatPrice(num) {
+  if (!num) return 'Rp0';
+  return 'Rp' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 function compressImage(file) {
