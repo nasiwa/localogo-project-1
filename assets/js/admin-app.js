@@ -110,17 +110,12 @@ async function loadDashboard() {
   await triggerAutoExpire(); // 🧹 Bersihkan pesanan basi sebelum hitung data
   try {
     const h = { 'x-admin-token': getAdminToken() };
-    const [bRes, oRes] = await Promise.all([
+    const [bRes, sRes] = await Promise.all([
       fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
-      fetch(`${BACKEND_URL}/api/admin/orders`, { headers: h })
+      fetch(`${BACKEND_URL}/api/admin/dashboard-stats`, { headers: h })
     ]);
     const { batches } = await bRes.json();
-    const { orders } = await oRes.json();
-
-    const totalFilled = batches.reduce((s, b) => s + b.filled_slots, 0);
-    const totalSlots = batches.reduce((s, b) => s + b.total_slots, 0);
-    const paidOrders = orders.filter(o => o.status === 'paid');
-    const pickupCount = paidOrders.filter(o => o.is_picked_up).length;
+    const stats = await sRes.json();
 
     const elFilled = document.getElementById('ds-filled');
     const elFilledSub = document.getElementById('ds-filled-sub');
@@ -129,12 +124,12 @@ async function loadDashboard() {
     const elPickup = document.getElementById('ds-pickup');
     const elPickupSub = document.getElementById('ds-pickup-sub');
 
-    if (elFilled) elFilled.textContent = totalFilled;
-    if (elFilledSub) elFilledSub.textContent = `dari ${totalSlots} total`;
-    if (elPaid) elPaid.textContent = paidOrders.length;
-    if (elPending) elPending.textContent = batches.reduce((s, b) => s + (b.pending_slots||0), 0);
-    if (elPickup) elPickup.textContent = pickupCount;
-    if (elPickupSub) elPickupSub.textContent = `${((pickupCount/paidOrders.length||0)*100).toFixed(0)}% telah lunas`;
+    if (elFilled) elFilled.textContent = stats.totalFilled;
+    if (elFilledSub) elFilledSub.textContent = `dari ${stats.totalSlots} total`;
+    if (elPaid) elPaid.textContent = stats.paidCount;
+    if (elPending) elPending.textContent = stats.pendingCount;
+    if (elPickup) elPickup.textContent = stats.pickupCount;
+    if (elPickupSub) elPickupSub.textContent = `${((stats.pickupCount/stats.paidCount||0)*100).toFixed(0)}% telah lunas`;
 
     const tbody = document.getElementById('dash-batch-tbody');
     if (tbody) {
@@ -159,9 +154,17 @@ async function loadAdminBatches() {
   await triggerAutoExpire(); // 🧹 Bersihkan pesanan basi sebelum hitung data
   try {
     const h = { 'x-admin-token': getAdminToken() };
+    
+    // Untuk mendapatkan jumlah paid per batch, kita perlu memanggil orders tapi per batch atau biarkan orders paginate.
+    // Karena /api/admin/batches sekarang hanya mengembalikan filled_slots (yang mana gabungan paid+pending),
+    // Untuk tabel Kelola Batch, kita perlu count per batch. 
+    // Cara termudah adalah fetch all orders, ATAU menggunakan API dashboard-stats yang di-expand.
+    // Agar lebih cepat tanpa merombak backend lagi, kita bisa fetch all orders jika tidak lebih dari limit.
+    // TAPI karena ada 631 order, kita harus request limit besar!
+    
     const [bRes, oRes] = await Promise.all([
       fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
-      fetch(`${BACKEND_URL}/api/admin/orders`, { headers: h })
+      fetch(`${BACKEND_URL}/api/admin/orders?limit=10000`, { headers: h }) // 🔧 LIMIT DIPERBESAR
     ]);
     const { batches } = await bRes.json();
     const { orders } = await oRes.json();
@@ -397,7 +400,7 @@ function renderOrders(orders) {
       <td>${batchName}</td>
       <td style="text-align:right; font-weight:700; color:var(--t)">${new Intl.NumberFormat('id-ID').format(o.amount || 0)}</td>
       <td><span class="badge-${o.status}">${o.status.toUpperCase()}</span></td>
-      <td>${o.proof_url ? `<a href="${o.proof_url}" target="_blank" style="text-decoration:none; font-size:11px; color:var(--td); border:1px solid var(--td); padding:2px 5px; border-radius:4px;">🖼️ Lihat</a>` : '<span style="opacity:0.2">—</span>'}</td>
+      <td>${o.proof_url ? `<button onclick="viewProof('${o.proof_url}')" style="background:transparent; cursor:pointer; font-size:11px; color:var(--td); border:1px solid var(--td); padding:2px 5px; border-radius:4px;">🖼️ Lihat</button>` : '<span style="opacity:0.2">—</span>'}</td>
       <td>${o.is_picked_up ? `<span class="badge-pickup">DIAMBIL</span><div style="font-size:9px;color:var(--txm);margin-top:2px;">oleh ${o.scanned_by || 'Loket'}</div>` : '<span style="opacity:0.3">—</span>'}</td>
       <td style="font-size:10px">${new Date(o.created_at).toLocaleString()}</td>
       <td>
@@ -409,6 +412,26 @@ function renderOrders(orders) {
       </td>
     </tr>`;
   }).join('');
+}
+
+async function viewProof(filename) {
+  // Jika sudah berupa URL (data lama), langsung buka
+  if (filename.startsWith('http')) return window.open(filename, '_blank');
+  
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/proof-url/${filename}`, {
+      headers: { 'x-admin-token': getAdminToken() }
+    });
+    const data = await res.json();
+    if (data.success && data.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    } else {
+      showToast('⚠️ ' + (data.error || 'Gagal memuat gambar'));
+    }
+  } catch (e) {
+    console.error('viewProof error:', e);
+    showToast('⚠️ Terjadi kesalahan server');
+  }
 }
 
 async function syncOrder(ref) {

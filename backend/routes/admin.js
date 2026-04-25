@@ -25,6 +25,69 @@ router.get('/check', (req, res) => {
 });
 
 /**
+ * GET /api/admin/dashboard-stats — get accurate counts for the dashboard
+ */
+router.get('/dashboard-stats', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  try {
+    const { count: paidCount, error: err1 } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'paid');
+    
+    const { count: pendingCount, error: err2 } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+      
+    const { count: pickupCount, error: err3 } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'paid')
+      .eq('is_picked_up', true);
+
+    const { data: batches, error: err4 } = await supabase
+      .from('batches')
+      .select('filled_slots, total_slots');
+
+    if (err1 || err2 || err3 || err4) throw new Error('Database count error');
+
+    // Karena filled_slots mungkin desync, kita gunakan paidCount + pendingCount sebagai totalFilled yang lebih akurat
+    const totalFilled = paidCount + pendingCount;
+    const totalSlots = batches.reduce((sum, b) => sum + (b.total_slots || 0), 0);
+
+    res.json({
+      success: true,
+      paidCount: paidCount || 0,
+      pendingCount: pendingCount || 0,
+      pickupCount: pickupCount || 0,
+      totalFilled,
+      totalSlots,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/admin/proof-url/:filename — generate signed URL for private bucket
+ */
+router.get('/proof-url/:filename', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  const { filename } = req.params;
+  try {
+    const { data, error } = await supabase.storage
+      .from('payment_proofs')
+      .createSignedUrl(filename, 3600); // 1 jam validitas
+
+    if (error) throw error;
+    res.json({ success: true, signedUrl: data.signedUrl });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/admin/batches — full batch data for admin
  */
 // Helper to generate manual order ref

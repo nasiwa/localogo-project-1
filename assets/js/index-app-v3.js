@@ -15,172 +15,198 @@ let selectedPaymentMethod = 'VC';
 let currentOrder = {};
 let activeGateway = 'manual';
 
-// ── INITIAL LOAD ──────────────────────────────────────────────────
+// ── INITIAL LOAD & STATE MANAGEMENT ───────────────────────────────
+let queueStatusInterval = null;
+let activeCountdownInterval = null;
+
 async function init() {
-  checkMaintenance();
-  await checkAuthSession();
-  await loadConfig();    // 🔧 Ambil gateway type dari server
-  await loadBatches();
+  await loadConfig();
+  await checkUserState();
   setupRealtime();
-  restorePendingOrder(); // 🔁 Pulihkan modal jika user refresh
 }
 
-function checkMaintenance() {
-  const params = new URLSearchParams(window.location.search);
-  const isPreview = params.get('preview') === 'ospek2026'; // UNTUK TEST ANTREAN
-  const isAdmin = params.get('admin') === 'true' || sessionStorage.getItem('localogo_admin_access') === 'true'; // UNTUK KERJA
+async function checkUserState() {
+  const { data: { session } } = await _supabase.auth.getSession();
   
-  const mOverlay = document.getElementById('maintenance-overlay');
-  const qOverlay = document.getElementById('queue-overlay');
-
-  // 1. Jika Admin -> Langsung Masuk (Bypass)
-  if (isAdmin) {
-    sessionStorage.setItem('localogo_admin_access', 'true');
-    if (mOverlay) mOverlay.classList.remove('show');
-    if (qOverlay) qOverlay.classList.remove('show');
-    document.body.style.overflow = '';
+  if (!session) {
+    showPanel('panel-not-logged-in');
     return;
   }
 
-  // 2. Jika Preview -> Tampilkan Antrean (Testing War)
-  if (isPreview) {
-    const hasPassed = sessionStorage.getItem('localogo_queue_passed');
-    if (hasPassed === 'true') {
-      if (mOverlay) mOverlay.classList.remove('show');
-      if (qOverlay) qOverlay.classList.remove('show');
-      document.body.style.overflow = '';
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/queue/status`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    const { success, status, data } = await res.json();
+
+    if (!success) throw new Error('Gagal cek status antrean');
+
+    if (status === 'not_queued') {
+      await renderNotQueuedPanel();
+    } else if (status === 'waiting') {
+      renderWaitingPanel(data);
+    } else if (status === 'active') {
+      renderActivePanel(data);
+    } else if (status === 'done') {
+      showPanel('panel-done');
+    } else if (status === 'expired') {
+      showPanel('panel-expired');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Terjadi kesalahan sistem, memuat ulang...');
+    setTimeout(() => window.location.reload(), 2000);
+  }
+}
+
+function showPanel(panelId) {
+  const panels = document.querySelectorAll('.state-panel');
+  panels.forEach(p => p.style.display = 'none');
+  const target = document.getElementById(panelId);
+  if (target) target.style.display = 'block';
+  
+  // Update step visual indicators
+  if (panelId === 'panel-not-queued' || panelId === 'panel-quota-full') updateStep(1);
+  else if (panelId === 'panel-waiting') updateStep(2);
+  else if (panelId === 'panel-active') updateStep(3);
+  else if (panelId === 'panel-done') updateStep(4);
+}
+
+function updateStep(stepNum) {
+  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
+  for (let i = 1; i <= stepNum; i++) {
+    const el = document.getElementById('step' + i);
+    if (el) el.classList.add('active');
+  }
+}
+
+async function renderNotQueuedPanel() {
+  const { data: { user } } = await _supabase.auth.getUser();
+  if(user) {
+    document.getElementById('queue-user-name').textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/queue/info`);
+    const { success, data } = await res.json();
+    
+    if (success && data.is_open) {
+      document.getElementById('queue-quota-available').textContent = data.available;
+      document.getElementById('queue-quota-total').textContent = data.total_quota;
+      
+      if (data.available <= 0) {
+        document.getElementById('qf-total').textContent = data.total_quota;
+        showPanel('panel-quota-full');
+      } else {
+        showPanel('panel-not-queued');
+      }
+    } else {
+      document.getElementById('queue-quota-available').textContent = 'Ditutup';
+      document.getElementById('queue-quota-total').textContent = '-';
+      document.getElementById('btn-claim-queue').disabled = true;
+      document.getElementById('btn-claim-queue').innerHTML = '<span>Antrean Belum Dibuka</span><span>🔒</span>';
+      showPanel('panel-not-queued');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function claimQueueSlot() {
+  const btn = document.getElementById('btn-claim-queue');
+  btn.innerHTML = '<span>Memproses...</span><span>⏳</span>';
+  btn.disabled = true;
+
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (!session) return window.location.reload();
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/queue/claim`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    const result = await res.json();
+
+    if (!result.success) {
+      if (result.error === 'quota_full') {
+        showPanel('panel-quota-full');
+      } else if (result.error === 'queue_closed') {
+        showToast('Antrean saat ini sedang ditutup');
+        window.location.reload();
+      } else {
+        showToast(result.error || 'Gagal mengambil antrean');
+        btn.innerHTML = '<span>Coba Lagi</span><span>→</span>';
+        btn.disabled = false;
+      }
       return;
     }
-    if (mOverlay) mOverlay.classList.remove('show');
-    initRealQueue();
-    return;
-  }
 
-  // 3. Jika Publik (Tanpa Param) -> Tampilkan Maintenance
-  if (mOverlay) {
-    mOverlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
+    checkUserState(); // Reload state automatically
+  } catch (err) {
+    showToast('Gagal koneksi ke server');
+    btn.innerHTML = '<span>Coba Lagi</span><span>→</span>';
+    btn.disabled = false;
   }
 }
 
-async function initRealQueue() {
-  const qOverlay = document.getElementById('queue-overlay');
-  const qNum = document.getElementById('queue-number');
-  const statusTxt = document.getElementById('queue-status-text');
-  const bar = document.getElementById('queue-progress');
-  const percentTxt = document.getElementById('queue-percent');
-
-  if (!qOverlay) return;
-  qOverlay.classList.add('show');
-  document.body.style.overflow = 'hidden';
-
-  if (qNum) qNum.textContent = 'Mendaftarkan...';
-
-  let myQueueId = sessionStorage.getItem('localogo_queue_id');
-  if (!myQueueId) {
-    try {
-      const { data } = await _supabase
-        .from('waiting_room')
-        .upsert({ session_id: getFingerprint() }, { onConflict: 'session_id' })
-        .select('id')
-        .single();
-      if (data) {
-        myQueueId = data.id;
-        sessionStorage.setItem('localogo_queue_id', myQueueId);
-      }
-    } catch (e) {
-      myQueueId = Math.floor(Math.random() * 100);
-    }
-  }
-
-  if (qNum) qNum.textContent = '#' + String(myQueueId || 0).padStart(6, '0');
-
-  // 2. Logic: 10 people every 5 minutes
-  // Jika ada param &test=true, gunakan "sekarang" sebagai waktu mulai agar bisa lihat LIVE progress
-  const isLiveTest = new URLSearchParams(window.location.search).get('test') === 'true';
-  const startTime = isLiveTest ? Date.now() : new Date('2026-04-23T21:00:00').getTime(); 
+function renderWaitingPanel(queueData) {
+  showPanel('panel-waiting');
+  document.getElementById('display-queue-number').textContent = String(queueData.queue_number).padStart(3, '0');
+  document.getElementById('display-queue-session').textContent = queueData.session;
   
-  const checkInterval = setInterval(() => {
-    const now = Date.now();
-    const elapsedSeconds = Math.max(0, (now - startTime) / 1000);
-    
-    // REAL WORLD MODE: 10 people every 5 minutes (300s)
-    const intervalSeconds = 300; 
-    const currentBatch = Math.floor(elapsedSeconds / intervalSeconds); 
-    const allowedMaxId = (currentBatch + 1) * 10; 
-
-    if (myQueueId <= allowedMaxId) {
-      clearInterval(checkInterval);
-      if (bar) bar.style.width = '100%';
-      if (percentTxt) percentTxt.textContent = '100%';
-      if (statusTxt) statusTxt.textContent = 'Giliran Anda! Masuk...';
-      
-      setTimeout(() => {
-        sessionStorage.setItem('localogo_queue_passed', 'true');
-        qOverlay.classList.remove('show');
-        document.body.style.overflow = '';
-      }, 1500);
-    } else {
-      const peopleAhead = myQueueId - allowedMaxId;
-      const waitMinutes = Math.ceil(peopleAhead / 10) * 5;
-      if (statusTxt) statusTxt.textContent = `Menunggu... ±${waitMinutes} menit lagi`;
-      
-      const progress = Math.min((allowedMaxId / myQueueId) * 100, 95);
-      if (bar) bar.style.width = progress + '%';
-      if (percentTxt) percentTxt.textContent = Math.floor(progress) + '%';
-    }
-  }, 5000);
+  if (queueStatusInterval) clearInterval(queueStatusInterval);
+  queueStatusInterval = setInterval(() => {
+    checkUserState();
+  }, 60000); 
 }
 
-function getFingerprint() {
-  let f = localStorage.getItem('localogo_fingerprint');
-  if (!f) {
-    f = 'f-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
-    localStorage.setItem('localogo_fingerprint', f);
+function renderActivePanel(queueData) {
+  if (queueStatusInterval) clearInterval(queueStatusInterval);
+  
+  const emailInput = document.getElementById('f-email');
+  _supabase.auth.getUser().then(({ data }) => {
+    if (data?.user?.email) emailInput.value = data.user.email;
+  });
+
+  showPanel('panel-active');
+
+  const expiresAt = new Date(queueData.expires_at).getTime();
+  if (activeCountdownInterval) clearInterval(activeCountdownInterval);
+
+  activeCountdownInterval = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = expiresAt - now;
+
+    if (distance <= 0) {
+      clearInterval(activeCountdownInterval);
+      showPanel('panel-expired');
+      return;
+    }
+
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    document.getElementById('active-countdown-timer').textContent = 
+      `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, 1000);
+}
+
+async function registerWaitlist() {
+  const btn = document.getElementById('btn-waitlist');
+  btn.innerHTML = '<span>Mendaftarkan...</span><span>⏳</span>';
+  const { data: { session } } = await _supabase.auth.getSession();
+  
+  try {
+    await fetch(`${BACKEND_URL}/api/queue/notify`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    });
+    document.getElementById('waitlist-box').innerHTML = `
+      <div style="color:var(--td); font-weight:bold; font-size:15px; margin-bottom:5px;">✅ Email Anda berhasil didaftarkan!</div>
+      <div style="font-size:13px; color:#555;">Kami akan mengirim email notifikasi sesaat sebelum kuota tambahan dibuka.</div>
+    `;
+  } catch (e) {
+    btn.innerHTML = '<span>Gagal. Coba lagi</span><span>🔄</span>';
   }
-  return f;
-}
-
-async function startWaitingRoom() {
-  const qOverlay = document.getElementById('queue-overlay');
-  const qNum = document.getElementById('queue-number');
-  const bar = document.getElementById('queue-progress');
-  const percentTxt = document.getElementById('queue-percent');
-  const statusTxt = document.getElementById('queue-status-text');
-
-  if (!qOverlay) return;
-  qOverlay.classList.add('show');
-  document.body.style.overflow = 'hidden';
-
-  // Generate random realistic queue number
-  const myQueue = Math.floor(1000 + Math.random() * 9000);
-  if (qNum) qNum.textContent = '#' + String(myQueue).padStart(6, '0');
-
-  // Throttling duration (simulated 4-10 seconds)
-  const duration = 4000 + Math.random() * 6000;
-  const start = Date.now();
-
-  const itv = setInterval(() => {
-    const elapsed = Date.now() - start;
-    const progress = Math.min((elapsed / duration) * 100, 99);
-    if (bar) bar.style.width = progress + '%';
-    if (percentTxt) percentTxt.textContent = Math.floor(progress) + '%';
-    
-    if (progress > 80) statusTxt.textContent = 'Mempersiapkan Formulir...';
-    else if (progress > 40) statusTxt.textContent = 'Menghitung Slot Sisa...';
-
-    if (elapsed >= duration) {
-       clearInterval(itv);
-       if (bar) bar.style.width = '100%';
-       if (percentTxt) percentTxt.textContent = '100%';
-       statusTxt.textContent = 'Akses Diberikan!';
-       
-       setTimeout(() => {
-         qOverlay.classList.remove('show');
-         document.body.style.overflow = '';
-       }, 800);
-    }
-  }, 100);
 }
 
 async function loadConfig() {
@@ -579,79 +605,72 @@ function validate() {
 }
 
 // ── HANDLE BOOKING ─────────────────────────────────────────────────
-// ── STEP 1: SHOW CONFIRMATION MODAL ──────────────────────────
 async function handleBooking() {
   if (!validate()) return;
-  if (!activeBatch) { showToast('⚠ Tidak ada batch aktif'); return; }
+  const proofFile = document.getElementById('f-proof').files[0];
+  if (!proofFile) {
+    showToast('⚠️ Silakan upload bukti transfer terlebih dahulu');
+    return;
+  }
 
-  const body = {
-    full_name: document.getElementById('f-name').value.trim(),
-    email: document.getElementById('f-email').value.trim(),
-    whatsapp: document.getElementById('f-wa').value.trim(),
-    batch_id: activeBatch.id,
-    batch_name: activeBatch.name // Fixed: ensure correct field name
-  };
+  const btnLanjut = document.getElementById('btn-pay');
+  const originalLanjutText = btnLanjut.innerHTML;
+  btnLanjut.disabled = true; 
+  btnLanjut.innerHTML = '<span>Mengunggah Bukti...</span><span>⏳</span>';
 
-  // (Artificial Batch 2 Delay Removed for better UX)
+  try {
+    // 1. Kompresi Gambar
+    const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true };
+    const compressedFile = await imageCompression(proofFile, options);
+    
+    // 2. Upload ke Supabase Storage
+    const fileName = `proof_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+    const { data: uploadData, error: uploadErr } = await _supabase.storage
+      .from('payment_proofs')
+      .upload(fileName, compressedFile);
 
-  const btnLanjut = document.querySelector('[onclick="handleBooking()"]');
-  const originalLanjutText = btnLanjut ? btnLanjut.innerHTML : 'Lanjut ke Pembayaran &rarr;';
+    if (uploadErr) throw new Error('Gagal mengunggah bukti: Pastikan bucket payment_proofs tersedia');
 
-  if (activeGateway === 'manual') {
-    if (btnLanjut) { btnLanjut.disabled = true; btnLanjut.innerHTML = 'Memproses...'; }
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/create-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        if (res.status === 409) showToast('⚠️ Email atau WhatsApp Anda sudah terdaftar atau Batch Penuh.');
-        else showToast('⚠️ ' + (data.error || 'Gagal membuat order'));
-        if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }
-        return;
-      }
-      
-      // Update global order state for Manual
-      currentOrder = { ...body, id: data.id, order_ref: data.order_ref, amount: data.amount };
-      paymentGateway = 'manual';
-      paymentToken = null; // No token for manual
-      
-      // Pre-fill modal details with generated data
-      document.getElementById('pm-oid').textContent = data.order_ref;
-      document.getElementById('pm-name').textContent = body.full_name;
-      document.getElementById('pm-email').textContent = body.email;
-      document.getElementById('pm-wa').textContent = body.whatsapp;
-      document.getElementById('pm-batch').textContent = body.batch_name;
-      
-      // Update manual payment unique nominal
-      const fmtIDR = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
-      
-      const manualTotalEl = document.getElementById('pm-total-manual');
-      if (manualTotalEl) manualTotalEl.textContent = fmtIDR(data.amount);
+    btnLanjut.innerHTML = '<span>Menyelesaikan Pendaftaran...</span><span>⏳</span>';
 
-      const pmAmount = document.getElementById('pm-amount');
-      if (pmAmount) pmAmount.textContent = fmtIDR(data.amount);
+    // 3. Post ke Backend
+    if (!activeBatch) throw new Error('Konfigurasi batch tidak ditemukan');
 
-      const sidebarAdminRow = document.getElementById('sidebar-admin-row');
-      const sidebarTotal = document.getElementById('sidebar-total');
-      if (sidebarAdminRow) sidebarAdminRow.style.display = 'none';
-      if (sidebarTotal) sidebarTotal.textContent = fmtIDR(data.amount);
+    const body = {
+      full_name: document.getElementById('f-name').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      whatsapp: document.getElementById('f-wa').value.trim(),
+      batch_id: activeBatch.id,
+      proof_url: fileName // Hanya kirim nama file, BUKAN public URL
+    };
+    
+    const res = await fetch(`${BACKEND_URL}/api/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    
+    const resData = await res.json();
+    if (!resData.success) {
+      throw new Error(resData.error || 'Gagal membuat pesanan');
+    }
 
-      const rowUnique = document.getElementById('row-unique-nominal');
-      const rowGateway = document.getElementById('row-total-gateway');
-      if (rowUnique) rowUnique.style.display = 'flex';
-      if (rowGateway) rowGateway.style.display = 'none';
+    // 4. Update status antrean menjadi 'done'
+    const { data: { session } } = await _supabase.auth.getSession();
+    await _supabase.from('queue_slots')
+      .update({ status: 'done' })
+      .eq('user_id', session.user.id);
 
-      const bankInfoEl = document.getElementById('manual-bank-info');
-      if (bankInfoEl) {
-        const amountStr = String(data.amount);
-        const uniqueCode = amountStr.slice(-3);
-        const basePart = amountStr.slice(0, -3);
-        bankInfoEl.innerHTML = `${data.bank_info || 'Trf ke Rekening'}<br>` +
-          `<span style="color:var(--txm); font-size:18px;">Rp ${basePart.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</span>` +
-          `<span style="color:var(--red); font-size:20px; font-weight:900;">${uniqueCode}</span>`;
+    // 5. Muat ulang state (akan masuk ke halaman Sukses)
+    checkUserState();
+
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ ' + err.message);
+    btnLanjut.disabled = false; 
+    btnLanjut.innerHTML = originalLanjutText;
+  }
+}
       }
       
       if (btnLanjut) { btnLanjut.disabled = false; btnLanjut.innerHTML = originalLanjutText; }

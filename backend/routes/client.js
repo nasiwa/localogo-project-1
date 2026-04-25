@@ -39,26 +39,20 @@ router.get('/batches', async (req, res) => {
  */
 router.post('/create-order', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
-  const { full_name, email, whatsapp, batch_id, payment_method } = req.body;
+  const { full_name, email, whatsapp, batch_id, proof_url } = req.body;
 
-  if (!full_name || !email || !whatsapp || !batch_id) {
-    return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
+  if (!full_name || !email || !whatsapp || !batch_id || !proof_url) {
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap. Bukti transfer wajib diunggah.' });
   }
 
   const orderRef = genOrderRef();
 
   try {
-    // 1. Choose Provider and Calculate Amount
-    const gateway = process.env.PAYMENT_GATEWAY || 'midtrans';
-    
-    // Gateway (102500) vs Manual (100000 + last 3 WA)
-    let finalAmount = 102500;
-    if (gateway === 'manual') {
-      const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
-      finalAmount = 100000 + parseInt(last3WA || '0');
-    }
+    // 1. Calculate Amount
+    const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
+    const finalAmount = 100000 + parseInt(last3WA || '0');
 
-    // 2. Claim Slot (Single Call)
+    // 2. Claim Slot via RPC (Atomic slot deduction)
     const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
       p_batch_id: batch_id,
       p_order_ref: orderRef,
@@ -72,32 +66,18 @@ router.post('/create-order', async (req, res) => {
       return res.status(409).json({ success: false, error: claimData?.error || 'Gagal memesan slot' });
     }
 
-    const payment = await createTransaction(gateway, {
-      orderRef,
-      amount: finalAmount,
-      full_name,
-      email,
-      whatsapp,
-      paymentMethod: payment_method, // Back to being dynamic
-      batchName: claimData.batch_name,
-      backendUrl: process.env.BACKEND_URL,
-      frontendUrl: process.env.FRONTEND_URL_OVERRIDE || process.env.FRONTEND_URL
-    });
-
-    // 3. Update database with token/gateway
+    // 3. Update database with proof_url and status
     await supabase.from('orders').update({
-      midtrans_token: payment.token || null,
-      payment_gateway: gateway,
-      amount: finalAmount
+      payment_gateway: 'manual',
+      amount: finalAmount,
+      proof_url: proof_url,
+      status: 'pending' // Admin akan memverifikasi ini nanti
     }).eq('order_ref', orderRef);
 
     res.json({
       success: true,
       id: claimData.id,
       order_ref: orderRef,
-      token: payment.token,
-      bank_info: payment.bank_info,
-      gateway: gateway,
       amount: finalAmount,
       batch_name: claimData.batch_name
     });
