@@ -3,7 +3,7 @@ const QRCode = require('qrcode');
 const { Resend } = require('resend');
 const crypto = require('crypto');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key_will_fail_at_send_time');
 const QR_SECRET = process.env.QR_SECRET || 'localogo_secure_qr_2026';
 
 function toRoman(num) {

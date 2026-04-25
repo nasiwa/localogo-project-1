@@ -6,15 +6,5 @@
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/activate-wave",
-      "schedule": "*/7 * * * *"
-    },
-    {
-      "path": "/api/cron/expire-slots",
-      "schedule": "* * * * *"
-    }
   ]
 }

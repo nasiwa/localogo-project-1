@@ -1,0 +1,10 @@
+.git
+node_modules
+.env
+.env.local
+backend/.env
+scratch
+supabase
+test_invoice.pdf
+*.jpeg
+*.png
