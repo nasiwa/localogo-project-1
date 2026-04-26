@@ -413,4 +413,35 @@ router.post('/auto-expire', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/gate — get master gate status
+ */
+router.get('/gate', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  const { data, error } = await supabase.from('batch_config').select('id, is_open').limit(1).single();
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, is_open: data.is_open, id: data.id });
+});
+
+/**
+ * POST /api/admin/gate — toggle master gate
+ */
+router.post('/gate', async (req, res) => {
+  const supabase = req.app.get('getSupabase')();
+  const { is_open } = req.body;
+  if (typeof is_open !== 'boolean') return res.status(400).json({ success: false, error: 'is_open must be boolean' });
+
+  const { data: config } = await supabase.from('batch_config').select('id').limit(1).single();
+  if (!config) return res.status(404).json({ success: false, error: 'batch_config not found' });
+
+  // Clear queue info cache when gate changes
+  const cache = req.app.get('queueCache');
+  if (cache) cache.del('queueInfo');
+
+  const { error } = await supabase.from('batch_config').update({ is_open }).eq('id', config.id);
+  if (error) return res.status(500).json({ success: false, error: error.message });
+
+  res.json({ success: true, is_open });
+});
+
 module.exports = router;

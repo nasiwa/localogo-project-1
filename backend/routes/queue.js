@@ -52,6 +52,25 @@ router.post('/claim', async (req, res) => {
   }
 });
 
+// POST /api/queue/reset
+router.post('/reset', async (req, res) => {
+  try {
+    const supabase = req.app.get('getSupabase')();
+    const { user, error } = await verifyUser(req, supabase);
+    if (error) return res.status(401).json({ success: false, error });
+
+    const { error: delError } = await supabase
+      .from('queue_slots')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (delError) throw delError;
+    res.json({ success: true, message: 'Antrean berhasil direset' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Gagal meriset antrean' });
+  }
+});
+
 // GET /api/queue/status
 router.get('/status', async (req, res) => {
   try {
@@ -79,48 +98,60 @@ router.get('/status', async (req, res) => {
       return res.json({ success: true, status: 'not_queued' });
     }
 
+    // AUTO-EXPIRE LOGIC: Jika active tapi waktu sudah lewat, ubah jadi expired
+    if (data.status === 'active' && data.expires_at) {
+      const expiresAt = new Date(data.expires_at).getTime();
+      const now = new Date().getTime();
+      if (now > expiresAt) {
+        console.log(`Auto-expiring user ${user.id}`);
+        const { data: updated, error: upError } = await supabase
+          .from('queue_slots')
+          .update({ status: 'expired' })
+          .eq('user_id', user.id)
+          .select()
+          .single();
+        
+        if (!upError && updated) {
+          return res.json({ success: true, status: 'expired', data: updated });
+        }
+      }
+    }
+
     res.json({ success: true, status: data.status, data });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
-// GET /api/queue/info (Public cached endpoint)
+// GET /api/queue/info (Public endpoint - always fresh for is_open)
 router.get('/info', async (req, res) => {
   try {
-    const cache = req.app.get('queueCache');
-    let info = cache ? cache.get('queueInfo') : null;
+    const supabase = req.app.get('getSupabase')();
     
-    if (!info) {
-      const supabase = req.app.get('getSupabase')();
+    const { data: config } = await supabase
+      .from('batch_config')
+      .select('*')
+      .limit(1)
+      .single();
       
-      const { data: config } = await supabase
-        .from('batch_config')
-        .select('*')
-        .limit(1)
-        .single();
-        
-      if (!config) {
-        return res.json({ success: true, is_open: false });
-      }
-
-      // Hitung slot terisi (bukan expired)
-      const { count: activeCount } = await supabase
-        .from('queue_slots')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['waiting', 'active', 'done']);
-
-      info = {
-        is_open: config.is_open,
-        total_quota: config.total_quota,
-        filled: activeCount || 0,
-        available: Math.max(0, config.total_quota - (activeCount || 0)),
-        session_capacity: config.session_capacity,
-        wave_duration_minutes: config.wave_duration_minutes
-      };
-
-      if (cache) cache.set('queueInfo', info);
+    if (!config) {
+      return res.json({ success: true, data: { is_open: false } });
     }
+
+    // Hitung slot terisi (bukan expired)
+    const { count: activeCount } = await supabase
+      .from('queue_slots')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['waiting', 'active', 'done']);
+
+    const info = {
+      is_open: config.is_open,
+      total_quota: config.total_quota,
+      filled: activeCount || 0,
+      available: Math.max(0, config.total_quota - (activeCount || 0)),
+      session_capacity: config.session_capacity,
+      wave_duration_minutes: config.wave_duration_minutes
+    };
     
     res.json({ success: true, data: info });
   } catch (err) {

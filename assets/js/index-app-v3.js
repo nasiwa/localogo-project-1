@@ -43,12 +43,19 @@ let queueStatusInterval = null;
 let activeCountdownInterval = null;
 
 async function init() {
-  await loadConfig();
-  await checkUserState();
-  setupRealtime();
+  console.log("System initializing...");
+  try {
+    loadConfig().catch(e => console.warn("Config load failed", e));
+    await checkUserState();
+    setupRealtime();
+  } catch (err) {
+    console.error("Init error:", err);
+    showPanel('panel-not-logged-in');
+  }
 }
 
 async function checkUserState() {
+  console.log("Checking user state...");
   const { data: { session } } = await _supabase.auth.getSession();
   
   if (!session) {
@@ -57,12 +64,14 @@ async function checkUserState() {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/queue/status`, {
+    const res = await fetch(`${BACKEND_URL}/api/queue/status?t=${Date.now()}`, {
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
-    const { success, status, data } = await res.json();
+    const result = await res.json();
+    if (!result.success) throw new Error('Gagal cek status');
 
-    if (!success) throw new Error('Gagal cek status antrean');
+    const { status, data } = result;
+    console.log("Current Status from server:", status);
 
     if (status === 'not_queued') {
       await renderNotQueuedPanel();
@@ -73,26 +82,56 @@ async function checkUserState() {
     } else if (status === 'done') {
       showPanel('panel-done');
     } else if (status === 'expired') {
-      showPanel('panel-expired');
+      const infoRes = await fetch(`${BACKEND_URL}/api/queue/info?t=${Date.now()}`);
+      const info = await infoRes.json();
+      if (info.success && info.data.is_open) {
+        showPanel('panel-expired');
+      } else {
+        await renderNotQueuedPanel();
+      }
     }
   } catch (err) {
-    console.error(err);
-    showToast('Terjadi kesalahan sistem, memuat ulang...');
-    setTimeout(() => window.location.reload(), 2000);
+    console.error("State check failed:", err);
+    showPanel('panel-not-logged-in');
   }
 }
 
 function showPanel(panelId) {
+  console.log("CRITICAL: Showing panel ->", panelId);
   const panels = document.querySelectorAll('.state-panel');
-  panels.forEach(p => p.style.display = 'none');
-  const target = document.getElementById(panelId);
-  if (target) target.style.display = 'block';
+  panels.forEach(p => {
+    p.style.display = 'none';
+    p.style.opacity = '1'; // Pastikan tidak transparan
+  });
   
-  // Update step visual indicators
-  if (panelId === 'panel-not-queued' || panelId === 'panel-quota-full') updateStep(1);
-  else if (panelId === 'panel-waiting') updateStep(2);
-  else if (panelId === 'panel-active') updateStep(3);
-  else if (panelId === 'panel-done') updateStep(4);
+  const target = document.getElementById(panelId);
+  if (target) {
+    target.style.display = 'block';
+  }
+
+  // FORCE CONTAINER VISIBILITY
+  const bookingMain = document.getElementById('booking-main');
+  if (bookingMain) {
+    bookingMain.style.display = 'grid';
+    bookingMain.style.visibility = 'visible';
+    bookingMain.style.opacity = '1';
+  }
+  
+  const mainWrap = document.querySelector('.main-wrap');
+  if (mainWrap) {
+    mainWrap.style.display = 'block';
+    mainWrap.style.visibility = 'visible';
+    mainWrap.style.opacity = '1';
+  }
+
+  // Update Steps
+  const steps = {
+    'panel-not-queued': 1, 'panel-quota-full': 1,
+    'panel-waiting': 2,
+    'panel-active': 3,
+    'panel-done': 4
+  };
+  if (steps[panelId]) updateStep(steps[panelId]);
 }
 
 function updateStep(stepNum) {
@@ -105,33 +144,39 @@ function updateStep(stepNum) {
 
 async function renderNotQueuedPanel() {
   const { data: { user } } = await _supabase.auth.getUser();
-  if(user) {
-    document.getElementById('queue-user-name').textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+  const nameEl = document.getElementById('queue-user-name');
+  if(user && nameEl) {
+    nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/queue/info`);
+    const res = await fetch(`${BACKEND_URL}/api/queue/info?t=${Date.now()}`);
     const { success, data } = await res.json();
     
     if (success && data.is_open) {
-      document.getElementById('queue-quota-available').textContent = data.available;
-      document.getElementById('queue-quota-total').textContent = data.total_quota;
+      const availEl = document.getElementById('queue-quota-available');
+      const totalEl = document.getElementById('queue-quota-total');
+      if (availEl) availEl.textContent = data.available;
+      if (totalEl) totalEl.textContent = data.total_quota;
       
       if (data.available <= 0) {
-        document.getElementById('qf-total').textContent = data.total_quota;
+        const qfTotal = document.getElementById('qf-total');
+        if (qfTotal) qfTotal.textContent = data.total_quota;
         showPanel('panel-quota-full');
       } else {
         showPanel('panel-not-queued');
       }
     } else {
-      document.getElementById('queue-quota-available').textContent = 'Ditutup';
-      document.getElementById('queue-quota-total').textContent = '-';
-      document.getElementById('btn-claim-queue').disabled = true;
-      document.getElementById('btn-claim-queue').innerHTML = '<span>Antrean Belum Dibuka</span><span>🔒</span>';
       showPanel('panel-not-queued');
+      const btn = document.getElementById('btn-claim-queue');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Antrean Belum Dibuka</span><span>🔒</span>';
+      }
     }
   } catch (err) {
-    console.error(err);
+    console.error("renderNotQueuedPanel error:", err);
+    showPanel('panel-not-queued');
   }
 }
 
@@ -165,6 +210,7 @@ async function claimQueueSlot() {
     }
 
     checkUserState(); // Reload state automatically
+    checkUserState(); // Reload state automatically
   } catch (err) {
     showToast('Gagal koneksi ke server');
     btn.innerHTML = '<span>Coba Lagi</span><span>→</span>';
@@ -173,73 +219,82 @@ async function claimQueueSlot() {
 }
 
 function renderWaitingPanel(queueData) {
-  showPanel('panel-waiting');
+  // Cegah render ulang jika sudah di panel waiting
+  const currentPanel = document.querySelector('.state-panel[style*="block"]');
+  if (currentPanel && currentPanel.id === 'panel-waiting') {
+    console.log("Already in waiting panel, skipping render");
+  } else {
+    showPanel('panel-waiting');
+  }
+
   document.getElementById('display-queue-number').textContent = String(queueData.queue_number).padStart(3, '0');
   document.getElementById('display-queue-session').textContent = queueData.session;
   
+  const qNum = queueData.queue_number;
+  const timerEl = document.getElementById('queue-timer');
+  const timerDisplay = document.getElementById('timer-countdown');
+  
+  if (timerEl && timerDisplay) {
+    timerEl.style.display = 'block';
+    const waveIndex = Math.floor((qNum - 1) / 10);
+    let totalSeconds = (waveIndex === 0) ? 60 : waveIndex * 10 * 60;
+    
+    const createdAt = new Date(queueData.created_at).getTime();
+    const now = new Date().getTime();
+    const elapsedSeconds = Math.floor((now - createdAt) / 1000);
+    let remainingSeconds = Math.max(10, totalSeconds - elapsedSeconds);
+    
+    startCountdown(remainingSeconds / 60, 'timer-countdown', () => {
+      timerDisplay.textContent = "Giliran Anda Tiba!";
+      checkUserState();
+    });
+  }
+
+  // Matikan interval lama jika ada
   if (queueStatusInterval) clearInterval(queueStatusInterval);
+  // Jalankan interval baru
   queueStatusInterval = setInterval(() => {
     checkUserState();
-  }, 60000); 
+  }, 10000);
 }
 
-function renderActivePanel(queueData) {
-  if (queueStatusInterval) clearInterval(queueStatusInterval);
+
+function renderActivePanel(data) {
+  showPanel('panel-active');
   
-  const emailInput = document.getElementById('f-email');
-  _supabase.auth.getUser().then(({ data }) => {
-    if (data?.user?.email) emailInput.value = data.user.email;
+  // Pastikan form-card tidak terpotong (CSS fix via JS)
+  const formCard = document.querySelector('.form-card');
+  if (formCard) formCard.style.height = 'auto';
+  if (formCard) formCard.style.overflow = 'visible';
+
+  _supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) {
+      const emailField = document.getElementById('f-email');
+      if (emailField) emailField.value = session.user.email;
+      // Trigger update nominal agar tidak Rp100.---
+      onWaInput(); 
+    }
   });
 
-  showPanel('panel-active');
-      startCountdown(10, 'active-countdown-timer', () => {
-        showPanel('panel-expired');
-      });
-
-  const expiresAt = new Date(queueData.expires_at).getTime();
-  if (activeCountdownInterval) clearInterval(activeCountdownInterval);
-
-  activeCountdownInterval = setInterval(() => {
+  if (data.expires_at) {
+    const expiresAt = new Date(data.expires_at).getTime();
     const now = new Date().getTime();
-    const distance = expiresAt - now;
-
-    if (distance <= 0) {
-      clearInterval(activeCountdownInterval);
-      showPanel('panel-expired');
-      return;
+    const diffSeconds = Math.floor((expiresAt - now) / 1000);
+    if (diffSeconds > 0) {
+      startCountdown(diffSeconds / 60, 'active-countdown-timer', () => {
+        checkUserState();
+      });
     }
-
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-    document.getElementById('active-countdown-timer').textContent = 
-      `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, 1000);
-}
-
-async function registerWaitlist() {
-  const btn = document.getElementById('btn-waitlist');
-  btn.innerHTML = '<span>Mendaftarkan...</span><span>⏳</span>';
-  const { data: { session } } = await _supabase.auth.getSession();
-  
-  try {
-    await fetch(`${BACKEND_URL}/api/queue/notify`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}` }
-    });
-    document.getElementById('waitlist-box').innerHTML = `
-      <div style="color:var(--td); font-weight:bold; font-size:15px; margin-bottom:5px;">✅ Email Anda berhasil didaftarkan!</div>
-      <div style="font-size:13px; color:#555;">Kami akan mengirim email notifikasi sesaat sebelum kuota tambahan dibuka.</div>
-    `;
-  } catch (e) {
-    btn.innerHTML = '<span>Gagal. Coba lagi</span><span>🔄</span>';
   }
 }
+
+
 
 async function loadConfig() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/config`);
     const data = await res.json();
-    activeGateway = data.gateway || 'midtrans';
+    activeGateway = data.gateway || 'manual';
     updateSidebarForGateway();
   } catch (e) {
     console.warn('loadConfig failed:', e);
@@ -247,12 +302,11 @@ async function loadConfig() {
 }
 
 function updateSidebarForGateway() {
+  const badgeEl = document.getElementById('payment-badge');
   const adminRow = document.getElementById('sidebar-admin-row');
   const totalEl = document.getElementById('sidebar-total');
-  const headPrice = document.querySelector('.order-price'); // Small fix: update head price too
-  const badgeEl = document.getElementById('payment-badge');
+  const headPrice = document.querySelector('.order-price');
 
-  // Update dynamic branding text
   if (badgeEl) {
     const gatewayLabel = activeGateway.charAt(0).toUpperCase() + activeGateway.slice(1);
     badgeEl.innerHTML = `🔒 Transaksi aman via ${gatewayLabel} · SSL Encrypted`;
@@ -261,7 +315,7 @@ function updateSidebarForGateway() {
   if (activeGateway === 'manual') {
     if (adminRow) adminRow.style.display = 'none';
     if (headPrice) headPrice.textContent = 'Rp100.xxx';
-    onWaInput(); // initial update
+    onWaInput(); 
   } else {
     if (adminRow) adminRow.style.display = 'flex';
     if (totalEl) totalEl.textContent = 'Rp102.500';
@@ -507,42 +561,30 @@ function debouncedLoadBatches() {
   }, jitter + 1000);
 }
 
+let realtimeChannel = null;
 function setupRealtime() {
-  // Listen for batch changes
-  _supabase.channel('public-batches')
+  if (realtimeChannel) {
+    _supabase.removeChannel(realtimeChannel);
+  }
+  
+  realtimeChannel = _supabase.channel('public-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, (payload) => {
       console.log('Batch update:', payload);
       debouncedLoadBatches();
     })
-    .subscribe();
-
-  // Listen for queue config changes (Master Switch)
-  _supabase.channel('public-config')
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'batch_config' }, (payload) => {
-      console.log('Queue Config update:', payload);
-      checkUserState(); // Full state refresh
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'batch_config' }, (payload) => {
+      console.log('Config update:', payload);
+      checkUserState();
+    })
+    .on('postgres_changes', { 
+      event: 'UPDATE', 
+      schema: 'public', 
+      table: 'queue_slots'
+    }, (payload) => {
+      console.log('My Queue Update:', payload);
+      checkUserState();
     })
     .subscribe();
-
-  // Listen for order status changes
-  _supabase.channel('orders-channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-      console.log('Order update:', payload);
-      debouncedLoadBatches();
-    })
-    .subscribe();
-}
-
-// ── LOAD BATCHES FROM BACKEND ─────────────────────────────────────
-async function loadBatches() {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/batches`);
-    const data = await res.json();
-    if (data.success) renderBatches(data.batches);
-  } catch (e) {
-    console.error('loadBatches:', e);
-    showToast('⚠ Gagal memuat data batch');
-  }
 }
 
 // ── RENDER BATCHES ────────────────────────────────────────────────
@@ -655,10 +697,10 @@ async function handleBooking() {
     // 2. Upload ke Supabase Storage
     const fileName = `proof_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
     const { data: uploadData, error: uploadErr } = await _supabase.storage
-      .from('payment_proofs')
+      .from('transfer_proofs')
       .upload(fileName, compressedFile);
 
-    if (uploadErr) throw new Error('Gagal mengunggah bukti: Pastikan bucket payment_proofs tersedia');
+    if (uploadErr) throw new Error('Gagal mengunggah bukti: Pastikan bucket transfer_proofs tersedia');
 
     btnLanjut.innerHTML = '<span>Menyelesaikan Pendaftaran...</span><span>⏳</span>';
 
@@ -1070,38 +1112,104 @@ window.currentSlide = function(n) {
   startAutoSlide();
 }
 
-function showSlides(n) {
-  let i;
-  const slider = document.getElementById("product-slider");
-  if (!slider) return;
-
-  const slides = slider.querySelectorAll(".pg-slide");
-  const dots = document.querySelectorAll(".dot");
+function renderActivePanel(data) {
+  console.log("Entering Active State - Stopping background loops.");
   
-  if (!slides.length) return;
-  
-  if (n > slides.length) { slideIndex = 1 }
-  if (n < 1) { slideIndex = slides.length }
-  
-  for (i = 0; i < slides.length; i++) {
-    slides[i].classList.remove("active");
+  // MATIKAN SEMUA LOOP BACKGROUND agar tombol "Kirim" tidak macet
+  if (queueStatusInterval) {
+    clearInterval(queueStatusInterval);
+    queueStatusInterval = null;
   }
-  for (i = 0; i < dots.length; i++) {
-    dots[i].classList.remove("active");
+
+  // Cegah render ulang jika user sedang di panel-active (agar form tidak reset)
+  const currentPanel = document.querySelector('.state-panel[style*="block"]');
+  if (currentPanel && currentPanel.id === 'panel-active') {
+    console.log("Already in active panel, skipping layout refresh");
+  } else {
+    showPanel('panel-active');
   }
   
-  slides[slideIndex - 1].classList.add("active");
-  if (dots[slideIndex - 1]) dots[slideIndex - 1].classList.add("active");
-}
+  // Update nominal segera jika belum ada
+  setTimeout(() => {
+    onWaInput();
+    updateSidebarForGateway();
+  }, 100);
 
-// Ensure init after everything is loaded
-window.addEventListener('load', () => {
-  init();
-  initCarousel();
-});
-
-function resetQueue() {
-  _supabase.auth.signOut().then(() => {
-    window.location.reload();
+  _supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) {
+      const emailField = document.getElementById('f-email');
+      if (emailField && !emailField.value) emailField.value = session.user.email;
+    }
   });
+
+  if (data.expires_at) {
+    const expiresAt = new Date(data.expires_at).getTime();
+    const now = new Date().getTime();
+    const diffSeconds = Math.floor((expiresAt - now) / 1000);
+    
+    if (diffSeconds > 0) {
+      startCountdown(diffSeconds / 60, 'active-countdown-timer', () => {
+        // Jika waktu benar-benar habis di browser:
+        console.log("Timer expired in browser!");
+        showPanel('panel-expired');
+      });
+    } else {
+      showPanel('panel-expired');
+    }
+  }
 }
+
+function onWaInput() {
+  const waField = document.getElementById('f-wa');
+  const totalEl = document.getElementById('sidebar-total');
+  const headPrice = document.querySelector('.order-price');
+  const formNominal = document.getElementById('display-unique-nominal');
+  
+  if (!waField) return;
+  waField.value = waField.value.replace(/\D/g, '');
+  const wa = waField.value;
+  
+  if (activeGateway === 'manual') {
+    let displayTotal = 'Rp100.---';
+    if (wa.length >= 3) {
+      const last3 = wa.substring(wa.length - 3);
+      displayTotal = 'Rp100.' + last3;
+    }
+    if (totalEl) totalEl.textContent = displayTotal;
+    if (headPrice) headPrice.textContent = displayTotal;
+    if (formNominal) formNominal.textContent = displayTotal;
+  }
+}
+
+async function resetQueue() {
+  console.log("CRITICAL RESET: Initiating full cleanup...");
+  const { data: { session } } = await _supabase.auth.getSession();
+  
+  if (session) {
+    try {
+      console.log("Calling backend reset for user:", session.user.id);
+      const res = await fetch(`${BACKEND_URL}/api/queue/reset`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+      console.log("Backend Reset Result:", result);
+    } catch (e) {
+      console.error("Backend reset failed:", e);
+    }
+  }
+
+  console.log("Clearing local storage and signing out...");
+  await _supabase.auth.signOut();
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  // Tambahkan timestamp agar tidak kena cache saat reload
+  window.location.href = window.location.origin + '/?refresh=' + Date.now();
+}
+
+// Tambahkan event listener untuk memanggil init saat halaman dimuat
+window.addEventListener('load', init);

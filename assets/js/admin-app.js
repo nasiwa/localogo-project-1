@@ -90,6 +90,7 @@ function showPage(page) {
 }
 
 async function refreshAll() {
+  loadMasterGate();
   const activePage = document.querySelector('.page-section.active');
   if (!activePage) return;
   const pageId = activePage.id.replace('page-', '');
@@ -586,3 +587,75 @@ window.onload = () => {
   const btnExport = document.getElementById('btn-export-csv');
   if (btnExport) btnExport.onclick = exportToCSV;
 };
+
+
+// ── MASTER GATE LOGIC (FIXED: Using Backend API) ───────────────────
+async function loadMasterGate() {
+  const adminToken = getAdminToken();
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/gate`, {
+      headers: { 'x-admin-token': adminToken }
+    });
+    const { success, is_open } = await res.json();
+    
+    if (success) {
+      const icon = document.getElementById('master-gate-icon');
+      const status = document.getElementById('master-gate-status');
+      const btn = document.getElementById('btn-master-toggle');
+      if (!icon || !status || !btn) return;
+      
+      if (is_open) {
+        icon.textContent = '🔓';
+        status.innerHTML = 'Status: <strong style="color:var(--green)">ANTREAN DIBUKA</strong>. User bisa masuk.';
+        btn.textContent = 'TUTUP ANTREAN 🔒';
+        btn.style.background = 'var(--red)';
+      } else {
+        icon.textContent = '🔒';
+        status.innerHTML = 'Status: <strong style="color:var(--red)">ANTREAN TERKUNCI</strong>. User tidak bisa masuk.';
+        btn.textContent = 'BUKA ANTREAN 🔓';
+        btn.style.background = 'var(--td)';
+      }
+    }
+  } catch (e) {
+    console.error('loadMasterGate error:', e);
+  }
+}
+
+async function toggleMasterGate() {
+  const adminToken = getAdminToken();
+  const btn = document.getElementById('btn-master-toggle');
+  const statusLabel = document.getElementById('master-gate-status');
+  
+  // Ambil status saat ini dulu
+  const resInit = await fetch(`${BACKEND_URL}/api/admin/gate`, {
+    headers: { 'x-admin-token': adminToken }
+  });
+  const { is_open: currentStatus } = await resInit.json();
+  const newState = !currentStatus;
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/gate`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-admin-token': adminToken 
+      },
+      body: JSON.stringify({ is_open: newState })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      showToast(newState ? '🚀 Antrean berhasil DIBUKA!' : '🔒 Antrean berhasil DITUTUP!');
+      loadMasterGate();
+    } else {
+      showToast('⚠ Gagal: ' + (result.error || 'Terjadi kesalahan'));
+    }
+  } catch (e) {
+    showToast('⚠ Gagal menyambung ke server');
+  } finally {
+    btn.disabled = false;
+  }
+}

@@ -94,7 +94,22 @@
           <button class="btn-sm btn-primary" onclick="refreshAll()">↻ Refresh</button>
         </div>
 
-        <div class="stats-row">
+        
+        <div class="card" style="margin-bottom: 25px; border: 2px solid var(--td); background: rgba(36,153,155,0.05);">
+          <div class="card-head" style="padding: 20px;">
+            <div style="display:flex; align-items:center; gap:20px; width:100%;">
+              <div style="font-size:40px;" id="master-gate-icon">🔒</div>
+              <div style="flex:1;">
+                <div class="card-title" style="font-size:20px;">Saklar Utama Antrean (Master Gate)</div>
+                <div class="card-sub" id="master-gate-status">Status: Antrean sedang TERKUNCI rapat.</div>
+              </div>
+              <button class="btn-sm" id="btn-master-toggle" onclick="toggleMasterGate()" style="padding: 15px 30px; font-size: 16px; font-weight: 800; background: var(--td); color:#fff; border:none; border-radius:8px; cursor:pointer;">
+                BUKA ANTREAN SEKARANG 🔓
+              </button>
+            </div>
+          </div>
+        </div>
+<div class="stats-row">
           <div class="stat-card accent">
             <div class="stat-card-label">Total Slot Terisi</div>
             <div class="stat-card-val" id="ds-filled">—</div>
