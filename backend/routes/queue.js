@@ -1,184 +1,165 @@
 const express = require('express');
 const router = express.Router();
+const { adminSupabase } = require('../client');
 
-// Helper to verify user token
-async function verifyUser(req, supabase) {
-  const token = req.headers.authorization?.split(' ')[1] || req.headers['x-user-token'];
-  if (!token) return { error: 'No token provided' };
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) return { error: 'Invalid token' };
-  return { user: data.user };
-}
-
-// POST /api/queue/claim
-router.post('/claim', async (req, res) => {
-  try {
-    const supabase = req.app.get('getSupabase')();
-    const { user, error } = await verifyUser(req, supabase);
-    if (error) return res.status(401).json({ success: false, error });
-
-    // Admin Bypass
-    if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
-        return res.json({
-            success: true,
-            data: {
-                user_id: user.id,
-                queue_number: 0,
-                session: 1,
-                status: 'active',
-                created_at: new Date(),
-                activated_at: new Date(),
-                expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24)
-            }
-        });
-    }
-
-    // Call RPC
-    const { data: rpcData, error: rpcError } = await supabase.rpc('claim_queue_slot', { p_user_id: user.id });
-
-    if (rpcError) {
-      console.error('RPC Error:', rpcError);
-      return res.status(500).json({ success: false, error: 'Database error while claiming slot' });
-    }
-
-    if (!rpcData.success) {
-      return res.status(400).json(rpcData);
-    }
-
-    res.json(rpcData);
-  } catch (err) {
-    console.error('Claim Error:', err);
-    res.status(500).json({ success: false, error: 'Internal server error' });
-  }
-});
-
-// POST /api/queue/reset
-router.post('/reset', async (req, res) => {
-  try {
-    const supabase = req.app.get('getSupabase')();
-    const { user, error } = await verifyUser(req, supabase);
-    if (error) return res.status(401).json({ success: false, error });
-
-    const { error: delError } = await supabase
-      .from('queue_slots')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (delError) throw delError;
-    res.json({ success: true, message: 'Antrean berhasil direset' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Gagal meriset antrean' });
-  }
-});
-
-// GET /api/queue/status
-router.get('/status', async (req, res) => {
-  try {
-    const supabase = req.app.get('getSupabase')();
-    const { user, error } = await verifyUser(req, supabase);
-    if (error) return res.status(401).json({ success: false, error });
-
-    if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
-        return res.json({
-            success: true,
-            status: 'active',
-            data: { queue_number: 0, session: 1, status: 'active' }
-        });
-    }
-
-    const { data, error: dbError } = await supabase
-      .from('queue_slots')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (dbError) throw dbError;
-
-    if (!data) {
-      return res.json({ success: true, status: 'not_queued' });
-    }
-
-    // AUTO-EXPIRE LOGIC: Jika active tapi waktu sudah lewat, ubah jadi expired
-    if (data.status === 'active' && data.expires_at) {
-      const expiresAt = new Date(data.expires_at).getTime();
-      const now = new Date().getTime();
-      if (now > expiresAt) {
-        console.log(`Auto-expiring user ${user.id}`);
-        const { data: updated, error: upError } = await supabase
-          .from('queue_slots')
-          .update({ status: 'expired' })
-          .eq('user_id', user.id)
-          .select()
-          .single();
-        
-        if (!upError && updated) {
-          return res.json({ success: true, status: 'expired', data: updated });
-        }
-      }
-    }
-
-    res.json({ success: true, status: data.status, data });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Internal server error' });
-  }
-});
-
-// GET /api/queue/info (Public endpoint - always fresh for is_open)
+// ── GET QUEUE INFO (PUBLIC) ───────────────────────────────────────
 router.get('/info', async (req, res) => {
   try {
-    const supabase = req.app.get('getSupabase')();
-    
-    const { data: config } = await supabase
-      .from('batch_config')
+    // 1. Ambil Batch Aktif
+    const { data: batch, error: bErr } = await adminSupabase
+      .from('batches')
       .select('*')
-      .limit(1)
+      .eq('status', 'active')
       .single();
-      
-    if (!config) {
-      return res.json({ success: true, data: { is_open: false } });
+
+    if (bErr || !batch) {
+      return res.json({ success: true, data: { is_open: false, available: 0, total_quota: 0 } });
     }
 
-    // Hitung slot terisi (bukan expired)
-    const { count: activeCount } = await supabase
+    // 2. Ambil Status Master Gate dari Config
+    const { data: config } = await adminSupabase.from('config').select('*').eq('key', 'is_queue_open').single();
+    const isMasterGateOpen = config ? (config.value === 'true' || config.value === true) : false;
+
+    // 3. Hitung Antrean Aktif (Reserved)
+    const { count: activeQueues, error: qErr } = await adminSupabase
       .from('queue_slots')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['waiting', 'active', 'done']);
+      .eq('batch_id', batch.id)
+      .neq('status', 'expired');
 
-    const info = {
-      is_open: config.is_open,
-      total_quota: config.total_quota,
-      filled: activeCount || 0,
-      available: Math.max(0, config.total_quota - (activeCount || 0)),
-      session_capacity: config.session_capacity,
-      wave_duration_minutes: config.wave_duration_minutes
-    };
+    if (qErr) throw qErr;
+
+    const available = Math.max(0, batch.total_slots - (activeQueues || 0));
+
+    res.json({
+      success: true,
+      data: {
+        is_open: isMasterGateOpen, // Gerbang Utama
+        available: available,
+        total_quota: batch.total_slots,
+        batch_name: batch.name,
+        session_size: 200, // Sesuai permintaan: 200 per sesi
+        wave_size: 10,     // Sesuai permintaan: 10 orang per gelombang
+        wave_interval: 10  // 10 menit
+      }
+    });
+  } catch (err) {
+    console.error("Queue Info Error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── CHECK STATUS (USER) ───────────────────────────────────────────
+router.get('/status', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ success: false, error: "No token" });
+    const token = authHeader.split(' ')[1];
     
-    res.json({ success: true, data: info });
+    const { data: { user }, error: authErr } = await adminSupabase.auth.getUser(token);
+    if (authErr || !user) return res.status(401).json({ success: false, error: "Invalid token" });
+
+    // Cek apakah user punya slot antrean
+    const { data: slot, error: sErr } = await adminSupabase
+      .from('queue_slots')
+      .select('*, batches(status, name, total_slots)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (sErr || !slot) return res.json({ success: true, status: 'not_queued' });
+    if (slot.status === 'expired') return res.json({ success: true, status: 'expired' });
+    if (slot.status === 'done') return res.json({ success: true, status: 'done' });
+
+    // LOGIKA SESI & GELOMBANG (10 Orang / 10 Menit)
+    const now = new Date();
+    const batchStart = new Date(slot.created_at);
+    const diffMs = now - batchStart;
+    const minutesElapsed = Math.floor(diffMs / 60000);
+
+    // Hitung apakah nomor antreannya sudah boleh masuk
+    // Contoh: Nomor 1-10 masuk menit 0, Nomor 11-20 masuk menit 10, dst.
+    const myWaveNumber = Math.ceil(slot.queue_number / 10);
+    const requiredMinutes = (myWaveNumber - 1) * 10;
+
+    let finalStatus = slot.status;
+    if (slot.status === 'waiting' && minutesElapsed >= requiredMinutes) {
+        // Otomatis Aktifkan jika waktu sudah tiba
+        await adminSupabase.from('queue_slots').update({ 
+            status: 'active',
+            activated_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+        }).eq('id', slot.id);
+        finalStatus = 'active';
+    }
+
+    res.json({
+      success: true,
+      status: finalStatus,
+      data: {
+        queue_number: slot.queue_number,
+        session: Math.ceil(slot.queue_number / 200),
+        expires_at: slot.expires_at,
+        minutes_to_wait: Math.max(0, requiredMinutes - minutesElapsed)
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// POST /api/queue/notify (Waitlist)
-router.post('/notify', async (req, res) => {
+// ── CLAIM SLOT ────────────────────────────────────────────────────
+router.post('/claim', async (req, res) => {
   try {
-    const supabase = req.app.get('getSupabase')();
-    const { user, error } = await verifyUser(req, supabase);
-    if (error) return res.status(401).json({ success: false, error });
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(' ')[1];
+    const { data: { user } } = await adminSupabase.auth.getUser(token);
 
-    const { error: insertError } = await supabase
-      .from('waitlist_notifications')
-      .insert({ email: user.email, user_id: user.id });
+    // 1. Cek Batch
+    const { data: batch } = await adminSupabase.from('batches').select('*').eq('status', 'active').single();
+    if (!batch) return res.status(400).json({ success: false, error: "Tidak ada batch aktif" });
 
-    // Ignore unique constraint error if they already registered
-    if (insertError && insertError.code !== '23505') {
-      throw insertError;
+    // 2. Cek apakah Master Gate Terbuka
+    const { data: config } = await adminSupabase.from('config').select('*').eq('key', 'is_queue_open').single();
+    if (!config || config.value !== 'true') return res.status(400).json({ success: false, error: "Antrean sedang ditutup sementara" });
+
+    // 3. Hitung Antrean Aktif
+    const { count } = await adminSupabase.from('queue_slots').select('*', { count: 'exact', head: true }).eq('batch_id', batch.id).neq('status', 'expired');
+    
+    if (count >= batch.total_slots) {
+        return res.status(400).json({ success: false, error: "Maaf, kuota batch ini sudah habis sepenuhnya!" });
     }
 
-    res.json({ success: true, message: 'Terdaftar di waitlist' });
+    // 4. Buat Slot Baru
+    const nextNumber = (count || 0) + 1;
+    const { data: newSlot, error: insErr } = await adminSupabase.from('queue_slots').insert({
+        user_id: user.id,
+        batch_id: batch.id,
+        queue_number: nextNumber,
+        status: 'waiting'
+    }).select().single();
+
+    if (insErr) throw insErr;
+    res.json({ success: true, data: newSlot });
+
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Gagal mendaftar waitlist' });
+    res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// ── RESET ─────────────────────────────────────────────────────────
+router.post('/reset', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        const token = authHeader.split(' ')[1];
+        const { data: { user } } = await adminSupabase.auth.getUser(token);
+
+        await adminSupabase.from('queue_slots').update({ status: 'expired' }).eq('user_id', user.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 module.exports = router;

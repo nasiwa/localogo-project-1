@@ -34,15 +34,18 @@ router.get('/batches', async (req, res) => {
   }
 });
 
+const { createClient } = require('@supabase/supabase-js');
+const adminSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
 /**
  * POST /api/create-order
  */
 router.post('/create-order', async (req, res) => {
   const supabase = req.app.get('getSupabase')();
-  const { full_name, email, whatsapp, batch_id, proof_url } = req.body;
+  const { full_name, email, whatsapp, batch_id, proof_url, user_id } = req.body;
 
   if (!full_name || !email || !whatsapp || !batch_id || !proof_url) {
-    return res.status(400).json({ success: false, error: 'Data tidak lengkap. Bukti transfer wajib diunggah.' });
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap.' });
   }
 
   const orderRef = genOrderRef();
@@ -52,34 +55,86 @@ router.post('/create-order', async (req, res) => {
     const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
     const finalAmount = 100000 + parseInt(last3WA || '0');
 
-    // 2. Claim Slot via RPC (Atomic slot deduction)
-    const { data: claimData, error: claimErr } = await supabase.rpc('claim_slot', {
-      p_batch_id: batch_id,
-      p_order_ref: orderRef,
-      p_name: full_name,
-      p_email: email,
-      p_wa: whatsapp,
-      p_amount: finalAmount
-    });
+    // 2. LOGIKA PENDAFTARAN (VERSI CEPAT & TANGGUH)
+    console.log(`[CREATE_ORDER] Starting claim for ${email} (User: ${user_id})`);
+    
+    // A. Ambil Info Batch
+    const { data: batch, error: bErr } = await supabase
+      .from('batches')
+      .select('id, name, total_slots, filled_slots')
+      .eq('id', batch_id)
+      .eq('status', 'active')
+      .single();
 
-    if (claimErr || !claimData?.success) {
-      return res.status(409).json({ success: false, error: claimData?.error || 'Gagal memesan slot' });
+    if (bErr || !batch) {
+      return res.status(400).json({ success: false, error: 'Batch tidak tersedia atau sudah penuh' });
     }
 
-    // 3. Update database with proof_url and status
-    await supabase.from('orders').update({
-      payment_gateway: 'manual',
-      amount: finalAmount,
-      proof_url: proof_url,
-      status: 'pending' // Admin akan memverifikasi ini nanti
-    }).eq('order_ref', orderRef);
+    // B. Cek Duplikat WA
+    const { data: existing } = await adminSupabase
+      .from('orders')
+      .select('id')
+      .eq('batch_id', batch_id)
+      .eq('whatsapp', whatsapp)
+      .in('status', ['paid', 'pending'])
+      .maybeSingle();
 
-    res.json({
+    if (existing) {
+      return res.status(409).json({ success: false, error: '⚠️ WhatsApp ini sudah terdaftar di Batch ini.' });
+    }
+
+    // C. Cek Kuota
+    const { count: takenCount } = await adminSupabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('batch_id', batch_id)
+      .in('status', ['paid', 'pending']);
+
+    if (takenCount >= batch.total_slots) {
+      return res.status(409).json({ success: false, error: 'Maaf, slot baru saja penuh.' });
+    }
+
+    // D. Buat Pesanan (INSERT)
+    console.log(`[CREATE_ORDER] Quota OK (${takenCount}/${batch.total_slots}). Inserting...`);
+    const { data: newOrder, error: insErr } = await adminSupabase
+      .from('orders')
+      .insert({
+        order_ref: orderRef,
+        batch_id: batch_id,
+        full_name: full_name,
+        email: email,
+        whatsapp: whatsapp,
+        amount: finalAmount,
+        status: 'pending',
+        payment_gateway: 'manual',
+        proof_url: proof_url
+      })
+      .select()
+      .single();
+
+    if (insErr) {
+      console.error('[INSERT_ERR]', insErr);
+      throw insErr;
+    }
+
+    // E. SET STATUS ANTREAN JADI 'DONE' (Gunakan try/catch agar tidak mengganggu response utama)
+    if (user_id) {
+      console.log(`[CREATE_ORDER] Setting queue status to DONE for ${user_id}`);
+      adminSupabase
+        .from('queue_slots')
+        .update({ status: 'done' })
+        .eq('user_id', user_id)
+        .then(() => console.log(`[QUEUE_UPDATE] Success for ${user_id}`))
+        .catch(e => console.error(`[QUEUE_UPDATE] Failed:`, e));
+    }
+
+    console.log(`[CREATE_ORDER] SUCCESS: ${orderRef}`);
+    return res.json({
       success: true,
-      id: claimData.id,
+      id: newOrder.id,
       order_ref: orderRef,
       amount: finalAmount,
-      batch_name: claimData.batch_name
+      batch_name: batch.name
     });
 
   } catch (err) {
