@@ -14,6 +14,29 @@ let paymentGateway = 'manual';
 let selectedPaymentMethod = 'VC';
 let currentOrder = {};
 let activeGateway = 'manual';
+let countdownInterval;
+
+function startCountdown(durationMinutes, displayId, onEnd) {
+  clearInterval(countdownInterval);
+  let timer = durationMinutes * 60;
+  const display = document.getElementById(displayId);
+  if (!display) return;
+
+  function update() {
+    let minutes = parseInt(timer / 60, 10);
+    let seconds = parseInt(timer % 60, 10);
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+    display.textContent = minutes + ":" + seconds;
+
+    if (--timer < 0) {
+      clearInterval(countdownInterval);
+      if (onEnd) onEnd();
+    }
+  }
+  update();
+  countdownInterval = setInterval(update, 1000);
+}
 
 // ── INITIAL LOAD & STATE MANAGEMENT ───────────────────────────────
 let queueStatusInterval = null;
@@ -169,6 +192,9 @@ function renderActivePanel(queueData) {
   });
 
   showPanel('panel-active');
+      startCountdown(10, 'active-countdown-timer', () => {
+        showPanel('panel-expired');
+      });
 
   const expiresAt = new Date(queueData.expires_at).getTime();
   if (activeCountdownInterval) clearInterval(activeCountdownInterval);
@@ -247,25 +273,25 @@ function onWaInput() {
   const waField = document.getElementById('f-wa');
   if (!waField) return;
 
-  // Filter: Hanya angka saja
   waField.value = waField.value.replace(/\D/g, '');
-
-  // Jika manual, update sidebar total live
+  const wa = waField.value;
+  
   if (activeGateway === 'manual') {
     const totalEl = document.getElementById('sidebar-total');
     const headPrice = document.querySelector('.order-price');
-    const wa = waField.value;
+    const formNominal = document.getElementById('display-unique-nominal');
     
-    let displayTotal = 'Rp100.xxx';
+    let displayTotal = 'Rp100.---';
     if (wa.length >= 3) {
-      const code = wa.slice(-3);
-      displayTotal = `Rp100.${code}`;
+      const suffix = wa.slice(-3);
+      displayTotal = 'Rp100.' + suffix;
     } else if (wa.length > 0) {
       displayTotal = `Rp100.${wa.padStart(3, '0')}`;
     }
-
+    
     if (totalEl) totalEl.textContent = displayTotal;
     if (headPrice) headPrice.textContent = displayTotal;
+    if (formNominal) formNominal.textContent = displayTotal;
   }
 }
 
@@ -482,27 +508,28 @@ function debouncedLoadBatches() {
 }
 
 function setupRealtime() {
-  const channel = _supabase.channel('public:batches');
-  
-  channel
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'batches' }, (payload) => {
-      if (activeBatch && payload.new.id === activeBatch.id) {
-        activeBatch = payload.new;
-        updateBatchUI();
-      }
+  // Listen for batch changes
+  _supabase.channel('public-batches')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, (payload) => {
+      console.log('Batch update:', payload);
+      debouncedLoadBatches();
     })
     .subscribe();
 
-  _supabase
-    .channel('orders-channel')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'orders' },
-      (payload) => {
-        console.log('Order update:', payload);
-        debouncedLoadBatches();
-      }
-    )
+  // Listen for queue config changes (Master Switch)
+  _supabase.channel('public-config')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'batch_config' }, (payload) => {
+      console.log('Queue Config update:', payload);
+      checkUserState(); // Full state refresh
+    })
+    .subscribe();
+
+  // Listen for order status changes
+  _supabase.channel('orders-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+      console.log('Order update:', payload);
+      debouncedLoadBatches();
+    })
     .subscribe();
 }
 
@@ -523,12 +550,12 @@ function renderBatches(batches) {
   const grid = document.getElementById('batch-grid');
   if (!grid) return;
   
-  // Determine the truly active batch (must be 'active' status AND have slots)
-  activeBatch = batches.find(b => b.status === 'active' && b.slots_left > 0) || null;
+  // Determine the truly active batch (must be 'active' status)
+  activeBatch = batches.find(b => b.status === 'active') || null;
 
-  // Hero stats
+  // Hero stats & Top banner
   const heroBatchEl = document.getElementById('h-batch');
-  if (heroBatchEl) heroBatchEl.textContent = activeBatch ? activeBatch.name : 'HABIS';
+  if (heroBatchEl) heroBatchEl.textContent = activeBatch ? activeBatch.name : 'HIDDEN';
 
   // Batch cards
   grid.innerHTML = batches.map(b => {
@@ -1072,3 +1099,9 @@ window.addEventListener('load', () => {
   init();
   initCarousel();
 });
+
+function resetQueue() {
+  _supabase.auth.signOut().then(() => {
+    window.location.reload();
+  });
+}
