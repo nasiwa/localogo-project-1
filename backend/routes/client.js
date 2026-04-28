@@ -34,8 +34,7 @@ router.get('/batches', async (req, res) => {
   }
 });
 
-const { createClient } = require('@supabase/supabase-js');
-const adminSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const { adminSupabase } = require('../supabaseClient');
 
 /**
  * POST /api/create-order

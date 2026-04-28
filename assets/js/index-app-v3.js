@@ -1,87 +1,74 @@
 // ── SUPABASE CLIENT ──────────────────────────────────────────────
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-// Update Midtrans client key dynamically
-const snapScript = document.querySelector('script[data-client-key]');
-if (snapScript) {
-  snapScript.setAttribute('data-client-key', MIDTRANS_CLIENT);
-}
-
 // ── STATE ─────────────────────────────────────────────────────────
 let activeBatch = null;
-let activeGateway = 'manual';
-let countdownInterval;
+let _countdownInterval = null;
+let _waveInterval = null;
 
-function startCountdown(durationMinutes, displayId, onEnd) {
-  clearInterval(countdownInterval);
-  let timer = Math.floor(durationMinutes * 60);
-  const display = document.getElementById(displayId);
-  if (!display) return;
-
-  function update() {
-    let minutes = parseInt(timer / 60, 10);
-    let seconds = parseInt(timer % 60, 10);
-    minutes = minutes < 10 ? "0" + minutes : minutes;
-    seconds = seconds < 10 ? "0" + seconds : seconds;
-    display.textContent = minutes + ":" + seconds;
-
-    if (--timer < 0) {
-      clearInterval(countdownInterval);
-      if (onEnd) onEnd();
-    }
-  }
-  update();
-  countdownInterval = setInterval(update, 1000);
-}
-
-// ── INITIAL LOAD & STATE MANAGEMENT ───────────────────────────────
-let queueStatusInterval = null;
-
+// ── INIT ──────────────────────────────────────────────────────────
 async function init() {
   console.log("System initializing...");
   try {
-    loadConfig().catch(e => console.warn("Config load failed", e));
+    await loadConfig();
     await checkUserState();
     setupRealtime();
+    
+    // Bersihkan URL dari token Supabase yang kotor (#access_token=...)
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      setTimeout(() => {
+        history.replaceState(null, '', window.location.pathname);
+      }, 1000);
+    }
   } catch (err) {
     console.error("Init error:", err);
     showPanel('panel-not-logged-in');
   }
 }
 
+// ── CEK STATUS USER ───────────────────────────────────────────────
 async function checkUserState() {
-  const { data: { session: authSession } } = await _supabase.auth.getSession();
-  if (!authSession) {
+  const { data: { session } } = await _supabase.auth.getSession();
+
+  if (!session) {
     showPanel('panel-not-logged-in');
     return;
   }
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/queue/status?t=${Date.now()}`, {
-      headers: { 'Authorization': `Bearer ${authSession.access_token}` }
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
+
+    if (!res.ok) {
+      showPanel('panel-not-logged-in');
+      return;
+    }
+
     const result = await res.json();
-    if (!result.success) throw new Error('Gagal cek status');
+    if (!result.success) {
+      showPanel('panel-not-logged-in');
+      return;
+    }
 
     const { status, data } = result;
-    console.log("Current Status:", status);
+    console.log("Current Status:", status, data);
 
-    if (status === 'not_queued') {
-      await renderNotQueuedPanel();
+    if (status === 'done') {
+      showPanel('panel-done');
     } else if (status === 'waiting') {
       renderWaitingPanel(data);
     } else if (status === 'active') {
-      // Transition effect
-      if (document.getElementById('panel-active').style.display !== 'block') {
-          renderWaitingPanel({ ...data, is_transition: true });
-          setTimeout(() => renderActivePanel(data), 2000);
+      if (!document.getElementById('panel-active').offsetParent) {
+        renderWaitingPanel({ ...data, is_transition: true });
+        setTimeout(() => renderActivePanel(data, session), 2000);
       } else {
-          renderActivePanel(data);
+        renderActivePanel(data, session);
       }
-    } else if (status === 'done') {
-      showPanel('panel-done');
     } else if (status === 'expired') {
       showPanel('panel-expired');
+    } else {
+      await renderNotQueuedPanel(session);
     }
   } catch (err) {
     console.error("State check failed:", err);
@@ -89,237 +76,289 @@ async function checkUserState() {
   }
 }
 
-function showPanel(panelId) {
-  const panels = document.querySelectorAll('.state-panel');
-  panels.forEach(p => p.style.display = 'none');
-  
-  const target = document.getElementById(panelId);
-  if (target) target.style.display = 'block';
-
-  // Update Steps
-  const steps = {
-    'panel-not-queued': 1, 'panel-quota-full': 1,
-    'panel-waiting': 2,
-    'panel-active': 3,
-    'panel-done': 4
-  };
-  if (steps[panelId]) updateStep(steps[panelId]);
-}
-
-function updateStep(stepNum) {
-  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
-  for (let i = 1; i <= stepNum; i++) {
-    const el = document.getElementById('step' + i);
-    if (el) el.classList.add('active');
-  }
-}
-
-async function renderNotQueuedPanel() {
-  const { data: { user } } = await _supabase.auth.getUser();
+// ── PANEL: BELUM ANTRE ────────────────────────────────────────────
+async function renderNotQueuedPanel(session) {
+  const user = session?.user;
   const nameEl = document.getElementById('queue-user-name');
-  if(user && nameEl) nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+  if (user && nameEl) {
+    nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
+  }
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/queue/info?t=${Date.now()}`);
     const { success, data } = await res.json();
-    
-    if (success && data.is_open) {
-      const availEl = document.getElementById('queue-quota-available');
-      const totalEl = document.getElementById('queue-quota-total');
-      if (availEl) availEl.textContent = data.available;
-      if (totalEl) totalEl.textContent = data.total_quota;
-      
-      const btn = document.getElementById('btn-claim-queue');
-      if (data.available <= 0) {
-          showPanel('panel-quota-full'); // SHOW SORRY PANEL
+
+    const availEl = document.getElementById('queue-quota-available');
+    const totalEl = document.getElementById('queue-quota-total');
+    const btn = document.getElementById('btn-claim-queue');
+
+    if (success && data) {
+      if (availEl) availEl.textContent = data.available ?? '?';
+      if (totalEl) totalEl.textContent = data.total_quota ?? '?';
+
+      if (!data.is_open) {
+        showPanel('panel-not-queued');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span>Antrean Sedang Ditutup</span><span>🔒</span>'; }
+      } else if (data.available <= 0) {
+        showPanel('panel-quota-full');
       } else {
-          showPanel('panel-not-queued');
-          if(btn) {
-              btn.disabled = false;
-              btn.innerHTML = '<span>Ambil Nomor Antrean</span><span>→</span>';
-          }
-      }
-    } else {
-      showPanel('panel-not-queued');
-      const btn = document.getElementById('btn-claim-queue');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span>Antrean Sedang Ditutup</span><span>🔒</span>';
+        showPanel('panel-not-queued');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span>Ambil Nomor Antrean</span><span>→</span>'; }
       }
     }
   } catch (err) {
-    showPanel('panel-not-logged-in');
+    console.error("Info fetch error:", err);
   }
 }
 
+// ── PANEL: MENUNGGU ───────────────────────────────────────────────
+function renderWaitingPanel(data) {
+  showPanel('panel-waiting');
+
+  const numEl   = document.getElementById('display-queue-number');
+  const sessEl  = document.getElementById('display-queue-session');
+  const timerEl = document.getElementById('timer-countdown');
+  const titleEl = document.getElementById('waiting-title');
+
+  if (numEl)  numEl.textContent  = String(data.queue_number || '---').padStart(3, '0');
+  if (sessEl) sessEl.textContent = data.session || '1';
+
+  if (data.is_transition) {
+    if (titleEl) titleEl.textContent = 'Giliran Anda Tiba! Menyiapkan Form...';
+    if (timerEl) timerEl.textContent = '00:02';
+    return;
+  }
+
+  if (_waveInterval) clearInterval(_waveInterval);
+  let secondsLeft = Math.max(0, (data.minutes_to_wait || 0) * 60);
+
+  function tick() {
+    if (secondsLeft <= 0) {
+      clearInterval(_waveInterval);
+      checkUserState();
+      return;
+    }
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    if (timerEl) timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    secondsLeft--;
+  }
+  tick();
+  _waveInterval = setInterval(tick, 1000);
+}
+
+// ── PANEL: AKTIF (FORM) ───────────────────────────────────────────
+function renderActivePanel(data, session) {
+  showPanel('panel-active');
+  const adminRow = document.getElementById('sidebar-admin-row');
+  if (adminRow) adminRow.style.display = 'none';
+
+  const user = session?.user;
+  if (user) {
+    const emailEl = document.getElementById('f-email');
+    const nameEl  = document.getElementById('f-name');
+    if (emailEl) emailEl.value = user.email || '';
+    if (nameEl && user.user_metadata?.full_name) nameEl.value = user.user_metadata.full_name;
+  }
+
+  onWaInput();
+
+  if (_countdownInterval) clearInterval(_countdownInterval);
+  let formSeconds = 10 * 60;
+  if (data?.expires_at) {
+    const msLeft = new Date(data.expires_at) - new Date();
+    formSeconds = Math.max(0, Math.floor(msLeft / 1000));
+  }
+
+  const countdownEl = document.getElementById('active-countdown-timer');
+  function tickForm() {
+    if (formSeconds <= 0) {
+      clearInterval(_countdownInterval);
+      checkUserState();
+      return;
+    }
+    const m = Math.floor(formSeconds / 60);
+    const s = formSeconds % 60;
+    if (countdownEl) countdownEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    formSeconds--;
+  }
+  tickForm();
+  _countdownInterval = setInterval(tickForm, 1000);
+}
+
+// ── LOAD CONFIG (Batch Aktif & Grid) ──────────────────────────────
+async function loadConfig() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/batches?t=${Date.now()}`);
+    const bData = await res.json();
+    if (bData.success && bData.batches) {
+      renderBatches(bData.batches);
+      const b = bData.batches.find(x => x.status === 'active');
+      if (b) {
+        activeBatch = b;
+        const batchEls = document.querySelectorAll('[id="sidebar-batch"], [id="h-batch"]');
+        batchEls.forEach(el => { if (el) el.textContent = b.name; });
+      }
+    }
+  } catch (e) { console.warn("loadConfig failed:", e); }
+}
+
+function renderBatches(batches) {
+  const grid = document.getElementById('batch-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  batches.forEach(b => {
+    const progress = Math.min(100, Math.round((b.filled_slots / b.total_slots) * 100));
+    const card = document.createElement('div');
+    card.className = `batch-card ${b.status === 'active' ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="batch-name">${b.name}</div>
+      <div class="batch-status-chip status-${b.status}">${b.status.toUpperCase()}</div>
+      <div class="batch-progress-bg"><div class="batch-progress-fill" style="width:${progress}%"></div></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ── NOMINAL UNIK ──────────────────────────────────────────────────
+function onWaInput() {
+  const waEl = document.getElementById('f-wa');
+  if (!waEl) return;
+  const wa = waEl.value.trim();
+  const last3 = wa.slice(-3).replace(/\D/g, '0');
+  const nominal = 100000 + parseInt(last3 || '0', 10);
+  const formatted = 'Rp' + nominal.toLocaleString('id-ID');
+
+  const nominalEl = document.getElementById('display-unique-nominal');
+  const sidebarEl = document.getElementById('sidebar-total');
+  if (nominalEl) nominalEl.textContent = formatted;
+  if (sidebarEl)  sidebarEl.textContent  = formatted;
+}
+
+// ── AMBIL NOMOR ANTREAN ───────────────────────────────────────────
 async function claimQueueSlot() {
   const btn = document.getElementById('btn-claim-queue');
-  btn.innerHTML = '<span>Memproses...</span><span>⏳</span>';
-  btn.disabled = true;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Memproses...</span><span>⏳</span>'; }
 
   const { data: { session } } = await _supabase.auth.getSession();
+  if (!session) { showPanel('panel-not-logged-in'); return; }
+
   try {
     const res = await fetch(`${BACKEND_URL}/api/queue/claim`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
     const result = await res.json();
+
     if (!result.success) {
-      showToast(result.error);
-      btn.innerHTML = '<span>Ambil Nomor Antrean</span><span>→</span>';
-      btn.disabled = false;
+      showToast('⚠️ ' + (result.error || 'Gagal mengambil antrean'));
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span>Ambil Nomor Antrean</span><span>→</span>'; }
       return;
     }
-    checkUserState();
+    
+    // Berhasil → langsung panggil checkUserState
+    await checkUserState();
   } catch (err) {
-    showToast('Koneksi terputus');
-    btn.disabled = false;
+    showToast('Koneksi terputus, coba lagi.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>Ambil Nomor Antrean</span><span>→</span>'; }
   }
 }
 
-function renderWaitingPanel(data) {
-  showPanel('panel-waiting');
-  const numEl = document.getElementById('display-queue-number');
-  const sessEl = document.getElementById('display-queue-session');
-  if (numEl) numEl.textContent = String(data.queue_number || '---').padStart(3, '0');
-  if (sessEl) sessEl.textContent = data.session || '1';
-  
-  const timerDisplay = document.getElementById('timer-countdown');
-  const statusText = document.getElementById('waiting-title');
-
-  if (data.is_transition && statusText) {
-      statusText.textContent = "Giliran Anda Tiba! Menyiapkan Form...";
-      if (timerDisplay) timerDisplay.textContent = "00:02";
-      return;
-  }
-
-  if (data.status === 'active') {
-      if (statusText) statusText.textContent = "Menuju Form Pendaftaran...";
-      if (timerDisplay) timerDisplay.textContent = "GO!";
-      return;
-  }
-
-  // LOGIKA GELOMBANG 10 MENIT
-  if (data.minutes_to_wait !== undefined) {
-      if (window.queueStatusInterval) clearInterval(window.queueStatusInterval);
-      
-      let secondsRemaining = data.minutes_to_wait * 60;
-      function tick() {
-          if (secondsRemaining <= 0) {
-              clearInterval(window.queueStatusInterval);
-              checkUserState();
-              return;
-          }
-          const m = Math.floor(secondsRemaining / 60);
-          const s = secondsRemaining % 60;
-          if (timerDisplay) timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-          secondsRemaining--;
-      }
-      tick();
-      window.queueStatusInterval = setInterval(tick, 1000);
-  }
-}
-
-function renderActivePanel(data) {
-  showPanel('panel-active');
-  const sidebarTotal = document.getElementById('sidebar-total');
-  const adminRow = document.getElementById('sidebar-admin-row');
-  if (adminRow) adminRow.style.display = 'none';
-
-  _supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session && session.user) {
-      document.getElementById('f-email').value = session.user.email;
-      if (session.user.user_metadata?.full_name) {
-          document.getElementById('f-name').value = session.user.user_metadata.full_name;
-      }
-      onWaInput(); 
-    }
-  });
-
-  if (data.expires_at) {
-    const diff = (new Date(data.expires_at) - new Date()) / 60000;
-    startCountdown(diff, 'active-countdown-timer', () => checkUserState());
-  }
-}
-
-async function loadConfig() {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/batches?t=${Date.now()}`);
-    const bData = await res.json();
-    if (bData.success && bData.batches) {
-      const b = bData.batches.find(x => x.status === 'active');
-      if (b) {
-        activeBatch = b;
-        document.getElementById('sidebar-batch').textContent = b.name;
-        document.getElementById('h-batch').textContent = b.name;
-      }
-    }
-  } catch (e) {}
-}
-
-function onWaInput() {
-  const wa = document.getElementById('f-wa').value.trim();
-  const last3 = wa.slice(-3).replace(/\D/g, '0');
-  const nominal = 100000 + parseInt(last3 || '0');
-  const formatted = 'Rp' + nominal.toLocaleString('id-ID');
-  document.getElementById('display-unique-nominal').textContent = formatted;
-  document.getElementById('sidebar-total').textContent = formatted;
-}
-
+// ── SUBMIT BOOKING ────────────────────────────────────────────────
 async function handleBooking() {
-  const proofFile = document.getElementById('f-proof').files[0];
-  if (!proofFile) return showToast('⚠️ Upload bukti transfer dulu');
+  const nameVal  = document.getElementById('f-name')?.value.trim();
+  const emailVal = document.getElementById('f-email')?.value.trim();
+  const waVal    = document.getElementById('f-wa')?.value.trim();
+  const proofFile = document.getElementById('f-proof')?.files[0];
+
+  if (!nameVal || !waVal || !proofFile) return showToast('⚠️ Lengkapi semua data');
 
   const btn = document.getElementById('btn-pay');
-  const oldText = btn.innerHTML;
-  btn.disabled = true; 
-  btn.innerHTML = '<span>Mengunggah...</span><span>⏳</span>';
+  const oldHTML = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Mengunggah...</span><span>⏳</span>'; }
 
   try {
-    const fileName = `proof_${Date.now()}.jpg`;
-    await _supabase.storage.from('transfer_proofs').upload(fileName, proofFile);
-    
     const { data: { session } } = await _supabase.auth.getSession();
+    const fileName = `proof_${session.user.id}_${Date.now()}.jpg`;
+    await _supabase.storage.from('transfer_proofs').upload(fileName, proofFile);
+
     const body = {
-      full_name: document.getElementById('f-name').value.trim(),
-      email: document.getElementById('f-email').value.trim(),
-      whatsapp: document.getElementById('f-wa').value.trim(),
-      batch_id: activeBatch?.id,
+      full_name: nameVal,
+      email: emailVal,
+      whatsapp: waVal,
+      batch_id: activeBatch.id,
       proof_url: fileName,
       user_id: session?.user?.id
     };
-    
+
     const res = await fetch(`${BACKEND_URL}/api/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
-    
+
     const resData = await res.json();
-    if (resData.success) showPanel('panel-done');
-    else throw new Error(resData.error);
+    if (resData.success) {
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      showPanel('panel-done');
+    } else {
+      throw new Error(resData.error || 'Gagal mengirim pendaftaran');
+    }
   } catch (err) {
     showToast('⚠️ ' + err.message);
-    btn.disabled = false; btn.innerHTML = oldText;
+    if (btn) { btn.disabled = false; btn.innerHTML = oldHTML; }
   }
 }
 
-window.loginGoogle = async () => {
-    await _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-};
-window.claimQueueSlot = claimQueueSlot;
-window.handleBooking = handleBooking;
-window.resetQueue = async () => {
-    const { data: { session } } = await _supabase.auth.getSession();
-    await fetch(`${BACKEND_URL}/api/queue/reset`, { method: 'POST', headers: { 'Authorization': `Bearer ${session.access_token}` } });
-    window.location.reload();
-};
+// ── SHOW PANEL ────────────────────────────────────────────────────
+function showPanel(panelId) {
+  document.querySelectorAll('.state-panel').forEach(p => p.style.display = 'none');
+  const target = document.getElementById(panelId);
+  if (target) target.style.display = 'block';
+
+  const stepMap = {
+    'panel-not-logged-in': 1, 'panel-quota-full': 1, 'panel-not-queued': 1,
+    'panel-waiting': 2, 'panel-active': 3, 'panel-done': 4
+  };
+  const step = stepMap[panelId] || 1;
+  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
+  for (let i = 1; i <= step; i++) {
+    const el = document.getElementById('step' + i);
+    if (el) el.classList.add('active');
+  }
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
+
 function setupRealtime() {
-  _supabase.channel('queue').on('postgres_changes', { event: '*', schema: 'public', table: 'queue_slots' }, () => checkUserState()).subscribe();
+  // Ganti Realtime WebSockets dengan Polling santai tiap 10 detik untuk menyelamatkan server
+  setInterval(() => {
+    loadQueueInfo();
+    if (userState.status === 'waiting' || userState.status === 'not_queued') {
+      checkUserState();
+    }
+  }, 10000);
 }
+
+// ── EXPOSED GLOBALS ───────────────────────────────────────────────
+window.loginGoogle = () => _supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } });
+window.claimQueueSlot = claimQueueSlot;
+window.handleBooking  = handleBooking;
+window.onWaInput      = onWaInput;
+window.resetQueue = async () => {
+  const { data: { session } } = await _supabase.auth.getSession();
+  await fetch(`${BACKEND_URL}/api/queue/reset`, { method: 'POST', headers: { 'Authorization': `Bearer ${session.access_token}` } });
+  window.location.reload();
+};
+window.logout = async () => {
+  await _supabase.auth.signOut();
+  window.location.reload();
+};
+
 init();

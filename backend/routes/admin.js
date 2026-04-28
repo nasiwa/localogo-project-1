@@ -1,55 +1,44 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto');
-const { adminSupabase } = require('../client');
+const { adminSupabase } = require('../supabaseClient');
 const { generateInvoicePDF, sendInvoiceEmail } = require('../utils/invoice');
+const crypto = require('crypto');
 
-/**
- * Middleware: Admin Authentication
- */
+const QR_SECRET = process.env.QR_SECRET || 'localogo_secure_qr_2026';
+
 function adminAuth(req, res, next) {
   if (req.headers['x-admin-token'] !== process.env.ADMIN_PASSWORD) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
   next();
 }
-
 router.use(adminAuth);
 
-router.get('/check', (req, res) => {
-  res.json({ allowed: true });
-});
+router.get('/check', (req, res) => res.json({ allowed: true }));
 
-// ── DASHBOARD STATS ──
+// ── DASHBOARD STATS ──────────────────────────────────────────────
 router.get('/dashboard-stats', async (req, res) => {
   try {
-    const { count: paidCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid');
+    const { count: paidCount }    = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid');
     const { count: pendingCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-    const { count: pickupCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid').eq('is_picked_up', true);
-    const { data: batches } = await adminSupabase.from('batches').select('filled_slots, total_slots');
+    const { count: pickupCount }  = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid').eq('is_picked_up', true);
+    const { data: batches }       = await adminSupabase.from('batches').select('filled_slots, total_slots');
 
     const totalFilled = (paidCount || 0) + (pendingCount || 0);
-    const totalSlots = batches ? batches.reduce((sum, b) => sum + (b.total_slots || 0), 0) : 0;
+    const totalSlots  = (batches || []).reduce((s, b) => s + (b.total_slots || 0), 0);
 
-    res.json({
-      success: true,
-      paidCount: paidCount || 0,
-      pendingCount: pendingCount || 0,
-      pickupCount: pickupCount || 0,
-      totalFilled,
-      totalSlots,
-    });
+    res.json({ success: true, paidCount: paidCount || 0, pendingCount: pendingCount || 0, pickupCount: pickupCount || 0, totalFilled, totalSlots });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ── MASTER GATE ──
+// ── MASTER GATE — BACA & TULIS KE batch_config (sumber yang sama dengan queue.js) ──
 router.get('/gate', async (req, res) => {
   try {
-    const { data } = await adminSupabase.from('config').select('*').eq('key', 'is_queue_open').single();
-    const is_open = data ? (data.value === 'true' || data.value === true) : false;
-    res.json({ success: true, is_open });
+    const { data, error } = await adminSupabase.from('batch_config').select('id, is_open').limit(1).single();
+    if (error) throw error;
+    res.json({ success: true, is_open: data.is_open });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -58,14 +47,22 @@ router.get('/gate', async (req, res) => {
 router.post('/gate', async (req, res) => {
   try {
     const { is_open } = req.body;
-    await adminSupabase.from('config').upsert({ key: 'is_queue_open', value: String(is_open), updated_at: new Date() }, { onConflict: 'key' });
+    if (typeof is_open !== 'boolean') return res.status(400).json({ success: false, error: 'is_open harus boolean' });
+
+    // Ambil id dulu
+    const { data: cfg, error: fetchErr } = await adminSupabase.from('batch_config').select('id').limit(1).single();
+    if (fetchErr || !cfg) throw new Error('batch_config tidak ditemukan');
+
+    const { error } = await adminSupabase.from('batch_config').update({ is_open, updated_at: new Date() }).eq('id', cfg.id);
+    if (error) throw error;
+
     res.json({ success: true, is_open });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ── BATCHES ──
+// ── BATCHES ──────────────────────────────────────────────────────
 router.get('/batches', async (req, res) => {
   try {
     const { data, error } = await adminSupabase.from('batches').select('*').order('sort_order');
@@ -78,8 +75,7 @@ router.get('/batches', async (req, res) => {
 
 router.patch('/batch/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error } = await adminSupabase.from('batches').update(req.body).eq('id', id).select().single();
+    const { data, error } = await adminSupabase.from('batches').update(req.body).eq('id', req.params.id).select().single();
     if (error) throw error;
     res.json({ success: true, batch: data });
   } catch (err) {
@@ -87,14 +83,23 @@ router.patch('/batch/:id', async (req, res) => {
   }
 });
 
-// ── ORDERS ──
+// ── ORDERS ───────────────────────────────────────────────────────
 router.get('/orders', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 100;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    const { data, error, count } = await adminSupabase.from('orders').select('*, batches(name)', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
+    const from  = (page - 1) * limit;
+    const to    = from + limit - 1;
+    const q       = req.query.q       || '';
+    const batchId = req.query.batch_id || 'all';
+    const status  = req.query.status  || 'all';
+
+    let query = adminSupabase.from('orders').select('*, batches(name)', { count: 'exact' });
+    if (q)              query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,order_ref.ilike.%${q}%`);
+    if (batchId !== 'all') query = query.eq('batch_id', batchId);
+    if (status  !== 'all') query = query.eq('status', status);
+
+    const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
     if (error) throw error;
     res.json({ success: true, orders: data, total: count });
   } catch (err) {
@@ -102,26 +107,24 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-// ── AUTO EXPIRE (RESTORED) ──
+// ── AUTO EXPIRE ───────────────────────────────────────────────────
 router.post('/auto-expire', async (req, res) => {
   try {
-    const { data: pendingOrders } = await adminSupabase.from('orders').select('id, created_at').eq('status', 'pending');
-    const idsToExpire = [];
+    const { data: pending } = await adminSupabase.from('orders').select('id, created_at, payment_gateway').eq('status', 'pending');
     const now = Date.now();
-    (pendingOrders || []).forEach(o => {
+    const toExpire = (pending || []).filter(o => {
       const age = now - new Date(o.created_at).getTime();
-      if (age > 24 * 60 * 60 * 1000) idsToExpire.push(o.id); // 24 Jam
-    });
-    if (idsToExpire.length > 0) {
-      await adminSupabase.from('orders').update({ status: 'expired' }).in('id', idsToExpire);
-    }
-    res.json({ success: true, expired_count: idsToExpire.length });
+      return o.payment_gateway === 'manual' ? age > 24 * 3600 * 1000 : age > 30 * 60 * 1000;
+    }).map(o => o.id);
+
+    if (toExpire.length > 0) await adminSupabase.from('orders').update({ status: 'expired' }).in('id', toExpire);
+    res.json({ success: true, expired_count: toExpire.length });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ── PROOF URL ──
+// ── PROOF URL ─────────────────────────────────────────────────────
 router.get('/proof-url/:filename', async (req, res) => {
   try {
     const { data, error } = await adminSupabase.storage.from('transfer_proofs').createSignedUrl(req.params.filename, 3600);
@@ -132,12 +135,111 @@ router.get('/proof-url/:filename', async (req, res) => {
   }
 });
 
-// ── CONFIRM MANUAL ──
+// ── BATCH MEMBERS ─────────────────────────────────────────────────
+router.get('/batch/:id/members', async (req, res) => {
+  try {
+    const { data, error } = await adminSupabase
+      .from('orders')
+      .select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num, scanned_by')
+      .eq('batch_id', req.params.id)
+      .eq('status', 'paid')
+      .order('created_at');
+    if (error) throw error;
+    res.json({ success: true, members: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── CONFIRM MANUAL ────────────────────────────────────────────────
 router.post('/order/:orderRef/confirm-manual', async (req, res) => {
   try {
     const { data, error } = await adminSupabase.rpc('confirm_payment', { p_order_ref: req.params.orderRef });
     if (error) throw error;
-    res.json({ success: true, message: 'Confirmed' });
+    if (data?.success) {
+      try {
+        const pdfBuffer = await generateInvoicePDF(data);
+        await sendInvoiceEmail(data, pdfBuffer);
+      } catch (e) { console.error('Email error:', e); }
+    }
+    res.json({ success: true, message: 'Dikonfirmasi' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── MANUAL ORDER ──────────────────────────────────────────────────
+router.post('/order/manual', async (req, res) => {
+  try {
+    const { full_name, email, whatsapp, batch_id, amount, status } = req.body;
+    if (!full_name || !email || !batch_id) return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
+
+    const orderRef = `MANUAL-${Date.now().toString(36).toUpperCase()}`;
+    const { data: claimData, error: claimErr } = await adminSupabase.rpc('claim_slot', {
+      p_batch_id: batch_id, p_order_ref: orderRef, p_name: full_name,
+      p_email: email, p_wa: whatsapp || 'Manual', p_amount: parseInt(amount || 100000)
+    });
+    if (claimErr || !claimData?.success) return res.status(400).json({ success: false, error: claimData?.error || 'Gagal' });
+
+    if (status === 'paid') {
+      const { data: conf } = await adminSupabase.rpc('confirm_payment', { p_order_ref: orderRef });
+      if (conf?.success) {
+        try {
+          const pdf = await generateInvoicePDF({ ...conf, order_ref: orderRef, full_name, email, whatsapp: whatsapp || 'N/A', paid_at: new Date().toISOString() });
+          await sendInvoiceEmail({ ...conf, order_ref: orderRef, full_name, email, whatsapp: whatsapp || 'N/A' }, pdf);
+        } catch (e) { console.error('Email error:', e); }
+      }
+    }
+    res.json({ success: true, order_ref: orderRef });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── VERIFY TICKET (SCANNER) ───────────────────────────────────────
+router.get('/verify/:qrData', async (req, res) => {
+  try {
+    const qrData = decodeURIComponent(req.params.qrData);
+    const [orderRef, signature] = qrData.split('|');
+
+    if (!orderRef || !signature) {
+      return res.status(400).json({ success: false, error: 'Format QR tidak valid' });
+    }
+
+    // Validasi Signature
+    const hmac = crypto.createHmac('sha256', QR_SECRET);
+    hmac.update(orderRef);
+    const expectedSig = hmac.digest('hex').substring(0, 16);
+
+    if (signature !== expectedSig) {
+      return res.status(403).json({ success: false, error: 'TANDA TANGAN QR TIDAK VALID' });
+    }
+
+    // Ambil Data Order
+    const { data: order, error } = await adminSupabase
+      .from('orders')
+      .select('*, batches(name)')
+      .eq('order_ref', orderRef)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!order) return res.status(404).json({ success: false, error: 'PESANAN TIDAK DITEMUKAN' });
+
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── PICKUP ────────────────────────────────────────────────────────
+router.post('/pickup/:orderRef', async (req, res) => {
+  try {
+    const { data, error } = await adminSupabase.from('orders')
+      .update({ is_picked_up: true, picked_up_at: new Date().toISOString(), scanned_by: req.body.loketId || 'Unknown' })
+      .eq('order_ref', req.params.orderRef).eq('status', 'paid').eq('is_picked_up', false).select();
+    if (error) throw error;
+    if (!data?.length) return res.status(400).json({ success: false, error: 'Tiket tidak valid atau sudah diambil' });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

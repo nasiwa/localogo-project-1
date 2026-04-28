@@ -132,6 +132,12 @@
           </button>
         </div>
 
+        <div id="panel-quota-full" class="state-panel" style="display:none; padding: 40px 20px; text-align: center;">
+          <div style="font-size:48px; margin-bottom:15px;">😔</div>
+          <h3 style="font-size:22px; color:var(--red); margin-bottom:10px;">Kuota Habis</h3>
+          <p style="font-size:14px; color:var(--txm); line-height:1.6;">Maaf, kuota untuk batch ini sudah penuh. Pantau terus untuk info batch selanjutnya!</p>
+        </div>
+
         <div id="panel-not-queued" class="state-panel" style="display:none; padding: 30px 20px; text-align: center;">
           <h3 style="margin-bottom:8px; color:var(--txd); font-size:20px;">Halo, <span id="queue-user-name"></span> 👋</h3>
           <p style="font-size:14px; color:var(--txm); margin-bottom:20px;">Klik tombol di bawah sekali saja. Posisi Anda akan langsung tersimpan secara aman di sistem kami.</p>
@@ -153,8 +159,20 @@
           <div id="queue-timer" style="margin-bottom: 20px; padding: 10px; background: rgba(36,153,155,0.05); border-radius: 8px; font-weight: 700; color: var(--td); font-size: 14px;">
             Estimasi giliran Anda: <span id="timer-countdown">--:--</span>
           </div>
-          <h4 id="waiting-title" style="font-size:18px; color:var(--txd); margin-bottom:10px;">Menunggu Giliran...</h4>
-          <p id="waiting-desc" style="font-size:13px; color:var(--txm); line-height:1.5; margin-bottom:20px;">Halaman ini akan otomatis mengarahkan Anda ke formulir pendaftaran saat giliran tiba.</p>
+          <div style="margin-top:20px; padding:15px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px dashed var(--border);">
+            <p style="font-size:13px; color:var(--red); font-weight:600; margin-bottom:8px;">⚠️ PENTING: SIAPKAN M-BANKING / E-WALLET</p>
+            <ul style="text-align:left; font-size:12px; color:var(--txm); padding-left:15px; line-height:1.6;">
+              <li>Giliran Anda akan tiba dalam waktu dekat.</li>
+              <li>Pastikan saldo cukup (Rp100.000 + Kode Unik).</li>
+              <li>Waktu pengisian form & upload bukti hanya <b>10 MENIT</b>.</li>
+              <li>Jika waktu habis, nomor antrean Anda akan <b>HANGUS</b>.</li>
+            </ul>
+          </div>
+
+          <div style="margin-top:25px;">
+            <p style="font-size:15px; color:var(--txm); font-weight:600; margin-bottom:5px;" id="waiting-title">Menunggu Giliran...</p>
+            <p style="font-size:13px; color:var(--txm); line-height:1.6;">Halaman ini akan otomatis mengarahkan Anda ke formulir pendaftaran saat giliran tiba.</p>
+          </div>
         </div>
 
         <div id="panel-expired" class="state-panel" style="display:none; padding: 40px 20px; text-align: center;">
@@ -198,11 +216,11 @@
         <div class="order-card">
           <div class="order-head">
             <div class="order-head-label">Ringkasan Pesanan</div>
-            <div class="order-price" id="sidebar-total">Rp102.500</div>
+            <div class="order-price" id="sidebar-total">Rp100.---</div>
           </div>
           <div class="order-body">
             <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
-            <div class="order-row"><span class="k">Admin</span><span class="v">Rp2.500</span></div>
+            <div class="order-row" id="sidebar-admin-row" style="display:none;"><span class="k">Admin</span><span class="v">Rp2.500</span></div>
             <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">—</span></div>
           </div>
         </div>

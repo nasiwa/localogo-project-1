@@ -83,13 +83,13 @@ async function generateInvoicePDF(order) {
     row('WhatsApp', order.whatsapp, startY + 60);
     row('Order', 'PO PAKET PERLENGKAPAN OSPEK 2026', startY + 90, teal);
     row('Nominal DP', 'Rp. 100,000', startY + 115);
-    row('Biaya Admin', 'Rp. 2,500', startY + 135);
     
-    doc.rect(labelX, startY + 152, 260, 1).fill('#e0eeee');
-    row('Total Bayar', 'Rp. 102,500', startY + 162, darkTeal);
+    doc.rect(labelX, startY + 132, 260, 1).fill('#e0eeee');
+    const formattedTotal = 'Rp. ' + (order.amount || 100000).toLocaleString('id-ID');
+    row('Total Bayar', formattedTotal, startY + 142, darkTeal);
 
     const paidTime = order.paid_at ? new Date(order.paid_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'N/A';
-    doc.fillColor(grayText).font('Helvetica-Bold').fontSize(9).text(`Dibayar pada: ${paidTime}`, labelX, startY + 185);
+    doc.fillColor(grayText).font('Helvetica-Bold').fontSize(9).text(`Dibayar pada: ${paidTime}`, labelX, startY + 165);
 
     // ── RIGHT SIDE BOXES ──
     const rightX = 380;
