@@ -22,21 +22,34 @@ router.get('/config', (req, res) => {
   });
 });
 
+const { sendInvoiceEmail } = require('../utils/invoice');
+
 /**
  * POST /api/simulate-payment-success
- * For simulator demo to update status immediately
+ * For production flow to update status immediately and send email
  */
 router.post('/simulate-payment-success', async (req, res) => {
   const { order_ref } = req.body;
   try {
-    const { error } = await adminSupabase
+    // 1. Update status to 'paid'
+    const { data: order, error } = await adminSupabase
       .from('orders')
-      .update({ status: 'success', paid_at: new Date().toISOString() })
-      .eq('order_ref', order_ref);
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('order_ref', order_ref)
+      .select('*, batch:batches(*)')
+      .single();
       
     if (error) throw error;
+
+    // 2. Trigger Auto Email
+    if (order) {
+      console.log(`[AUTO_EMAIL] Sending invoice for ${order.order_ref}...`);
+      sendInvoiceEmail(order).catch(e => console.error('[EMAIL_ERR]', e));
+    }
+
     res.json({ success: true });
   } catch (err) {
+    console.error('[SIM_SUCCESS_ERR]', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

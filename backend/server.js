@@ -59,8 +59,8 @@ app.get('/payment_with_duitku', (req, res) => {
   res.sendFile(path.join(__dirname, '../payment_with_duitku.html'));
 });
 
-app.get('/midtrans_simulator', (req, res) => {
-  res.sendFile(path.join(__dirname, '../midtrans_simulator.html'));
+app.get('/midtrans_payment', (req, res) => {
+  res.sendFile(path.join(__dirname, '../midtrans_payment.html'));
 });
 
 // ── ROUTES ───────────────────────────────────────────────────────

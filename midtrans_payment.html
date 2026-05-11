@@ -4,24 +4,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pre-Order Perlengkapan OSPEK 2026 — Localogo</title>
+  <title>Pembayaran Atribut OSPEK 2026 — Localogo</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="assets/css/index.css">
   <style>
     body { background-color: #f4f9f9; color: var(--txd); }
-    .sim-header { background: #fff; padding: 60px 0; text-align: center; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
-    .sim-header h1 { font-size: 36px; font-weight: 800; color: var(--td); margin-bottom: 10px; }
-    .sim-header p { color: var(--txm); font-size: 15px; }
-    .sim-main { max-width: 1100px; margin: 0 auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 30px; }
-    @media (max-width: 900px) { .sim-main { grid-template-columns: 1fr; } }
+    
+    /* Premium Hero Section */
+    .hero-premium {
+      background: linear-gradient(135deg, #024847 0%, #24999b 100%);
+      padding: 100px 20px 140px;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-premium::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -20%;
+      width: 100%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
+      transform: rotate(-15deg);
+    }
+
+    .hero-content { position: relative; z-index: 2; max-width: 800px; margin: 0 auto; }
+    .hero-content h1 { font-size: 48px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .hero-content p { font-size: 18px; opacity: 0.9; line-height: 1.6; margin-bottom: 0; }
+
+    .sim-main { max-width: 1100px; margin: -60px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 30px; position: relative; z-index: 10; }
+    @media (max-width: 900px) { 
+      .sim-main { grid-template-columns: 1fr; margin-top: -30px; }
+      .hero-content h1 { font-size: 32px; }
+    }
+
     .disclaimer-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 20px; border-radius: 12px; color: #856404; font-size: 13px; line-height: 1.6; margin-top: 40px; text-align: center; }
     .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 40px; }
-    .proof-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: 0.3s; }
-    .proof-img { width: 100%; height: 200px; object-fit: cover; }
+    .proof-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .proof-img { width: 100%; height: 250px; object-fit: cover; }
     .proof-info { padding: 15px; }
     .proof-info h4 { font-size: 14px; font-weight: 700; color: var(--td); margin-bottom: 5px; }
     .proof-info p { font-size: 12px; color: var(--txm); }
+
+    /* Floating WA */
+    .floating-wa {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      background: #25d366;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(37, 211, 102, 0.4);
+      z-index: 1000;
+      transition: 0.3s;
+      text-decoration: none;
+    }
+    .floating-wa:hover { transform: translateY(-5px) scale(1.05); }
+    .floating-wa svg { width: 32px; height: 32px; fill: #fff; }
 
     /* Modal Success Details */
     .success-info-list { margin-bottom: 25px; border-top: 1px solid #eee; padding-top: 15px; }
@@ -29,7 +76,6 @@
     .info-k { color: #888; font-weight: 500; }
     .info-v { font-weight: 700; color: #333; text-align: right; }
     .info-v.ok { color: #1a9e6a; }
-    
     .spam-notice { background: #f0f7ff; border: 1px solid #d0e7ff; border-radius: 8px; padding: 12px; font-size: 11px; color: #0056b3; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
@@ -37,11 +83,11 @@
 <body>
   <div class="ticker-wrap">
     <div class="ticker-track">
-      <span class="hi">⚡ Pendaftaran Batch Aktif</span>
+      <span class="hi">⚡ Pembayaran Atribut OSPEK 2026</span>
       <span>·</span><span>Slot Terbatas</span><span>·</span>
       <span>DP Rp100.000</span><span>·</span>
       <span>QRIS · VA · E-Wallet</span><span>·</span>
-      <span class="hi">⚡ Pendaftaran Batch Aktif</span>
+      <span class="hi">⚡ Pembayaran Atribut OSPEK 2026</span>
     </div>
   </div>
 
@@ -54,16 +100,18 @@
     </div>
   </nav>
 
-  <div class="sim-header">
-    <h1>Pre-Order Perlengkapan OSPEK</h1>
-    <p>Amankan slot kamu sekarang. Down Payment hanya Rp100.000.</p>
-  </div>
+  <section class="hero-premium">
+    <div class="hero-content">
+      <h1>Amankan Atribut OSPEK Kamu Sekarang</h1>
+      <p>Proses cepat, aman, dan otomatis lewat Midtrans. Lengkapi data diri untuk mendapatkan invoice resmi.</p>
+    </div>
+  </section>
 
   <div class="sim-main">
     <div class="form-card">
       <div class="form-card-head">
         <div class="form-card-title">Form Pendaftaran</div>
-        <div class="form-card-sub">Lengkapi data diri kamu. Invoice PDF akan dikirim otomatis ke email.</div>
+        <div class="form-card-sub">Invoice PDF dan instruksi penting akan dikirim otomatis ke email.</div>
       </div>
       <div class="form-body" style="display: block;">
         <div class="field-row">
@@ -114,17 +162,20 @@
     </div>
   </div>
 
-  <!-- SHOWCASE -->
-  <div class="main-wrap" style="margin-top: -40px; margin-bottom: 80px;">
-    <div class="section-header"><div class="section-title">Bukti & Showcase</div></div>
+  <!-- SHOWCASE (ONLY REAL PROOFS) -->
+  <div class="main-wrap" style="margin-top: 40px; margin-bottom: 80px;">
+    <div class="section-header">
+      <div class="section-title">Bukti Penyerahan Atribut</div>
+      <div class="section-note">Dokumentasi real dari pengambilan paket mahasiswa tahun sebelumnya</div>
+    </div>
     <div class="showcase-grid">
-      <div class="proof-card"><img src="real_proof_student_1_raw.jpeg" class="proof-img"><div class="proof-info"><h4>Penyerahan Atribut</h4><p>MABA mengambil paket di store resmi Localogo.</p></div></div>
-      <div class="proof-card"><img src="real_proof_student_2_raw.jpeg" class="proof-img"><div class="proof-info"><h4>Ribuan Paket Terkirim</h4><p>Melayani mahasiswa dari berbagai fakultas.</p></div></div>
-      <div class="proof-card"><img src="raja_brawijaya_gear_layout_1776763771838.png" class="proof-img"><div class="proof-info"><h4>Detail Atribut</h4><p>Kualitas bahan dan kelengkapan sesuai panduan.</p></div></div>
+      <div class="proof-card"><img src="real_proof_student_1_raw.jpeg" class="proof-img"><div class="proof-info"><h4>Store Localogo Malang</h4><p>Proses pengambilan atribut Batch 1.</p></div></div>
+      <div class="proof-card"><img src="real_proof_student_2_raw.jpeg" class="proof-img"><div class="proof-info"><h4>Happy Students</h4><p>Mahasiswa baru menerima paket lengkap.</p></div></div>
+      <div class="proof-card"><img src="real_proof_student_3_raw.jpeg" class="proof-img"><div class="proof-info"><h4>Real Testimonial</h4><p>Kualitas terjamin untuk ribuan peserta.</p></div></div>
     </div>
   </div>
 
-  <!-- SUCCESS MODAL (Updated with detailed info) -->
+  <!-- SUCCESS MODAL -->
   <div class="modal-backdrop" id="success-modal">
     <div class="success-box">
       <div class="success-top">
@@ -137,7 +188,6 @@
           <span>📧</span>
           <span>Cek Inbox emailmu. Tidak ada? Cek folder <strong>Spam / Promotions</strong>.</span>
         </div>
-        
         <div class="success-info-list">
           <div class="info-row"><span class="info-k">NAMA</span><span class="info-v" id="res-name">—</span></div>
           <div class="info-row"><span class="info-k">ORDER ID</span><span class="info-v" id="res-oid">—</span></div>
@@ -145,16 +195,20 @@
           <div class="info-row"><span class="info-k">EMAIL</span><span class="info-v" id="res-email">—</span></div>
           <div class="info-row"><span class="info-k">STATUS</span><span class="info-v ok">✓ SETTLED</span></div>
         </div>
-
         <a id="download-link" href="#" target="_blank" class="btn-close-success" style="background:var(--td); display:block; text-align:center; text-decoration:none; margin-bottom:10px;">📥 DOWNLOAD INVOICE PDF</a>
         <button class="btn-close-success" style="background:#024847" onclick="location.reload()">SELESAI</button>
       </div>
     </div>
   </div>
 
+  <!-- FLOATING WA -->
+  <a href="https://wa.me/6281234567890" target="_blank" class="floating-wa">
+    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+  </a>
+
   <footer class="app-footer"><div class="footer-bottom">&copy; 2026 LOCALOGO</div></footer>
 
   <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js"></script>
-  <script src="assets/js/midtrans-simulator.js"></script>
+  <script src="assets/js/midtrans-payment.js"></script>
 </body>
 </html>
