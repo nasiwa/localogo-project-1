@@ -62,7 +62,11 @@ router.get('/batches', async (req, res) => {
   try {
     const supabase = req.app.get('getSupabase')();
     await supabase.rpc('auto_reveal_batches');
-    const { data, error } = await supabase.from('public_batches').select('*');
+    const { data, error } = await supabase
+      .from('public_batches')
+      .select('*')
+      .eq('status', 'OPEN'); // Hanya ambil yang OPEN
+      
     if (error) throw error;
     res.json({ success: true, batches: data });
   } catch (err) {
