@@ -23,6 +23,25 @@ router.get('/config', (req, res) => {
 });
 
 /**
+ * POST /api/simulate-payment-success
+ * For simulator demo to update status immediately
+ */
+router.post('/simulate-payment-success', async (req, res) => {
+  const { order_ref } = req.body;
+  try {
+    const { error } = await adminSupabase
+      .from('orders')
+      .update({ status: 'success', paid_at: new Date().toISOString() })
+      .eq('order_ref', order_ref);
+      
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/batches — public batch status (with auto-reveal)
  */
 router.get('/batches', async (req, res) => {

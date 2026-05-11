@@ -39,7 +39,8 @@ function renderBatches() {
 function updateSummary() {
   const select = document.getElementById('sim-batch');
   const batchName = select.options[select.selectedIndex]?.text.split(' (')[0] || '—';
-  document.getElementById('sum-batch').innerText = batchName;
+  const sumBatch = document.getElementById('sum-batch');
+  if (sumBatch) sumBatch.innerText = batchName;
 }
 
 async function startSimulatedPayment() {
@@ -69,7 +70,7 @@ async function startSimulatedPayment() {
         whatsapp: wa,
         batch_id: batchId,
         gateway: 'midtrans',
-        access_code: 'PUBLIC' // Using existing public code
+        access_code: 'PUBLIC'
       })
     });
 
@@ -85,8 +86,10 @@ async function startSimulatedPayment() {
     // 2. Trigger Midtrans Snap
     if (window.snap) {
       window.snap.pay(result.token, {
-        onSuccess: function(res) {
-          showSuccess(result.order_ref);
+        onSuccess: async function(res) {
+          // Notify backend of success (to update status immediately in admin)
+          await confirmSuccess(result.order_ref);
+          showSuccess(result.order_ref, name, email);
         },
         onPending: function(res) {
           alert('Pembayaran pending. Silakan selesaikan sesuai instruksi.');
@@ -98,15 +101,14 @@ async function startSimulatedPayment() {
           btn.innerHTML = originalText;
         },
         onClose: function() {
-          alert('Anda menutup popup sebelum menyelesaikan pembayaran.');
           btn.disabled = false;
           btn.innerHTML = originalText;
         }
       });
     } else {
-      // Fallback for simulation without snap script
-      alert('Simulasi: Token Snap diterima, tapi script Snap tidak dimuat. Mengalihkan ke sukses...');
-      showSuccess(result.order_ref);
+      alert('Simulasi: Token Snap diterima. Mengalihkan ke sukses...');
+      await confirmSuccess(result.order_ref);
+      showSuccess(result.order_ref, name, email);
     }
 
   } catch (err) {
@@ -117,9 +119,28 @@ async function startSimulatedPayment() {
   }
 }
 
-function showSuccess(oid) {
+async function confirmSuccess(oid) {
+  try {
+    await fetch('/api/simulate-payment-success', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_ref: oid })
+    });
+  } catch (err) {
+    console.error('Confirm Error:', err);
+  }
+}
+
+function showSuccess(oid, name, email) {
+  const select = document.getElementById('sim-batch');
+  const batchName = select.options[select.selectedIndex]?.text.split(' (')[0] || '—';
+
   document.getElementById('res-oid').innerText = oid;
+  document.getElementById('res-name').innerText = name.toUpperCase();
+  document.getElementById('res-email').innerText = email;
+  document.getElementById('res-batch').innerText = batchName;
   document.getElementById('download-link').href = `/api/invoice/${oid}`;
+  
   document.getElementById('success-modal').classList.add('active');
   document.getElementById('success-modal').style.display = 'flex';
 }
