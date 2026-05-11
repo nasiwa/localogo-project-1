@@ -117,13 +117,13 @@
       <div class="logo-text">Localogo</div>
     </a>
     <div class="live-chip">
-      <div class="dot"></div><span>SIMULATOR ACTIVE</span>
+      <div class="dot"></div><span>BOOKING OPEN</span>
     </div>
   </nav>
 
   <div class="sim-header">
-    <h1>Simulator Midtrans</h1>
-    <p>Pengalaman checkout premium untuk perlengkapan OSPEK 2026.</p>
+    <h1>Pre-Order Perlengkapan OSPEK</h1>
+    <p>Amankan slot kamu sekarang. Down Payment hanya Rp100.000.</p>
   </div>
 
   <div class="sim-main">
@@ -131,17 +131,17 @@
     <div class="form-card">
       <div class="form-card-head">
         <div class="form-card-title">Form Pendaftaran</div>
-        <div class="form-card-sub">Lengkapi data untuk mencoba simulasi pembayaran.</div>
+        <div class="form-card-sub">Lengkapi data diri kamu. Invoice PDF akan dikirim otomatis ke email.</div>
       </div>
       
       <div class="form-body" style="display: block;">
         <div class="field-row">
-          <div class="field full">
-            <label>Pilih Batch <span class="req">*</span></label>
-            <select id="sim-batch" onchange="updateSummary()" style="width:100%; padding:12px; border-radius:8px; border:1.5px solid var(--border); font-family:inherit;">
-              <option value="">Memuat...</option>
-            </select>
+          <!-- Hidden Batch Selection -->
+          <div class="field full" style="display: none;">
+            <label>Batch</label>
+            <select id="sim-batch" onchange="updateSummary()"></select>
           </div>
+          
           <div class="field full">
             <label>Nama Lengkap <span class="req">*</span></label>
             <input type="text" id="sim-name" placeholder="Nama sesuai KTM">

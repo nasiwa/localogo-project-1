@@ -53,7 +53,7 @@ async function startSimulatedPayment() {
     return;
   }
 
-  const btn = document.querySelector('.btn-premium');
+  const btn = document.getElementById('btn-pay-sim');
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span>Memproses...</span>';
