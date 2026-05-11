@@ -165,7 +165,7 @@ async function loadAdminBatches() {
     
     const [bRes, oRes] = await Promise.all([
       fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h }),
-      fetch(`${BACKEND_URL}/api/admin/orders?limit=10000`, { headers: h }) // 🔧 LIMIT DIPERBESAR
+      fetch(`${BACKEND_URL}/api/admin/orders?limit=2000`, { headers: h }) // 🔧 LIMIT DISESUAIKAN KE 2000 UNTUK STABILITAS
     ]);
     const { batches } = await bRes.json();
     const { orders } = await oRes.json();
@@ -330,13 +330,14 @@ async function exportToCSV() {
     // Force status 'paid' for export, regardless of the UI filter
     const status = 'paid';
     
-    // Fetch ALL matching paid orders without pagination limit
-    const url = `${BACKEND_URL}/api/admin/orders?page=1&limit=99999&q=${encodeURIComponent(q)}&batch_id=${batchId}&status=${status}`;
+    // Fetch ALL matching paid orders with a high limit to bypass default 1000
+    const url = `${BACKEND_URL}/api/admin/orders?page=1&limit=5000&q=${encodeURIComponent(q)}&batch_id=${batchId}&status=${status}`;
     const res = await fetch(url, { 
       headers: { 'x-admin-token': getAdminToken() } 
     });
     
-    const { orders } = await res.json();
+    const { orders, total } = await res.json();
+    console.log(`Exporting ${orders?.length} of ${total} orders`);
     
     if (!orders || orders.length === 0) {
       if (btnExport) btnExport.innerHTML = originalHtml;
@@ -344,19 +345,29 @@ async function exportToCSV() {
     }
     
     // Format headers
-    const headers = ['Order Ref', 'Nama', 'Email', 'WhatsApp', 'Batch', 'Nominal', 'Status', 'Waktu'];
+    const headers = ['No', 'Code', 'Nama', 'Email', 'WhatsApp'];
     
     // Format rows
-    const csvRows = orders.map(o => [
-      o.order_ref,
-      `"${o.full_name.replace(/"/g, '""')}"`,
-      o.email,
-      `'${o.whatsapp}`, // prevent excel from stripping leading zero
-      o.batches?.name || '-',
-      o.amount,
-      o.status,
-      new Date(o.created_at).toLocaleString('id-ID')
-    ]);
+    const csvRows = orders.map((o, index) => {
+      const batchName = o.batches?.name || 'Batch 1';
+      
+      // Hitung Smart Code (sama dengan logika di tabel)
+      let smartCode = '—';
+      if (o.status === 'paid' && o.sequence_num) {
+        const bNum = parseInt(batchName.match(/\d+/) || '1');
+        const sess = Math.ceil(o.sequence_num / 200);
+        const romans = ['I','II','III','IV','V'];
+        smartCode = `BC${romans[bNum-1] || 'I'}${sess}_${o.sequence_num.toString().padStart(4, '0')}`;
+      }
+
+      return [
+        index + 1,
+        smartCode,
+        `"${o.full_name.replace(/"/g, '""')}"`,
+        o.email,
+        `'${o.whatsapp}`
+      ];
+    });
 
     const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

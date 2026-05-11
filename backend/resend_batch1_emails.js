@@ -90,9 +90,11 @@ async function resendAllEmails() {
             </div>
           </div>
         `,
+        text: `Halo ${order.full_name}, ini adalah email koreksi untuk nomor antrean dan sesi pengambilan Anda. Silakan cek invoice terbaru yang terlampir.`,
         attachments: [{
           filename: `Invoice-KOREKSI-${order.full_name.replace(/\s+/g, '-')}.pdf`,
-          content: pdfBuffer.toString('base64'),
+          content: pdfBuffer,
+          contentType: 'application/pdf',
         }],
       });
 

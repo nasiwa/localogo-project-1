@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Midtrans Simulator — Localogo OSPEK 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="assets/css/index.css">
+  <style>
+    :root {
+      --primary: #24999b;
+      --primary-dark: #024847;
+      --accent: #ffc107;
+      --bg-dark: #0b1111;
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-dark);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    .premium-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 30%, rgba(36, 153, 155, 0.15) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 70%, rgba(36, 153, 155, 0.1) 0%, transparent 40%);
+      z-index: -1;
+    }
+
+    nav.premium-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 5%;
+      backdrop-filter: blur(10px);
+      background: rgba(11, 17, 17, 0.8);
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-premium {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-premium img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nav-badge {
+      background: var(--primary);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hero-sim {
+      padding: 100px 5% 60px;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .hero-sim h1 {
+      font-size: 56px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      background: linear-gradient(to bottom, #fff 40%, rgba(255,255,255,0.6));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sim p {
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      line-height: 1.6;
+    }
+
+    .sim-container {
+      max-width: 1100px;
+      margin: 0 auto 100px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 30px;
+      padding: 0 5%;
+    }
+
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      backdrop-filter: blur(10px);
+    }
+
+    .form-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border);
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 15px;
+      transition: 0.3s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: rgba(255,255,255,0.1);
+    }
+
+    .btn-premium {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 18px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.3s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-premium:hover {
+      background: #2cb5b7;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(36, 153, 155, 0.4);
+    }
+
+    .summary-card {
+      position: sticky;
+      top: 100px;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .summary-item .k { color: rgba(255,255,255,0.5); }
+    .summary-item .v { font-weight: 600; }
+
+    .summary-total {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .total-label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--primary); }
+    .total-val { font-size: 28px; font-weight: 900; }
+
+    /* ShowCase */
+    .showcase-section {
+      padding: 80px 5%;
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 40px auto 0;
+    }
+
+    .proof-card {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      transition: 0.4s;
+    }
+
+    .proof-card:hover {
+      transform: translateY(-10px);
+      border-color: var(--primary);
+    }
+
+    .proof-img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+    }
+
+    .proof-body {
+      padding: 20px;
+    }
+
+    .proof-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .proof-desc {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+    }
+
+    /* Checklist */
+    .checklist-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      max-width: 900px;
+      margin: 60px auto;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 15px;
+      align-items: flex-start;
+      font-size: 15px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .check-icon {
+      width: 22px;
+      height: 22px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .disclaimer {
+      max-width: 800px;
+      margin: 60px auto;
+      padding: 30px;
+      border-radius: 16px;
+      background: rgba(255, 193, 7, 0.05);
+      border: 1px solid rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(20px);
+    }
+
+    .success-card {
+      background: #fff;
+      color: #333;
+      width: 90%;
+      max-width: 450px;
+      border-radius: 30px;
+      padding: 40px;
+      text-align: center;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-overlay.active .success-card {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .success-icon-big {
+      width: 80px;
+      height: 80px;
+      background: #e7f7f2;
+      color: #1a9e6a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 20px;
+    }
+
+    .success-card h2 { font-size: 28px; font-weight: 800; margin-bottom: 10px; color: #024847; }
+    .success-card p { font-size: 15px; color: #666; line-height: 1.6; margin-bottom: 30px; }
+
+    .btn-done {
+      background: #024847;
+      color: #fff;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .sim-container { grid-template-columns: 1fr; }
+      .hero-sim h1 { font-size: 40px; }
+      .checklist-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="premium-bg"></div>
+
+  <nav class="premium-nav">
+    <a href="/" class="logo-premium">
+      <img src="favicon.png" alt="Localogo">
+      <span>Localogo</span>
+    </a>
+    <div class="nav-badge">Midtrans Simulator</div>
+  </nav>
+
+  <section class="hero-sim">
+    <h1>Amankan Slot OSPEK<br>dengan Midtrans</h1>
+    <p>Simulasi sistem pembayaran resmi Localogo. Proses cepat, aman, dan otomatis. Masukkan data kamu untuk memulai simulasi transaksi.</p>
+  </section>
+
+  <div class="sim-container">
+    <!-- FORM -->
+    <div class="glass-card">
+      <div class="form-title">
+        <span>📝</span> Data Pendaftaran
+      </div>
+      
+      <div class="form-group">
+        <label>Pilih Batch Pendaftaran</label>
+        <select id="sim-batch" onchange="updateSummary()">
+          <option value="">Memuat Batch...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Nama Lengkap</label>
+        <input type="text" id="sim-name" placeholder="Contoh: Ashila Rayya">
+      </div>
+
+      <div class="form-group">
+        <label>Alamat Email</label>
+        <input type="email" id="sim-email" placeholder="nama@email.com">
+      </div>
+
+      <div class="form-group">
+        <label>Nomor WhatsApp</label>
+        <input type="tel" id="sim-wa" placeholder="08xxxxxxxxxx">
+      </div>
+
+      <button class="btn-premium" onclick="startSimulatedPayment()">
+        <span>Mulai Pembayaran</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- SIDEBAR SUMMARY -->
+    <div class="glass-card summary-card">
+      <div class="form-title" style="font-size: 20px;">
+        <span>📊</span> Ringkasan
+      </div>
+      
+      <div class="summary-item">
+        <span class="k">Item</span>
+        <span class="v">Kit OSPEK 2026</span>
+      </div>
+      <div class="summary-item">
+        <span class="k">Status</span>
+        <span class="v">Down Payment (DP)</span>
+      </div>
+      <div class="summary-item">
+        <span class="k">Batch</span>
+        <span class="v" id="sum-batch">—</span>
+      </div>
+      <div class="summary-item">
+        <span class="k">Admin Fee</span>
+        <span class="v">Rp 2.500</span>
+      </div>
+
+      <div class="summary-total">
+        <div class="total-label">Total Bayar</div>
+        <div class="total-val">Rp 102.500</div>
+      </div>
+
+      <div style="margin-top: 30px; font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.5;">
+        * Pembayaran menggunakan Midtrans Snap. Mendukung QRIS, Virtual Account, dan E-Wallet.
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOWCASE -->
+  <section class="showcase-section">
+    <div style="text-align: center; max-width: 700px; margin: 0 auto;">
+      <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 15px;">Real Proof & Showcase</h2>
+      <p style="color: rgba(255,255,255,0.6);">Lihat bagaimana kami melayani ribuan mahasiswa baru setiap tahunnya dengan kualitas terbaik.</p>
+    </div>
+
+    <div class="showcase-grid">
+      <div class="proof-card">
+        <img src="real_proof_student_1_raw.jpeg" class="proof-img" alt="Proof 1">
+        <div class="proof-body">
+          <div class="proof-title">Penyerahan Paket Batch 1</div>
+          <div class="proof-desc">Proses pengambilan barang yang tertib dan cepat di store Localogo Malang.</div>
+        </div>
+      </div>
+      <div class="proof-card">
+        <img src="real_proof_student_2_raw.jpeg" class="proof-img" alt="Proof 2">
+        <div class="proof-body">
+          <div class="proof-title">Ribuan Mahasiswa Terlayani</div>
+          <div class="proof-desc">Testimoni positif dari para MABA yang merasa terbantu dengan paket lengkap kami.</div>
+        </div>
+      </div>
+      <div class="proof-card">
+        <img src="raja_brawijaya_gear_layout_1776763771838.png" class="proof-img" alt="Gear Layout">
+        <div class="proof-body">
+          <div class="proof-title">Kelengkapan Atribut</div>
+          <div class="proof-desc">Gambaran isi paket atribut (contoh tahun 2025) yang disusun rapi dan premium.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 60px;">
+      <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Apa saja yang kamu dapatkan?</h3>
+      <div class="checklist-grid">
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Tote Bag Spunbond Premium & Name Tag Laminated</div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Pita Sakit, Pita Gerbong, & Pita Merah Putih</div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Buku Catatan, Alat Tulis, & Pin Cluster</div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Jas Hujan, Hand Sanitizer, & Tisu Kit</div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Kaos Kaki, Alat Sholat, & Perlengkapan Kebersihan</div>
+        </div>
+        <div class="check-item">
+          <div class="check-icon">✓</div>
+          <div>Invoice Resmi (PDF) & Link Grup WA Official</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <strong>⚠️ PENGUMUMAN PENTING:</strong><br>
+      Isi paket dan atribut yang disediakan akan disesuaikan secara otomatis dengan ketentuan dan panduan resmi OSPEK Universitas yang berlaku di tahun berjalan. Kami menjamin kelengkapan sesuai list resmi terbaru.
+    </div>
+  </section>
+
+  <!-- MODAL SUCCESS -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="success-card">
+      <div class="success-icon-big">✓</div>
+      <h2>Pembayaran Berhasil!</h2>
+      <p>Slot kamu telah berhasil diamankan. Invoice resmi telah dikirim ke email kamu. Silakan cek juga folder Spam jika tidak ada di Inbox.</p>
+      
+      <div style="background: #f8f9fa; border-radius: 16px; padding: 20px; text-align: left; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+          <span style="color: #888;">Order ID</span>
+          <span id="res-oid" style="font-weight: 700;">—</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+          <span style="color: #888;">Metode</span>
+          <span style="font-weight: 700; color: #1a9e6a;">Midtrans Snap</span>
+        </div>
+      </div>
+
+      <button class="btn-done" onclick="location.reload()">Tutup & Selesai</button>
+      <a id="download-link" href="#" target="_blank" style="display: block; margin-top: 15px; font-size: 14px; font-weight: 700; color: var(--primary); text-decoration: none;">📥 Download Invoice PDF</a>
+    </div>
+  </div>
+
+  <!-- MIDTRANS SNAP -->
+  <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="SET_YOUR_CLIENT_KEY_HERE"></script>
+  <script src="assets/js/midtrans-simulator.js"></script>
+</body>
+</html>

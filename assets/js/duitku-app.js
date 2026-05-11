@@ -4,29 +4,65 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 // ── STATE ─────────────────────────────────────────────────────────
 let activeBatch = null;
 let _countdownInterval = null;
+let selectedPaymentMethod = 'BC'; // Default VA
 
 // ── INIT ──────────────────────────────────────────────────────────
 async function init() {
-  console.log("System initializing (Code Verification Mode)...");
+  console.log("Duitku System initializing...");
   try {
     await loadConfig();
 
+    // Sementara: Bypass Google Auth karena kendala teknis
+    showPanel('panel-active');
+    startFormTimer();
+    // handleAuthState(); // Simpan untuk nanti
+    
+    /* 
     const verifiedCode = sessionStorage.getItem('verified_code');
     const verifiedAt = sessionStorage.getItem('code_verified_at');
-
-    // Jika sudah verifikasi dan belum expired (30 mnt)
     if (verifiedCode && verifiedAt && (Date.now() - parseInt(verifiedAt)) < 30 * 60 * 1000) {
       showPanel('panel-active');
       startFormTimer();
+      handleAuthState(); 
     } else {
       showPanel('panel-enter-code');
     }
+    */
 
     // Polling kuota tiap 10 detik
     setInterval(loadConfig, 10000);
   } catch (err) {
     console.error("Init error:", err);
     showPanel('panel-enter-code');
+  }
+}
+
+// ── GOOGLE AUTH ───────────────────────────────────────────────────
+async function loginGoogle() {
+  const { data, error } = await _supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/payment_with_duitku'
+    }
+  });
+  if (error) console.error("Google Login Error:", error);
+}
+
+async function handleAuthState() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    const user = session.user;
+    const nameEl = document.getElementById('f-name');
+    const emailEl = document.getElementById('f-email');
+    
+    if (nameEl) nameEl.value = user.user_metadata.full_name || '';
+    if (emailEl) emailEl.value = user.email || '';
+    
+    // Hide overlay, show form
+    const overlay = document.getElementById('google-auth-overlay');
+    const formBody = document.getElementById('the-form-body');
+    if (overlay) overlay.style.display = 'none';
+    if (formBody) formBody.style.display = 'block';
   }
 }
 
@@ -59,6 +95,7 @@ async function verifyCode() {
       sessionStorage.setItem('code_verified_at', Date.now().toString());
       showPanel('panel-active');
       startFormTimer();
+      handleAuthState();
     } else {
       if (errEl) errEl.textContent = '❌ ' + (data.error || 'Kode tidak valid.');
       if (btn) { btn.disabled = false; btn.textContent = 'Verifikasi Kode →'; }
@@ -69,7 +106,7 @@ async function verifyCode() {
   }
 }
 
-// ── FORM TIMER (30 MIN) ───────────────────────────────────────────
+// ── FORM TIMER ────────────────────────────────────────────────────
 function startFormTimer() {
   if (_countdownInterval) clearInterval(_countdownInterval);
 
@@ -103,6 +140,7 @@ async function loadConfig() {
     const res = await fetch(`${BACKEND_URL}/api/batches?t=${Date.now()}`);
     const bData = await res.json();
     if (bData.success && bData.batches) {
+      renderBatches(bData.batches);
       const b = bData.batches.find(x => x.status === 'active');
       if (b) {
         activeBatch = b;
@@ -111,99 +149,113 @@ async function loadConfig() {
 
         const batchEls = document.querySelectorAll('[id="sidebar-batch"]');
         batchEls.forEach(el => { if (el) el.textContent = b.name; });
+
+        const baVal = document.getElementById('ba-val');
+        if (baVal) baVal.textContent = b.name;
       }
     }
   } catch (e) { console.warn("loadConfig failed:", e); }
 }
 
-// ── NOMINAL UNIK (Triggered by id-wa) ──────────────────────────────
+function renderBatches(batches) {
+  const grid = document.getElementById('batch-grid');
+  if (!grid) return;
+  grid.innerHTML = batches.map(b => {
+    const remain = b.total_slots - b.filled_slots;
+    const isFull = remain <= 0 || b.status !== 'active';
+    return `
+      <div class="batch-card ${isFull ? 'full' : ''}">
+        <div class="batch-name">${b.name}</div>
+        <div class="batch-slots">${isFull ? 'CLOSED' : remain + ' Slot'}</div>
+        <div class="batch-status-pill ${b.status}">${b.status.toUpperCase()}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── NOMINAL UNIK ──────────────────────────────────────────────────
 function onWaInput() {
   updateNominal();
 }
 
-function onNameInput() {
-  const nameVal = document.getElementById('f-name')?.value.trim();
-  const displayEl = document.getElementById('display-sender-name');
-  if (displayEl) {
-    displayEl.textContent = nameVal || '...';
-  }
+function onInput() {
+  // Common input handler if needed
 }
 
 function updateNominal() {
-  const waEl = document.getElementById('id-wa');
+  const waEl = document.getElementById('f-wa');
   if (!waEl) return;
   const wa = waEl.value.trim();
-  const last3 = wa.slice(-3).replace(/\D/g, '0');
-  const nominal = 100000 + parseInt(last3 || '0', 10);
-  const formatted = 'Rp' + nominal.toLocaleString('id-ID');
+  
+  // For Duitku, we usually have a fixed admin fee or dynamic fee
+  // The sidebar in war-test.html has Rp102.500 fixed total.
+  // I'll update it to match the logic in backend: 100k + 2500 admin
+  const formatted = 'Rp' + (102500).toLocaleString('id-ID');
 
-  const nominalEl = document.getElementById('display-unique-nominal');
   const sidebarEl = document.getElementById('sidebar-total');
-  if (nominalEl) nominalEl.textContent = formatted;
+  const modalTotalEl = document.getElementById('pm-amount');
   if (sidebarEl) sidebarEl.textContent = formatted;
+  if (modalTotalEl) modalTotalEl.textContent = formatted;
 }
 
-// ── FILE HELPERS ──────────────────────────────────────────────────
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-  });
+// ── DUITKU HELPERS ────────────────────────────────────────────────
+function highlightMethod(method, el) {
+  selectedPaymentMethod = method;
+  document.querySelectorAll('.method-card').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  console.log("Selected Method:", selectedPaymentMethod);
+}
+
+function openConfirm() {
+  const nameVal = document.getElementById('f-name')?.value.trim();
+  const emailVal = document.getElementById('f-email')?.value.trim();
+  const waVal = document.getElementById('f-wa')?.value.trim();
+
+  if (!nameVal || !emailVal || !waVal) return showToast('⚠️ Lengkapi nama, email, dan nomor WA');
+
+  document.getElementById('pm-name').textContent = nameVal;
+  document.getElementById('pm-email').textContent = emailVal;
+  document.getElementById('pm-wa').textContent = waVal;
+  document.getElementById('pm-batch').textContent = activeBatch?.name || '—';
+  
+  // Show modal
+  document.getElementById('confirm-modal').classList.add('show');
+  document.getElementById('duitku-selector').style.display = 'block';
+  document.getElementById('btn-pay-modal').style.display = 'block';
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('show');
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────────
 async function handleBooking() {
+  // First step: show confirmation modal with Duitku selector
+  openConfirm();
+}
+
+async function startPayment() {
   const nameVal = document.getElementById('f-name')?.value.trim();
   const emailVal = document.getElementById('f-email')?.value.trim();
-  const waVal = document.getElementById('id-wa')?.value.trim();
-  const proofFile = document.getElementById('f-proof')?.files[0];
-  const code = sessionStorage.getItem('verified_code');
+  const waVal = document.getElementById('f-wa')?.value.trim();
+  
+  // Gunakan kode PUBLIC untuk bypass kendala Supabase/Google Auth
+  const code = 'PUBLIC'; 
   const batchId = sessionStorage.getItem('verified_batch_id') || activeBatch?.id;
 
-  console.log("DEBUG handleBooking:", { nameVal, emailVal, waVal, proofFile, code, batchId });
-
-  if (!nameVal || !emailVal || !waVal) return showToast('⚠️ Lengkapi nama, email, dan nomor WA');
-  
-  // Validasi Email Ketat
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(emailVal)) {
-    return showToast('⚠️ Format email tidak valid (contoh: nama@gmail.com)');
-  }
-  
-  if (!proofFile) return showToast('⚠️ Upload bukti transfer terlebih dahulu');
-  if (!code) { showPanel('panel-enter-code'); return; }
-
-  // ── KONFIRMASI AKHIR ──
-  const confirmMsg = `Pastikan email Anda sudah benar:\n\n» ${emailVal}\n\nEmail ini akan digunakan untuk mengirim INVOICE dan LINK GRUP WA setelah diverifikasi. Apakah email ini sudah aktif dan sesuai?`;
-  if (!window.confirm(confirmMsg)) return;
-
-  const btn = document.getElementById('btn-pay');
+  const btn = document.getElementById('btn-pay-modal');
   const oldHTML = btn?.innerHTML;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Mengirim...</span>'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Memproses...'; }
 
   try {
-    let finalFile = proofFile;
-    // Kompres jika > 500KB
-    if (proofFile.size > 500 * 1024) {
-      try {
-        const options = { maxSizeMB: 0.8, maxWidthOrHeight: 1280, useWebWorker: true };
-        finalFile = await imageCompression(proofFile, options);
-      } catch (e) { console.warn("Compression failed, using original", e); }
-    }
-
-    const base64 = await fileToBase64(finalFile);
-    const ext = finalFile.name.split('.').pop().toLowerCase() || 'jpg';
-
     const body = {
       full_name: nameVal,
       email: emailVal,
       whatsapp: waVal,
       batch_id: batchId,
       access_code: code,
-      proof_base64: base64,
-      proof_ext: ext
+      gateway: 'duitku',
+      paymentMethod: selectedPaymentMethod
     };
 
     const res = await fetch(`${BACKEND_URL}/api/create-order`, {
@@ -213,12 +265,11 @@ async function handleBooking() {
     });
 
     const resData = await res.json();
-    if (resData.success) {
-      if (_countdownInterval) clearInterval(_countdownInterval);
-      sessionStorage.clear();
-      showPanel('panel-done');
+    if (resData.success && resData.payment_url) {
+      // Redirect to Duitku
+      window.location.href = resData.payment_url;
     } else {
-      throw new Error(resData.error || 'Gagal mengirim pendaftaran');
+      throw new Error(resData.error || 'Gagal membuat transaksi');
     }
   } catch (err) {
     showToast('⚠️ ' + err.message);
@@ -228,9 +279,19 @@ async function handleBooking() {
 
 // ── UI HELPERS ────────────────────────────────────────────────────
 function showPanel(panelId) {
-  document.querySelectorAll('.state-panel').forEach(p => p.style.display = 'none');
-  const target = document.getElementById(panelId);
-  if (target) target.style.display = 'block';
+  document.querySelectorAll('.state-panel, .booking-layout').forEach(p => p.style.display = 'none');
+  
+  if (panelId === 'panel-active') {
+    document.getElementById('booking-main').style.display = 'grid';
+    // Bypass: Tampilkan form body langsung
+    const fb = document.getElementById('the-form-body');
+    const overlay = document.getElementById('google-auth-overlay');
+    if (fb) fb.style.display = 'block';
+    if (overlay) overlay.style.display = 'none';
+  } else {
+    const target = document.getElementById(panelId);
+    if (target) target.style.display = 'block';
+  }
 
   // Update steps
   const stepMap = { 'panel-enter-code': 1, 'panel-active': 2, 'panel-done': 3 };
@@ -251,6 +312,11 @@ function showToast(msg) {
 // ── GLOBALS ───────────────────────────────────────────────────────
 window.verifyCode = verifyCode;
 window.handleBooking = handleBooking;
+window.startPayment = startPayment;
+window.loginGoogle = loginGoogle;
+window.highlightMethod = highlightMethod;
+window.closeConfirm = closeConfirm;
 window.onWaInput = onWaInput;
+window.onInput = onInput;
 
 init();

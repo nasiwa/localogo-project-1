@@ -1,241 +1,34 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LOCALOGO — Pre-Order Perlengkapan OSPEK 2026</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="assets/css/index.css">
 </head>
-
 <body>
-
-  <script src="assets/js/config.js"></script>
-
-  <div class="ticker-wrap">
-    <div class="ticker-track">
-      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
-      <span>·</span><span>Slot Terbatas</span><span>·</span>
-      <span>DP Rp100.000</span><span>·</span>
-      <span>QRIS · GoPay · ShopeePay</span><span>·</span>
-      <span>Invoice PDF Otomatis via Email</span><span>·</span>
-      <span class="hi">⚡ Pre-Order OSPEK 2026 Resmi Dibuka</span>
-      <span>·</span><span>Slot Terbatas</span><span>·</span>
-      <span>DP Rp100.000</span><span>·</span>
-      <span>QRIS · GoPay · ShopeePay</span><span>·</span>
-      <span>Invoice PDF Otomatis via Email</span><span>·</span>
-    </div>
-  </div>
-
   <nav>
-    <a class="logo" href="#">
-      <img src="favicon.png" alt="Logo" style="height: 30px; margin-right: 10px;" onerror="this.style.display='none'">
+    <a class="logo" href="/">
+      <img src="favicon.png" alt="Logo" style="height: 30px; margin-right: 10px;">
       <div class="logo-text">Localogo</div>
     </a>
-    <div class="live-chip">
-      <div class="dot"></div><span id="nav-status">Booking Open</span>
-    </div>
+    <div class="live-chip"><div class="dot" style="background:#ff4d4f"></div><span>Closed</span></div>
   </nav>
 
-  <section class="hero">
+  <section class="hero" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; text-align: center;">
     <div class="hero-inner">
-      <div class="hero-badge fade-up" style="animation-delay:.05s">🎒 Perlengkapan Resmi OSPEK 2026</div>
-      <h1 class="hero-title fade-up" style="animation-delay:.1s">
-        <em>Pre-Order</em>
-        Amankan<br>Slot Kamu
-      </h1>
-      <p class="hero-sub fade-up" style="animation-delay:.15s">Bayar DP Rp100.000 sekarang untuk mengamankan slot PO perlengkapan OSPEK di localogo. Kuota terbatas — cepat sebelum habis</p>
-      <div class="hero-stats fade-up" style="animation-delay:.2s">
-        <div class="hero-stat">
-          <div class="hero-stat-val" id="h-batch">—</div>
-          <div class="hero-stat-label">Batch Aktif</div>
-        </div>
-        <div class="hero-stat" style="opacity: 0.5">
-          <div class="hero-stat-val">Rp100K</div>
-          <div class="hero-stat-label">Down Payment</div>
-        </div>
+      <div class="hero-badge fade-up">🎒 Perlengkapan Resmi OSPEK 2026</div>
+      <h1 class="hero-title fade-up" style="animation-delay:.1s">Pre-Order<br>Batch 1 Selesai</h1>
+      <p class="hero-sub fade-up" style="animation-delay:.15s">Terima kasih atas antusiasmenya! Kuota Batch 1 telah terpenuhi. Pantau Instagram kami untuk info pembukaan Batch selanjutnya.</p>
+      <div style="margin-top: 40px;">
+        <a href="https://instagram.com/localogo.id" class="btn-pay" style="display: inline-flex; width: auto; padding: 15px 40px; text-decoration: none;">
+          <span>Cek Update di Instagram</span><span>→</span>
+        </a>
       </div>
     </div>
   </section>
-
-  <div class="main-wrap">
-    <div class="steps-nav fade-up" style="animation-delay:.25s">
-      <div class="step-item active" id="step1">
-        <div class="step-circle" id="sc1">1</div>
-        <div>
-          <div class="step-label">Cek Slot</div>
-          <div class="step-desc">Lihat batch tersedia</div>
-        </div>
-      </div>
-      <div class="step-item" id="step2">
-        <div class="step-circle" id="sc2">2</div>
-        <div>
-          <div class="step-label">Isi Data</div>
-          <div class="step-desc">Lengkapi form diri</div>
-        </div>
-      </div>
-      <div class="step-item" id="step3">
-        <div class="step-circle" id="sc3">3</div>
-        <div>
-          <div class="step-label">Bayar DP</div>
-          <div class="step-desc">Via Transfer</div>
-        </div>
-      </div>
-      <div class="step-item" id="step4">
-        <div class="step-circle" id="sc4">4</div>
-        <div>
-          <div class="step-label">Slot Aman</div>
-          <div class="step-desc">Invoice ke email</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BATCH STATUS -->
-    <div class="fade-up" style="animation-delay:.28s;margin-bottom:40px;">
-      <div class="section-header">
-        <div class="section-title">Status Batch</div>
-        <div class="section-note" id="slots-remain">Memuat...</div>
-      </div>
-      <div class="batch-grid" id="batch-grid">
-        <div
-          style="padding:32px;text-align:center;color:var(--txd);font-size:13px;border:1.5px solid var(--border);border-radius:var(--rl);grid-column:1/-1;">
-          Memuat status batch...</div>
-      </div>
-    </div>
-
-    <!-- FORM + SIDEBAR -->
-    <div class="booking-layout fade-up" style="animation-delay:.32s" id="booking-main">
-      <div class="form-card">
-        <div class="form-card-head">
-          <div class="form-card-title">Form Pendaftaran</div>
-          <div class="form-card-sub">Lengkapi data diri kamu. Invoice PDF dan instruksi penting akan dikirim otomatis ke email ini.</div>
-        </div>
-
-        <div id="panel-not-logged-in" class="state-panel" style="padding: 40px 20px; text-align: center; border-radius:8px;">
-          <div style="font-size:36px; margin-bottom:14px;">🛡️</div>
-          <h3 style="margin-bottom:12px; color:var(--txd); font-size:20px;">Verifikasi Akun</h3>
-          <p style="font-size:13px; color:var(--txm); margin-bottom:28px; line-height:1.6; padding: 0 10px;">
-            Demi mencegah antrean ganda dan menjaga keadilan, <strong>wajib login dengan Akun Google</strong> untuk mengambil nomor antrean. Posisi Anda akan tersimpan aman.
-          </p>
-          <button onclick="loginGoogle()" style="background:#fff; border:1.5px solid #eaeaea; padding:12px 24px; border-radius:8px; font-weight:600; color:#555; display:inline-flex; align-items:center; gap:12px; cursor:pointer; font-family:inherit; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin:0 auto; width:100%; justify-content:center; transition:0.2s;">
-            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
-            Lanjutkan dengan Google
-          </button>
-        </div>
-
-        <div id="panel-quota-full" class="state-panel" style="display:none; padding: 40px 20px; text-align: center;">
-          <div style="font-size:48px; margin-bottom:15px;">😔</div>
-          <h3 style="font-size:22px; color:var(--red); margin-bottom:10px;">Kuota Habis</h3>
-          <p style="font-size:14px; color:var(--txm); line-height:1.6;">Maaf, kuota untuk batch ini sudah penuh. Pantau terus untuk info batch selanjutnya!</p>
-        </div>
-
-        <div id="panel-not-queued" class="state-panel" style="display:none; padding: 30px 20px; text-align: center;">
-          <h3 style="margin-bottom:8px; color:var(--txd); font-size:20px;">Halo, <span id="queue-user-name"></span> 👋</h3>
-          <p style="font-size:14px; color:var(--txm); margin-bottom:20px;">Klik tombol di bawah sekali saja. Posisi Anda akan langsung tersimpan secara aman di sistem kami.</p>
-          <div style="background:#f4f6f8; border-radius:8px; padding:15px; margin-bottom:25px;">
-            <div style="font-size:12px; color:var(--txm); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Sisa Kuota Batch Ini</div>
-            <div style="font-size:32px; font-weight:900; color:var(--td); line-height:1.2; margin-top:5px;"><span id="queue-quota-available">...</span> <span style="font-size:16px; font-weight:600; color:var(--txm);">/ <span id="queue-quota-total">...</span></span></div>
-          </div>
-          <button onclick="claimQueueSlot()" id="btn-claim-queue" class="btn-pay" style="width:100%;">
-            <span>Ambil Nomor Antrean</span><span>→</span>
-          </button>
-        </div>
-
-        <div id="panel-waiting" class="state-panel" style="display:none; padding: 20px; text-align: center;">
-          <div style="background:var(--bg3); border:1.5px solid var(--border); border-radius:12px; padding:25px 20px; margin-bottom:20px;">
-            <div style="font-size:13px; color:var(--txm); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Nomor Antrean Anda</div>
-            <div id="display-queue-number" style="font-size:48px; font-weight:900; color:var(--txd); line-height:1; margin-bottom:10px;">...</div>
-            <div style="display:inline-block; background:rgba(36,153,155,0.1); color:var(--td); font-size:12px; font-weight:700; padding:6px 12px; border-radius:20px;">Sesi <span id="display-queue-session">...</span></div>
-          </div>
-          <div id="queue-timer" style="margin-bottom: 20px; padding: 10px; background: rgba(36,153,155,0.05); border-radius: 8px; font-weight: 700; color: var(--td); font-size: 14px;">
-            Estimasi giliran Anda: <span id="timer-countdown">--:--</span>
-          </div>
-          <div style="margin-top:20px; padding:15px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px dashed var(--border);">
-            <p style="font-size:13px; color:var(--red); font-weight:600; margin-bottom:8px;">⚠️ PENTING: SIAPKAN M-BANKING / E-WALLET</p>
-            <ul style="text-align:left; font-size:12px; color:var(--txm); padding-left:15px; line-height:1.6;">
-              <li>Giliran Anda akan tiba dalam waktu dekat.</li>
-              <li>Pastikan saldo cukup (Rp100.000 + Kode Unik).</li>
-              <li>Waktu pengisian form & upload bukti hanya <b>10 MENIT</b>.</li>
-              <li>Jika waktu habis, nomor antrean Anda akan <b>HANGUS</b>.</li>
-            </ul>
-          </div>
-
-          <div style="margin-top:25px;">
-            <p style="font-size:15px; color:var(--txm); font-weight:600; margin-bottom:5px;" id="waiting-title">Menunggu Giliran...</p>
-            <p style="font-size:13px; color:var(--txm); line-height:1.6;">Halaman ini akan otomatis mengarahkan Anda ke formulir pendaftaran saat giliran tiba.</p>
-          </div>
-        </div>
-
-        <div id="panel-expired" class="state-panel" style="display:none; padding: 40px 20px; text-align: center;">
-          <div style="font-size:48px; margin-bottom:15px;">⏱️</div>
-          <h3 style="font-size:22px; color:var(--red); margin-bottom:10px;">Waktu Habis</h3>
-          <p style="font-size:14px; color:var(--txm); line-height:1.6; margin-bottom:25px;">Anda melewati batas waktu 10 menit. Slot antrean Anda telah diberikan ke peserta lain.</p>
-          <button onclick="resetQueue()" class="btn-pay" style="width:100%;">Ambil Antrean Baru</button>
-        </div>
-
-        <div id="panel-active" class="state-panel form-body" style="display:none;">
-          <div style="background:rgba(224,85,85,0.1); border:1.5px solid rgba(224,85,85,0.2); border-radius:8px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
-            <div style="font-size:24px;">⏱️</div>
-            <div>
-              <div style="font-size:11px; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Batas Waktu Anda</div>
-              <div id="active-countdown-timer" style="font-size:20px; font-weight:900; color:var(--red); line-height:1;">10:00</div>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field full"><label>Nama Lengkap <span class="req">*</span></label><input type="text" id="f-name" placeholder="Nama sesuai KTM" /></div>
-            <div class="field full"><label>Email Aktif <span class="req">*</span></label><input type="email" id="f-email" disabled style="background:#f4f4f4;" /></div>
-            <div class="field full"><label>No. WhatsApp <span class="req">*</span></label><input type="tel" id="f-wa" placeholder="08xxxxxxxxxx" oninput="onWaInput()" /></div>
-          </div>
-          <div style="background:var(--bg); padding:15px; border-radius:8px; margin: 20px 0; border:1px solid var(--border);">
-            <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:10px;">Transfer Ke: Bank BCA - 3150915928 (a.n. Anang Kuntoro)</div>
-            <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:5px;">Nominal yang Harus Dibayar:</div>
-            <div style="font-size:24px; color:var(--td); font-weight:900;" id="display-unique-nominal">Rp100.---</div>
-            <div style="font-size:10px; color:var(--red); font-weight:600;">*WAJIB transfer sesuai nominal sampai 3 digit terakhir.</div>
-          </div>
-          <div class="field full"><label>Upload Bukti Transfer <span class="req">*</span></label><input type="file" id="f-proof" accept="image/*" /></div>
-          <button class="btn-pay" id="btn-pay" onclick="handleBooking()" style="margin-top:25px;"><span>Kirim Pendaftaran</span><span>→</span></button>
-        </div>
-
-        <div id="panel-done" class="state-panel" style="display:none; padding: 40px 20px; text-align: center;">
-          <div style="font-size:48px; margin-bottom:15px;">🎉</div>
-          <h3 style="font-size:22px; color:var(--td); margin-bottom:10px;">Pendaftaran Berhasil!</h3>
-          <p style="font-size:14px; color:var(--txm); line-height:1.6;">Terima kasih. Data Anda sedang kami verifikasi. Cek email secara berkala.</p>
-        </div>
-      </div>
-
-      <div class="sidebar">
-        <div class="order-card">
-          <div class="order-head">
-            <div class="order-head-label">Ringkasan Pesanan</div>
-            <div class="order-price" id="sidebar-total">Rp100.---</div>
-          </div>
-          <div class="order-body">
-            <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
-            <div class="order-row" id="sidebar-admin-row" style="display:none;"><span class="k">Admin</span><span class="v">Rp2.500</span></div>
-            <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">—</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PRODUCT SHOWCASE (Carousel) -->
-    <div class="product-showcase fade-up" style="margin-top:60px;">
-      <div style="text-align:center; color:var(--red); font-weight:800; font-size:13px; margin-bottom:25px; text-transform:uppercase;">⚠️ ATRIBUT TAHUN LALU SEBAGAI GAMBARAN</div>
-      <div class="product-carousel" id="product-slider">
-        <div class="pg-slide active"><img src="real_proof_student_1_raw.jpeg" class="pg-img"></div>
-        <div class="pg-slide"><img src="real_proof_student_2_raw.jpeg" class="pg-img"></div>
-      </div>
-    </div>
-  </div>
 
   <footer class="app-footer">
     <div class="footer-grid">
@@ -244,27 +37,7 @@
         <p class="footer-about">Official supplier perlengkapan mahasiswa baru di Malang. Aman, Lengkap, dan Cepat sejak 2021.</p>
         <div class="footer-social-note">© 2026 Localogo Team</div>
       </div>
-      <div class="footer-col">
-        <div class="footer-h">Pusat Bantuan</div>
-        <div class="footer-item">📧 localogo01@gmail.com</div>
-        <div class="footer-item">📍 Jl. Kerto Raharjo No.42a, Malang</div>
-        <div class="footer-h" style="margin-top:20px;">Pembayaran Aman</div>
-        <div style="display:flex; gap:10px; margin-top:10px;"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" style="height:15px; opacity:0.6;"><img src="https://upload.wikimedia.org/wikipedia/commons/e/eb/Logo_ovo_purple.svg" style="height:12px; opacity:0.6;"></div>
-      </div>
-      <div class="footer-col">
-        <div class="footer-h">PO Package Items</div>
-        <div class="footer-kit-list">
-          <div>✓ Tote bag & Name Tag</div>
-          <div>✓ Pita & Pin Cluster</div>
-          <div>✓ Jas Hujan & Alat Tulis</div>
-          <div>✓ Dan Kit Lainnya...</div>
-        </div>
-        <p style="font-size:10px; opacity:0.5; margin-top:15px;">*Isi paket disesuaikan panduan OSPEK 2026 terbaru.</p>
-      </div>
     </div>
   </footer>
-
-  <div class="toast" id="toast"></div>
-  <script src="assets/js/index-app-v3.js"></script>
 </body>
 </html>

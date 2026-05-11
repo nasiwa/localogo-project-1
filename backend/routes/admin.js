@@ -19,13 +19,13 @@ router.get('/check', (req, res) => res.json({ allowed: true }));
 // ── DASHBOARD STATS ──────────────────────────────────────────────
 router.get('/dashboard-stats', async (req, res) => {
   try {
-    const { count: paidCount }    = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid');
+    const { count: paidCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid');
     const { count: pendingCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-    const { count: pickupCount }  = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid').eq('is_picked_up', true);
-    const { data: batches }       = await adminSupabase.from('batches').select('filled_slots, total_slots');
+    const { count: pickupCount } = await adminSupabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid').eq('is_picked_up', true);
+    const { data: batches } = await adminSupabase.from('batches').select('filled_slots, total_slots');
 
     const totalFilled = (paidCount || 0) + (pendingCount || 0);
-    const totalSlots  = (batches || []).reduce((s, b) => s + (b.total_slots || 0), 0);
+    const totalSlots = (batches || []).reduce((s, b) => s + (b.total_slots || 0), 0);
 
     res.json({ success: true, paidCount: paidCount || 0, pendingCount: pendingCount || 0, pickupCount: pickupCount || 0, totalFilled, totalSlots });
   } catch (err) {
@@ -87,17 +87,31 @@ router.patch('/batch/:id', async (req, res) => {
 router.get('/orders', async (req, res) => {
   try {
     const page  = parseInt(req.query.page)  || 1;
-    const limit = parseInt(req.query.limit) || 100;
+    let limit   = parseInt(req.query.limit) || 100;
+    
+    // Pastikan limit tidak terlalu kecil untuk export, tapi juga tidak merusak server
+    if (limit > 5000) limit = 5000; 
+
     const from  = (page - 1) * limit;
     const to    = from + limit - 1;
-    const q       = req.query.q       || '';
+    const q = req.query.q || '';
     const batchId = req.query.batch_id || 'all';
-    const status  = req.query.status  || 'all';
+    const status = req.query.status || 'all';
 
     let query = adminSupabase.from('orders').select('*, batches(name)', { count: 'exact' });
-    if (q)              query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,order_ref.ilike.%${q}%`);
+    if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,order_ref.ilike.%${q}%`);
     if (batchId !== 'all') query = query.eq('batch_id', batchId);
-    if (status  !== 'all') query = query.eq('status', status);
+    if (status !== 'all') query = query.eq('status', status);
+
+    // Jika limit > 1000, kita ambil 2 kali saja secara manual untuk kestabilan
+    if (limit > 1000) {
+      const { data: d1, error: e1, count } = await query.order('created_at', { ascending: false }).range(0, 999);
+      const { data: d2, error: e2 }        = await query.order('created_at', { ascending: false }).range(1000, 1999);
+      
+      if (e1) throw e1;
+      const combined = (d1 || []).concat(d2 || []);
+      return res.json({ success: true, orders: combined, total: count });
+    }
 
     const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
     if (error) throw error;
@@ -106,6 +120,10 @@ router.get('/orders', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// ── AUTO EXPIRE ───────────────────────────────────────────────────
+// ... (rest of file)
+
 
 // ── AUTO EXPIRE ───────────────────────────────────────────────────
 router.post('/auto-expire', async (req, res) => {
@@ -138,14 +156,13 @@ router.get('/proof-url/:filename', async (req, res) => {
 // ── BATCH MEMBERS ─────────────────────────────────────────────────
 router.get('/batch/:id/members', async (req, res) => {
   try {
-    const { data, error } = await adminSupabase
-      .from('orders')
-      .select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num, scanned_by')
-      .eq('batch_id', req.params.id)
-      .eq('status', 'paid')
-      .order('created_at');
-    if (error) throw error;
-    res.json({ success: true, members: data });
+    // Ambil 2 kali saja secara manual (total 2000 data) untuk kestabilan server
+    const { data: d1, error: e1 } = await adminSupabase.from('orders').select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num, scanned_by').eq('batch_id', req.params.id).eq('status', 'paid').order('created_at').range(0, 999);
+    const { data: d2, error: e2 } = await adminSupabase.from('orders').select('order_ref, full_name, email, whatsapp, status, created_at, is_picked_up, sequence_num, scanned_by').eq('batch_id', req.params.id).eq('status', 'paid').order('created_at').range(1000, 1999);
+
+    if (e1) throw e1;
+    const allMembers = (d1 || []).concat(d2 || []);
+    res.json({ success: true, members: allMembers });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

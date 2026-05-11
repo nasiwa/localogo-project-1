@@ -4,6 +4,7 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── HEALTH CHECK (TOP PRIORITY) ──────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'ok', node: process.version }));
@@ -40,18 +41,27 @@ const apiLimiter = rateLimit({
 
 // ── MIDDLEWARE ───────────────────────────────────────────────────
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Terapkan rate limiter ke semua route API kecuali cron
+// Terapkan rate limiter ke semua route API kecuali cron dan admin dashboard
 app.use('/api/', (req, res, next) => {
-  if (req.path.startsWith('/cron/')) return next();
+  // Pengecualian untuk cron dan admin polling
+  if (req.path.startsWith('/cron/') || req.path.startsWith('/admin/')) return next();
   return apiLimiter(req, res, next);
 });
 
 // ── SERVE FRONTEND (STATIC) ──────────────────────────────────────
 const path = require('path');
 app.use(express.static(path.join(__dirname, '../')));
+
+app.get('/payment_with_duitku', (req, res) => {
+  res.sendFile(path.join(__dirname, '../payment_with_duitku.html'));
+});
+
+app.get('/midtrans_simulator', (req, res) => {
+  res.sendFile(path.join(__dirname, '../midtrans_simulator.html'));
+});
 
 // ── ROUTES ───────────────────────────────────────────────────────
 const clientRoutes = require('./routes/client');

@@ -31,7 +31,10 @@ function generateSecureQrData(orderRef) {
 async function generateInvoicePDF(order) {
   const seq = order.sequence || 0;
   const batchNum = parseInt(order.batch_num) || 1;
-  const sessionNum = Math.ceil(seq / 200) || 1;
+  // Hitung sesi (200 per sesi), maksimal Sesi 5
+  const rawSession = Math.ceil(seq / 200) || 1;
+  const sessionNum = Math.min(5, rawSession);
+
   const romanBatch = toRoman(batchNum);
   // SMART CODE with SESSION NUMBER (1-5)
   const smartCode = `BC${romanBatch}${sessionNum}_${seq.toString().padStart(4, '0')}`;
@@ -203,9 +206,11 @@ async function sendInvoiceEmail(order, pdfBuffer) {
     to: order.email,
     subject: `SLOT SECURED: Invoice PO Perlengkapan OSPEK - ${order.full_name}`,
     html,
+    text: `Halo ${order.full_name}, pembayaran DP Anda berhasil. Slot untuk Batch ${order.batch_num} telah diamankan. Silakan cek invoice terlampir. Order Ref: ${order.order_ref}`,
     attachments: [{
       filename: `Invoice-${order.full_name.replace(/\s+/g, '-')}.pdf`,
-      content: pdfBuffer.toString('base64'),
+      content: pdfBuffer,
+      contentType: 'application/pdf',
     }],
   });
 }

@@ -16,7 +16,10 @@ function genOrderRef() {
  * GET /api/config — public config (gateway type)
  */
 router.get('/config', (req, res) => {
-  res.json({ gateway: process.env.PAYMENT_GATEWAY || 'manual' });
+  res.json({ 
+    gateway: process.env.PAYMENT_GATEWAY || 'manual',
+    midtransClientKey: process.env.MIDTRANS_CLIENT_KEY || ''
+  });
 });
 
 /**
@@ -40,25 +43,34 @@ const { adminSupabase } = require('../supabaseClient');
  * POST /api/create-order
  */
 router.post('/create-order', async (req, res) => {
-  const supabase = req.app.get('getSupabase')();
-  const { full_name, email, whatsapp, batch_id, proof_url, user_id } = req.body;
+  const { full_name, email, whatsapp, batch_id, proof_base64, proof_ext, access_code, paymentMethod } = req.body;
+  const gateway = req.body.gateway || process.env.PAYMENT_GATEWAY || 'manual';
 
-  if (!full_name || !email || !whatsapp || !batch_id || !proof_url) {
+  if (!full_name || !email || !whatsapp || !batch_id || !access_code) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap.' });
   }
 
+  if (gateway === 'manual' && !proof_base64) {
+    return res.status(400).json({ success: false, error: 'Bukti transfer wajib diunggah untuk metode manual.' });
+  }
+
   const orderRef = genOrderRef();
+  const normalizedCode = access_code.trim().toUpperCase();
 
   try {
-    // 1. Calculate Amount
-    const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
-    const finalAmount = 100000 + parseInt(last3WA || '0');
+    // 1. Atomic code claim
+    const { data: claimData, error: claimErr } = await adminSupabase
+      .rpc('increment_access_code', { p_code: normalizedCode });
 
-    // 2. LOGIKA PENDAFTARAN (VERSI CEPAT & TANGGUH)
-    console.log(`[CREATE_ORDER] Starting claim for ${email} (User: ${user_id})`);
-    
-    // A. Ambil Info Batch
-    const { data: batch, error: bErr } = await supabase
+    if (claimErr) throw claimErr;
+    const claimResult = claimData && claimData[0];
+
+    if (!claimResult || !claimResult.success) {
+      return res.status(409).json({ success: false, error: 'Kuota untuk kode sesi ini sudah penuh atau kode tidak valid.' });
+    }
+
+    // 2. Cek Batch
+    const { data: batch, error: bErr } = await adminSupabase
       .from('batches')
       .select('id, name, total_slots, filled_slots')
       .eq('id', batch_id)
@@ -66,35 +78,80 @@ router.post('/create-order', async (req, res) => {
       .single();
 
     if (bErr || !batch) {
+      console.error('[BATCH_ERR]', bErr);
+      await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
       return res.status(400).json({ success: false, error: 'Batch tidak tersedia atau sudah penuh' });
     }
 
-    // B. Cek Duplikat WA
+    // 3. Cek Duplikat WA
     const { data: existing } = await adminSupabase
       .from('orders')
-      .select('id')
+      .select('id, status')
       .eq('batch_id', batch_id)
       .eq('whatsapp', whatsapp)
       .in('status', ['paid', 'pending'])
       .maybeSingle();
 
     if (existing) {
-      return res.status(409).json({ success: false, error: '⚠️ WhatsApp ini sudah terdaftar di Batch ini.' });
+      await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
+      const msg = existing.status === 'paid'
+        ? 'Nomor WhatsApp ini sudah lunas di Batch ini.'
+        : 'Pendaftaran nomor ini sedang diproses (Pending).';
+      return res.status(400).json({ success: false, error: msg });
     }
 
-    // C. Cek Kuota
-    const { count: takenCount } = await adminSupabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('batch_id', batch_id)
-      .in('status', ['paid', 'pending']);
-
-    if (takenCount >= batch.total_slots) {
-      return res.status(409).json({ success: false, error: 'Maaf, slot baru saja penuh.' });
+    // 4. Calculate Amount
+    let finalAmount = 100000;
+    if (gateway === 'manual') {
+      const last3WA = whatsapp.slice(-3).replace(/\D/g, '0');
+      finalAmount += parseInt(last3WA || '0');
+    } else {
+      finalAmount += 2500; // Admin fee for gateway
     }
 
-    // D. Buat Pesanan (INSERT)
-    console.log(`[CREATE_ORDER] Quota OK (${takenCount}/${batch.total_slots}). Inserting...`);
+    // 5. Handle Proof (Only if manual)
+    let fileName = null;
+    if (gateway === 'manual' && proof_base64) {
+      fileName = `proof_${Date.now()}.${proof_ext || 'jpg'}`;
+      const fileBuffer = Buffer.from(proof_base64, 'base64');
+      const { error: uploadErr } = await adminSupabase.storage
+        .from('transfer_proofs')
+        .upload(fileName, fileBuffer, {
+          contentType: `image/${proof_ext || 'jpeg'}`,
+          upsert: false
+        });
+
+      if (uploadErr) {
+        console.error('[UPLOAD_ERR]', uploadErr);
+        await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
+        return res.status(500).json({ success: false, error: `Gagal upload bukti: ${uploadErr.message}` });
+      }
+    }
+
+    // 6. Create Transaction with Provider (if not manual)
+    let paymentData = { gateway: 'manual' };
+    if (gateway !== 'manual') {
+      try {
+        paymentData = await createTransaction(gateway, {
+          orderRef,
+          amount: finalAmount,
+          full_name,
+          email,
+          whatsapp,
+          batchName: batch.name,
+          paymentMethod: paymentMethod, // Specific for Duitku
+          backendUrl: process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`,
+          frontendUrl: process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`
+        });
+      } catch (payErr) {
+        console.error('[PAYMENT_PROVIDER_ERR]', payErr);
+        await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
+        return res.status(500).json({ success: false, error: `Gagal membuat transaksi ${gateway}: ${payErr.message}` });
+      }
+    }
+
+    // 7. Insert Order
+    const currentSeq = (batch.filled_slots || 0) + 1;
     const { data: newOrder, error: insErr } = await adminSupabase
       .from('orders')
       .insert({
@@ -105,8 +162,10 @@ router.post('/create-order', async (req, res) => {
         whatsapp: whatsapp,
         amount: finalAmount,
         status: 'pending',
-        payment_gateway: 'manual',
-        proof_url: proof_url
+        payment_gateway: gateway,
+        proof_url: fileName,
+        sequence: currentSeq,
+        payment_token: paymentData.token || null
       })
       .select()
       .single();
@@ -116,29 +175,27 @@ router.post('/create-order', async (req, res) => {
       throw insErr;
     }
 
-    // E. SET STATUS ANTREAN JADI 'DONE' (Gunakan try/catch agar tidak mengganggu response utama)
-    if (user_id) {
-      console.log(`[CREATE_ORDER] Setting queue status to DONE for ${user_id}`);
-      adminSupabase
-        .from('queue_slots')
-        .update({ status: 'done' })
-        .eq('user_id', user_id)
-        .then(() => console.log(`[QUEUE_UPDATE] Success for ${user_id}`))
-        .catch(e => console.error(`[QUEUE_UPDATE] Failed:`, e));
-    }
+    // 8. Update Filled Slots
+    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: batch_id });
 
-    console.log(`[CREATE_ORDER] SUCCESS: ${orderRef}`);
+    console.log(`[CREATE_ORDER] SUCCESS: ${orderRef} (${gateway})`);
     return res.json({
       success: true,
       id: newOrder.id,
       order_ref: orderRef,
       amount: finalAmount,
-      batch_name: batch.name
+      batch_name: batch.name,
+      payment_url: paymentData.paymentUrl || null, // Duitku might return paymentUrl
+      token: paymentData.token || null // Midtrans uses token
     });
 
   } catch (err) {
-    console.error('create-order error:', err);
-    res.status(500).json({ success: false, error: err.message });
+    console.error('[CREATE_ORDER_CRASH]', err);
+    res.status(500).json({
+      success: false,
+      error: `Server Error: ${err.message || 'Unknown'}`,
+      details: err.details || null
+    });
   }
 });
 
@@ -157,7 +214,7 @@ router.post('/submit-proof', async (req, res) => {
 
   try {
     const query = supabase.from('orders').update({ proof_url: proof_url, status: 'pending' });
-    
+
     // Filter by ID if available, otherwise fallback to order_ref
     if (id) query.eq('id', id);
     else query.eq('order_ref', order_ref);
@@ -165,8 +222,8 @@ router.post('/submit-proof', async (req, res) => {
     const { data: updateData, error } = await query.select();
 
     if (error) {
-       console.error('[PROOF_SUBMIT_ERROR]', error);
-       throw error;
+      console.error('[PROOF_SUBMIT_ERROR]', error);
+      throw error;
     }
 
     console.log(`[PROOF_SUBMIT_SUCCESS] Updated rows: ${updateData?.length}`);
