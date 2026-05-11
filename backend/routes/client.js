@@ -165,7 +165,7 @@ router.post('/create-order', async (req, res) => {
         payment_gateway: gateway,
         proof_url: fileName,
         sequence: currentSeq,
-        payment_token: paymentData.token || null
+        midtrans_token: paymentData.token || null
       })
       .select()
       .single();
