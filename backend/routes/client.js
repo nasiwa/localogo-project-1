@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createTransaction, snap } = require('../services/paymentProvider');
 const { generateInvoicePDF, sendInvoiceEmail } = require('../utils/invoice');
+const { adminSupabase } = require('../supabaseClient');
 
 /**
  * HELPERS
@@ -22,7 +23,7 @@ router.get('/config', (req, res) => {
   });
 });
 
-const { sendInvoiceEmail } = require('../utils/invoice');
+
 
 /**
  * POST /api/simulate-payment-success
@@ -69,7 +70,7 @@ router.get('/batches', async (req, res) => {
   }
 });
 
-const { adminSupabase } = require('../supabaseClient');
+
 
 /**
  * POST /api/create-order
