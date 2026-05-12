@@ -58,7 +58,7 @@ router.post('/simulate-payment-success', async (req, res) => {
     if (order) {
       console.log(`[AUTO_EMAIL] Generating invoice and sending email for ${order.order_ref}...`);
       try {
-        const pdfBuffer = await generateInvoicePDF({
+        const mappedOrder = {
           order_ref: order.order_ref,
           full_name: order.full_name,
           email: order.email,
@@ -69,9 +69,11 @@ router.post('/simulate-payment-success', async (req, res) => {
           wa_group_url: order.batches?.wa_group_url,
           paid_at: order.paid_at,
           amount: order.amount
-        });
+        };
+
+        const pdfBuffer = await generateInvoicePDF(mappedOrder);
         
-        await sendInvoiceEmail(order, pdfBuffer);
+        await sendInvoiceEmail(mappedOrder, pdfBuffer);
         console.log(`[AUTO_EMAIL] Success for ${order.order_ref}`);
       } catch (e) {
         console.error('[EMAIL_GENERATE_ERR]', e);

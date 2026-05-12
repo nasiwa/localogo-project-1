@@ -175,8 +175,18 @@ router.post('/order/:orderRef/confirm-manual', async (req, res) => {
     if (error) throw error;
     if (data?.success) {
       try {
-        const pdfBuffer = await generateInvoicePDF(data);
-        await sendInvoiceEmail(data, pdfBuffer);
+        const { data: fullOrder } = await adminSupabase.from('orders').select('*, batches(*)').eq('order_ref', req.params.orderRef).single();
+        if (fullOrder) {
+          const mappedOrder = {
+            ...fullOrder,
+            batch_name: fullOrder.batches?.name,
+            batch_num: fullOrder.batches?.name ? parseInt(fullOrder.batches.name.replace(/\D/g, '')) || 1 : 1,
+            sequence: fullOrder.sequence_num,
+            wa_group_url: fullOrder.batches?.wa_group_url,
+          };
+          const pdfBuffer = await generateInvoicePDF(mappedOrder);
+          await sendInvoiceEmail(mappedOrder, pdfBuffer);
+        }
       } catch (e) { console.error('Email error:', e); }
     }
     res.json({ success: true, message: 'Dikonfirmasi' });
@@ -202,8 +212,18 @@ router.post('/order/manual', async (req, res) => {
       const { data: conf } = await adminSupabase.rpc('confirm_payment', { p_order_ref: orderRef });
       if (conf?.success) {
         try {
-          const pdf = await generateInvoicePDF({ ...conf, order_ref: orderRef, full_name, email, whatsapp: whatsapp || 'N/A', paid_at: new Date().toISOString() });
-          await sendInvoiceEmail({ ...conf, order_ref: orderRef, full_name, email, whatsapp: whatsapp || 'N/A' }, pdf);
+          const { data: fullOrder } = await adminSupabase.from('orders').select('*, batches(*)').eq('order_ref', orderRef).single();
+          if (fullOrder) {
+            const mappedOrder = {
+              ...fullOrder,
+              batch_name: fullOrder.batches?.name,
+              batch_num: fullOrder.batches?.name ? parseInt(fullOrder.batches.name.replace(/\D/g, '')) || 1 : 1,
+              sequence: fullOrder.sequence_num,
+              wa_group_url: fullOrder.batches?.wa_group_url,
+            };
+            const pdf = await generateInvoicePDF(mappedOrder);
+            await sendInvoiceEmail(mappedOrder, pdf);
+          }
         } catch (e) { console.error('Email error:', e); }
       }
     }

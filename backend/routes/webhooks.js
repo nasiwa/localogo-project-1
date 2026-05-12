@@ -30,16 +30,26 @@ router.post('/midtrans-webhook', async (req, res) => {
     const { data: confirmData, error: confirmErr } = await supabase.rpc('confirm_payment', { p_order_ref: order_id });
     if (confirmErr || !confirmData?.success) return res.status(500).json({ error: 'Confirmation failed' });
 
+    // Fetch full order to get joined batch data
+    const { data: fullOrder, error: fetchErr } = await supabase
+      .from('orders')
+      .select('*, batches(*)')
+      .eq('order_ref', order_id)
+      .single();
+
+    if (fetchErr || !fullOrder) return res.status(500).json({ error: 'Failed to fetch order details' });
+
     const order = {
-      order_ref: confirmData.order_ref,
-      full_name: confirmData.full_name,
-      email: confirmData.email,
-      whatsapp: confirmData.whatsapp || 'N/A',
-      batch_name: confirmData.batch_name,
-      batch_num: confirmData.batch_num,
-      sequence: confirmData.sequence,
-      wa_group_url: confirmData.wa_group_url,
-      paid_at: new Date().toISOString(),
+      order_ref: fullOrder.order_ref,
+      full_name: fullOrder.full_name,
+      email: fullOrder.email,
+      whatsapp: fullOrder.whatsapp || 'N/A',
+      batch_name: fullOrder.batches?.name,
+      batch_num: fullOrder.batches?.name ? parseInt(fullOrder.batches.name.replace(/\D/g, '')) || 1 : 1,
+      sequence: fullOrder.sequence_num,
+      wa_group_url: fullOrder.batches?.wa_group_url,
+      paid_at: fullOrder.paid_at || new Date().toISOString(),
+      amount: fullOrder.amount
     };
 
     try {
@@ -70,21 +80,31 @@ router.post('/duitku-webhook', async (req, res) => {
     const { data: confirmData, error: confirmErr } = await supabase.rpc('confirm_payment', { p_order_ref: merchantOrderId });
     if (confirmErr || !confirmData?.success) return res.status(500).json({ error: 'Confirmation failed' });
 
+    // Fetch full order to get joined batch data
+    const { data: fullOrder, error: fetchErr } = await supabase
+      .from('orders')
+      .select('*, batches(*)')
+      .eq('order_ref', merchantOrderId)
+      .single();
+
+    if (fetchErr || !fullOrder) return res.status(500).json({ error: 'Failed to fetch order details' });
+
     const order = {
-      order_ref: confirmData.order_ref,
-      full_name: confirmData.full_name,
-      email: confirmData.email,
-      whatsapp: confirmData.whatsapp || 'N/A',
-      batch_name: confirmData.batch_name,
-      batch_num: confirmData.batch_num,
-      sequence: confirmData.sequence,
-      wa_group_url: confirmData.wa_group_url,
-      paid_at: new Date().toISOString(),
+      order_ref: fullOrder.order_ref,
+      full_name: fullOrder.full_name,
+      email: fullOrder.email,
+      whatsapp: fullOrder.whatsapp || 'N/A',
+      batch_name: fullOrder.batches?.name,
+      batch_num: fullOrder.batches?.name ? parseInt(fullOrder.batches.name.replace(/\D/g, '')) || 1 : 1,
+      sequence: fullOrder.sequence_num,
+      wa_group_url: fullOrder.batches?.wa_group_url,
+      paid_at: fullOrder.paid_at || new Date().toISOString(),
+      amount: fullOrder.amount
     };
 
     try {
       const pdfBuffer = await generateInvoicePDF(order);
-      await sendInvoiceEmail(confirmData, pdfBuffer); // Note: confirmData has all info
+      await sendInvoiceEmail(order, pdfBuffer);
     } catch (err) { console.error('Duitku Webhook Email Error:', err); }
 
     res.json({ success: true });
