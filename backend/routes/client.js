@@ -381,7 +381,21 @@ router.get('/download-invoice/:orderRef', async (req, res) => {
     if (error || !order) return res.status(404).send('Order tidak ditemukan');
     if (order.status !== 'paid') return res.status(403).send('Order belum lunas');
 
-    const pdfBuffer = await generateInvoicePDF(order);
+    // Map database fields to what generateInvoicePDF expects
+    const mappedOrder = {
+      order_ref: order.order_ref,
+      full_name: order.full_name,
+      email: order.email,
+      whatsapp: order.whatsapp || 'N/A',
+      batch_name: order.batch?.name,
+      batch_num: order.batch?.name ? parseInt(order.batch.name.replace(/\D/g, '')) || 1 : 1,
+      sequence: order.sequence_num,
+      wa_group_url: order.batch?.wa_group_url,
+      paid_at: order.paid_at,
+      amount: order.amount
+    };
+
+    const pdfBuffer = await generateInvoicePDF(mappedOrder);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Invoice_${orderRef}.pdf`);
     res.send(pdfBuffer);
