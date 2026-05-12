@@ -32,20 +32,50 @@ router.get('/config', (req, res) => {
 router.post('/simulate-payment-success', async (req, res) => {
   const { order_ref } = req.body;
   try {
-    // 1. Update status to 'paid'
+    // 1. Confirm Payment via RPC (This handles sequence_num and quota correctly)
+    const { data: confirmData, error: rpcError } = await adminSupabase.rpc('confirm_payment', { p_order_ref: order_ref });
+    
+    if (rpcError) {
+      console.error('[CONFIRM_RPC_ERR]', rpcError);
+      throw rpcError;
+    }
+    
+    if (!confirmData.success) {
+       console.error('[CONFIRM_LOGIC_ERR]', confirmData.error);
+       throw new Error(confirmData.error);
+    }
+
+    // 2. Fetch full order details for the PDF
     const { data: order, error } = await adminSupabase
       .from('orders')
-      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .select('*, batches(*)')
       .eq('order_ref', order_ref)
-      .select('*, batch:batches(*)')
       .single();
       
     if (error) throw error;
 
-    // 2. Trigger Auto Email
+    // 3. Generate PDF and Send Email
     if (order) {
-      console.log(`[AUTO_EMAIL] Sending invoice for ${order.order_ref}...`);
-      sendInvoiceEmail(order).catch(e => console.error('[EMAIL_ERR]', e));
+      console.log(`[AUTO_EMAIL] Generating invoice and sending email for ${order.order_ref}...`);
+      try {
+        const pdfBuffer = await generateInvoicePDF({
+          order_ref: order.order_ref,
+          full_name: order.full_name,
+          email: order.email,
+          whatsapp: order.whatsapp || 'N/A',
+          batch_name: order.batches?.name,
+          batch_num: order.batches?.name ? parseInt(order.batches.name.replace(/\D/g, '')) || 1 : 1,
+          sequence: order.sequence_num, // Now this will have a valid number!
+          wa_group_url: order.batches?.wa_group_url,
+          paid_at: order.paid_at,
+          amount: order.amount
+        });
+        
+        await sendInvoiceEmail(order, pdfBuffer);
+        console.log(`[AUTO_EMAIL] Success for ${order.order_ref}`);
+      } catch (e) {
+        console.error('[EMAIL_GENERATE_ERR]', e);
+      }
     }
 
     res.json({ success: true });
