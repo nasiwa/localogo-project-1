@@ -10,8 +10,16 @@ async function loadBatches() {
       select.innerHTML = '';
       
       if (currentBatches.length === 0) {
-        select.innerHTML = '<option value="">Tidak ada batch aktif</option>';
+        select.innerHTML = '<option value="">Tidak ada batch aktif saat ini</option>';
         document.getElementById('hero-batch-name').innerText = "CLOSED";
+        // Disable button and show message
+        const btn = document.getElementById('btn-pay-sim');
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>Pendaftaran Ditutup Sementara</span>';
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+        }
         return;
       }
 

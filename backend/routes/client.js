@@ -62,14 +62,18 @@ router.get('/batches', async (req, res) => {
   try {
     const supabase = req.app.get('getSupabase')();
     await supabase.rpc('auto_reveal_batches');
+    
+    // public_batches view sudah filter status='active'|'closed' secara otomatis
+    // Kita hanya tampilkan yang benar-benar aktif (bukan closed) ke customer
     const { data, error } = await supabase
       .from('public_batches')
       .select('*')
-      .in('status', ['OPEN', 'ACTIVE']); // Menerima OPEN atau ACTIVE
+      .eq('status', 'active'); // lowercase sesuai schema database
       
     if (error) throw error;
-    res.json({ success: true, batches: data });
+    res.json({ success: true, batches: data || [] });
   } catch (err) {
+    console.error('[BATCHES_ERR]', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
