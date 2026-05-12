@@ -63,8 +63,8 @@ async function createTransaction(gateway, params) {
     },
     enabled_payments: ['qris', 'gopay', 'shopeepay', 'bca_va', 'bni_va', 'mandiri_bill', 'permata_va'],
     customer_details: {
-      first_name: 'LOCALOGO -',
-      last_name: full_name.substring(0, 30), // Limit length just in case
+      first_name: 'Localogo-PO Ospek',
+      last_name: '', // Empty so it doesn't append the user's name
       email: email,
       phone: whatsapp,
     },
