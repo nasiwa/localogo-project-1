@@ -85,15 +85,14 @@ async function startSimulatedPayment() {
   btn.innerHTML = '<span>Memproses...</span>';
 
   try {
-    const res = await fetch('/api/create-order', {
+    const res = await fetch('/api/create-midtrans-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         full_name: name,
         email: email,
         whatsapp: wa,
-        batch_id: batchId,
-        paymentMethod: 'midtrans'
+        batch_id: batchId
       })
     });
 

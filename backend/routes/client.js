@@ -81,6 +81,101 @@ router.get('/batches', async (req, res) => {
 
 
 /**
+ * POST /api/create-midtrans-order
+ * Dedicated route for Midtrans payment page — no access_code required
+ */
+router.post('/create-midtrans-order', async (req, res) => {
+  const { full_name, email, whatsapp, batch_id } = req.body;
+
+  if (!full_name || !email || !whatsapp || !batch_id) {
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap. Isi semua field.' });
+  }
+
+  const orderRef = genOrderRef();
+  const finalAmount = 102500; // Rp100.000 + Rp2.500 admin fee
+
+  try {
+    // 1. Cek Batch masih aktif
+    const { data: batch, error: bErr } = await adminSupabase
+      .from('batches')
+      .select('id, name, total_slots, filled_slots, status')
+      .eq('id', batch_id)
+      .eq('status', 'active')
+      .single();
+
+    if (bErr || !batch) {
+      return res.status(400).json({ success: false, error: 'Batch tidak tersedia atau sudah ditutup.' });
+    }
+
+    // 2. Cek Duplikat WhatsApp
+    const { data: existing } = await adminSupabase
+      .from('orders')
+      .select('id, status')
+      .eq('batch_id', batch_id)
+      .eq('whatsapp', whatsapp)
+      .in('status', ['paid', 'pending'])
+      .maybeSingle();
+
+    if (existing) {
+      const msg = existing.status === 'paid'
+        ? '⚠️ Nomor WhatsApp ini sudah memiliki slot aktif di Batch ini.'
+        : '⚠️ Pendaftaran nomor ini sedang diproses (Pending). Selesaikan pembayaran sebelumnya.';
+      return res.status(400).json({ success: false, error: msg });
+    }
+
+    // 3. Buat Midtrans Snap Token
+    let snapToken = null;
+    try {
+      const paymentData = await createTransaction('midtrans', {
+        orderRef,
+        amount: finalAmount,
+        full_name,
+        email,
+        whatsapp,
+        batchName: batch.name,
+        backendUrl: process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`,
+        frontendUrl: process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`
+      });
+      snapToken = paymentData.token;
+    } catch (payErr) {
+      console.error('[MIDTRANS_CREATE_ERR]', payErr);
+      return res.status(500).json({ success: false, error: `Gagal membuat transaksi Midtrans: ${payErr.message}` });
+    }
+
+    // 4. Insert Order ke database
+    const { data: newOrder, error: insErr } = await adminSupabase
+      .from('orders')
+      .insert({
+        order_ref: orderRef,
+        batch_id: batch_id,
+        full_name,
+        email,
+        whatsapp,
+        amount: finalAmount,
+        status: 'pending',
+        payment_gateway: 'midtrans',
+        midtrans_token: snapToken
+      })
+      .select()
+      .single();
+
+    if (insErr) throw insErr;
+
+    console.log(`[MIDTRANS_ORDER] Created: ${orderRef}`);
+    return res.json({
+      success: true,
+      order_ref: orderRef,
+      midtrans_token: snapToken,
+      batch_name: batch.name
+    });
+
+  } catch (err) {
+    console.error('[MIDTRANS_ORDER_CRASH]', err);
+    res.status(500).json({ success: false, error: `Server Error: ${err.message}` });
+  }
+});
+
+/**
  * POST /api/create-order
  */
 router.post('/create-order', async (req, res) => {
