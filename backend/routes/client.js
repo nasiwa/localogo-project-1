@@ -65,7 +65,7 @@ router.get('/batches', async (req, res) => {
     const { data, error } = await supabase
       .from('public_batches')
       .select('*')
-      .eq('status', 'OPEN'); // Hanya ambil yang OPEN
+      .in('status', ['OPEN', 'ACTIVE']); // Menerima OPEN atau ACTIVE
       
     if (error) throw error;
     res.json({ success: true, batches: data });
