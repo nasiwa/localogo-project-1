@@ -144,12 +144,14 @@ async function confirmPayment(orderRef) {
 }
 
 function showSuccessModal(orderRef) {
+  document.getElementById('res-name').textContent = document.getElementById('sim-name').value;
   document.getElementById('res-oid').textContent = orderRef;
   document.getElementById('res-batch').textContent = document.getElementById('sum-batch').textContent;
+  document.getElementById('res-email').textContent = document.getElementById('sim-email').value;
   
-  // Link download invoice PDF
+  // Link download invoice PDF (Public Route)
   const downloadBtn = document.getElementById('download-link');
-  downloadBtn.href = `/api/admin/orders/download-invoice/${orderRef}`;
+  downloadBtn.href = `/api/download-invoice/${orderRef}`;
   
   document.getElementById('success-modal').classList.add('show');
 }

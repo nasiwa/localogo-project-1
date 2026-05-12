@@ -336,6 +336,31 @@ router.post('/create-order', async (req, res) => {
 });
 
 /**
+ * GET /api/download-invoice/:orderRef
+ * Publicly accessible download for customers
+ */
+router.get('/download-invoice/:orderRef', async (req, res) => {
+  const { orderRef } = req.params;
+  try {
+    const { data: order, error } = await adminSupabase
+      .from('orders')
+      .select('*, batch:batches(*)')
+      .eq('order_ref', orderRef)
+      .single();
+
+    if (error || !order) return res.status(404).send('Order tidak ditemukan');
+    if (order.status !== 'paid') return res.status(403).send('Order belum lunas');
+
+    const pdfBuffer = await generateInvoicePDF(order);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice_${orderRef}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+/**
  * POST /api/submit-proof
  */
 router.post('/submit-proof', async (req, res) => {
