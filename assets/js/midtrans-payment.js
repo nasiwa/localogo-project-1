@@ -1,52 +1,59 @@
-/**
- * Midtrans Simulator Logic
- */
+let currentBatches = [];
 
-let activeBatches = [];
-
-async function init() {
+async function loadBatches() {
   try {
-    // Fetch Batches
-    const resB = await fetch('/api/batches');
-    const dataB = await resB.json();
-    if (dataB.success) {
-      activeBatches = dataB.batches;
-      renderBatches();
-    }
-
-    // Fetch Config
-    const resC = await fetch('/api/config');
-    const dataC = await resC.json();
-    if (dataC.midtransClientKey) {
-      const snapScript = document.querySelector('script[src*="snap.js"]');
-      if (snapScript) {
-        snapScript.setAttribute('data-client-key', dataC.midtransClientKey);
+    const res = await fetch('/api/batches');
+    const data = await res.json();
+    if (data.success) {
+      currentBatches = data.batches;
+      const select = document.getElementById('sim-batch');
+      select.innerHTML = '';
+      
+      if (currentBatches.length === 0) {
+        select.innerHTML = '<option value="">Tidak ada batch aktif</option>';
+        document.getElementById('hero-batch-name').innerText = "CLOSED";
+        return;
       }
+
+      currentBatches.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = `${b.name} (Sisa: ${b.quota - b.paid_count})`;
+        select.appendChild(opt);
+      });
+
+      // Set default batch
+      updateSummary();
+      const firstBatch = currentBatches[0].name;
+      document.getElementById('hero-batch-name').innerText = firstBatch;
     }
   } catch (err) {
-    console.error('Initialization error:', err);
+    console.error('Failed to load batches:', err);
   }
-}
-
-function renderBatches() {
-  const select = document.getElementById('sim-batch');
-  select.innerHTML = activeBatches.map(b => `
-    <option value="${b.id}">${b.name} (${b.filled_slots}/${b.total_slots} Terisi)</option>
-  `).join('');
-  updateSummary();
 }
 
 function updateSummary() {
   const select = document.getElementById('sim-batch');
-  const batchName = select.options[select.selectedIndex]?.text.split(' (')[0] || '—';
-  const sumBatch = document.getElementById('sum-batch');
-  if (sumBatch) sumBatch.innerText = batchName;
+  const batchId = select.value;
+  const batch = currentBatches.find(b => b.id == batchId);
+  
+  if (batch) {
+    document.getElementById('sum-batch').textContent = batch.name;
+    document.getElementById('hero-batch-name').innerText = batch.name;
+  } else {
+    document.getElementById('sum-batch').textContent = '—';
+  }
 }
 
+// WhatsApp input: Only numbers
+document.getElementById('sim-wa').addEventListener('input', function(e) {
+  this.value = this.value.replace(/[^0-9]/g, '');
+});
+
 async function startSimulatedPayment() {
-  const name = document.getElementById('sim-name').value;
-  const email = document.getElementById('sim-email').value;
-  const wa = document.getElementById('sim-wa').value;
+  const name = document.getElementById('sim-name').value.trim();
+  const email = document.getElementById('sim-email').value.trim();
+  const wa = document.getElementById('sim-wa').value.trim();
   const batchId = document.getElementById('sim-batch').value;
 
   if (!name || !email || !wa || !batchId) {
@@ -54,14 +61,23 @@ async function startSimulatedPayment() {
     return;
   }
 
+  // Strict Email Validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email) || !email.endsWith('.com')) {
+    alert('Format email tidak valid. Pastikan diakhiri dengan .com (Contoh: nama@gmail.com)');
+    return;
+  }
+
+  // Confirmation Popup
+  const confirmEmail = confirm(`Apakah email ini sudah benar?\n\n👉 ${email}\n\nEmail ini akan digunakan untuk mengirimkan Invoice PDF dan Link Grup WhatsApp resmi.`);
+  if (!confirmEmail) return;
+
   const btn = document.getElementById('btn-pay-sim');
-  const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span>Memproses...</span>';
 
   try {
-    // 1. Create order via API
-    const response = await fetch('/api/create-order', {
+    const res = await fetch('/api/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -69,80 +85,67 @@ async function startSimulatedPayment() {
         email: email,
         whatsapp: wa,
         batch_id: batchId,
-        gateway: 'midtrans',
-        access_code: 'PUBLIC'
+        paymentMethod: 'midtrans'
       })
     });
 
-    const result = await response.json();
-
-    if (!result.success) {
-      alert('Error: ' + result.error);
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-
-    // 2. Trigger Midtrans Snap
-    if (window.snap) {
-      window.snap.pay(result.token, {
-        onSuccess: async function(res) {
-          // Notify backend of success (to update status immediately in admin)
-          await confirmSuccess(result.order_ref);
-          showSuccess(result.order_ref, name, email);
+    const data = await res.json();
+    if (data.success && data.midtrans_token) {
+      window.snap.pay(data.midtrans_token, {
+        onSuccess: async function(result) {
+          await confirmPayment(data.order_ref);
         },
-        onPending: function(res) {
-          alert('Pembayaran pending. Silakan selesaikan sesuai instruksi.');
+        onPending: function(result) {
+          alert('Pembayaran tertunda. Silakan selesaikan pembayaran Anda.');
           location.reload();
         },
-        onError: function(res) {
+        onError: function(result) {
           alert('Pembayaran gagal. Silakan coba lagi.');
-          btn.disabled = false;
-          btn.innerHTML = originalText;
+          location.reload();
         },
         onClose: function() {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
+          alert('Anda menutup jendela pembayaran sebelum selesai.');
+          location.reload();
         }
       });
     } else {
-      alert('Simulasi: Token Snap diterima. Mengalihkan ke sukses...');
-      await confirmSuccess(result.order_ref);
-      showSuccess(result.order_ref, name, email);
+      alert('Error: ' + (data.error || 'Gagal membuat pesanan'));
     }
-
   } catch (err) {
-    console.error('Submit Error:', err);
+    console.error(err);
     alert('Terjadi kesalahan koneksi.');
+  } finally {
     btn.disabled = false;
-    btn.innerHTML = originalText;
+    btn.innerHTML = '<span>Lanjut ke Pembayaran</span><span>→</span>';
   }
 }
 
-async function confirmSuccess(oid) {
+async function confirmPayment(orderRef) {
   try {
-    await fetch('/api/simulate-payment-success', {
+    const res = await fetch('/api/simulate-payment-success', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_ref: oid })
+      body: JSON.stringify({ order_ref: orderRef })
     });
+    const data = await res.json();
+    if (data.success) {
+      showSuccessModal(orderRef);
+    }
   } catch (err) {
-    console.error('Confirm Error:', err);
+    console.error('Confirm error:', err);
   }
 }
 
-function showSuccess(oid, name, email) {
-  const select = document.getElementById('sim-batch');
-  const batchName = select.options[select.selectedIndex]?.text.split(' (')[0] || '—';
-
-  document.getElementById('res-oid').innerText = oid;
-  document.getElementById('res-name').innerText = name.toUpperCase();
-  document.getElementById('res-email').innerText = email;
-  document.getElementById('res-batch').innerText = batchName;
-  document.getElementById('download-link').href = `/api/invoice/${oid}`;
+function showSuccessModal(orderRef) {
+  document.getElementById('res-oid').textContent = orderRef;
+  document.getElementById('res-batch').textContent = document.getElementById('sum-batch').textContent;
   
-  document.getElementById('success-modal').classList.add('active');
-  document.getElementById('success-modal').style.display = 'flex';
+  // Link download invoice PDF
+  const downloadBtn = document.getElementById('download-link');
+  downloadBtn.href = `/api/admin/orders/download-invoice/${orderRef}`;
+  
+  document.getElementById('success-modal').classList.add('show');
 }
 
-init();
+// Init
+loadBatches();
