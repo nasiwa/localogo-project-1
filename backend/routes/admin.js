@@ -282,4 +282,49 @@ router.post('/pickup/:orderRef', async (req, res) => {
   }
 });
 
+// ── ACCESS CODES MANAGEMENT ──────────────────────────────────────
+router.get('/access-codes', async (req, res) => {
+  try {
+    const { data, error } = await adminSupabase
+      .from('access_codes')
+      .select('code, max_uses, use_count, batch_id, created_at, batches(name)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, codes: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/access-codes', async (req, res) => {
+  try {
+    const { code, max_uses, batch_id } = req.body;
+    if (!code || !batch_id) return res.status(400).json({ success: false, error: 'Kode dan batch_id wajib diisi.' });
+    const normalizedCode = code.trim().toUpperCase();
+    const { data, error } = await adminSupabase
+      .from('access_codes')
+      .insert({ code: normalizedCode, max_uses: parseInt(max_uses) || 100, batch_id, use_count: 0 })
+      .select('code, max_uses, use_count, batch_id, created_at')
+      .single();
+    if (error) throw error;
+    res.json({ success: true, code: data });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ success: false, error: 'Kode sudah ada, gunakan kode lain.' });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/access-codes/:code', async (req, res) => {
+  try {
+    const { error } = await adminSupabase
+      .from('access_codes')
+      .delete()
+      .eq('code', req.params.code.toUpperCase());
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

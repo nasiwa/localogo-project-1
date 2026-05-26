@@ -238,12 +238,33 @@ router.post('/create-order', async (req, res) => {
     }
 
     // 2. Cek Batch
-    const { data: batch, error: bErr } = await adminSupabase
-      .from('batches')
-      .select('id, name, total_slots, filled_slots')
-      .eq('id', batch_id)
-      .eq('status', 'active')
-      .single();
+    let batch = null;
+    let bErr = null;
+
+    if (batch_id) {
+      // Cari batch berdasarkan ID yang dikirim
+      const result = await adminSupabase
+        .from('batches')
+        .select('id, name, total_slots, filled_slots')
+        .eq('id', batch_id)
+        .eq('status', 'active')
+        .single();
+      batch = result.data;
+      bErr = result.error;
+    }
+
+    // Fallback: jika batch_id kosong atau tidak ketemu, cari batch aktif secara otomatis
+    if (!batch) {
+      const fallback = await adminSupabase
+        .from('batches')
+        .select('id, name, total_slots, filled_slots')
+        .eq('status', 'active')
+        .order('sort_order')
+        .limit(1)
+        .single();
+      batch = fallback.data;
+      bErr = fallback.error;
+    }
 
     if (bErr || !batch) {
       console.error('[BATCH_ERR]', bErr);
@@ -251,11 +272,14 @@ router.post('/create-order', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Batch tidak tersedia atau sudah penuh' });
     }
 
+    // Pakai batch_id yang sebenarnya (dari batch yang ditemukan)
+    const resolvedBatchId = batch.id;
+
     // 3. Cek Duplikat WA
     const { data: existing } = await adminSupabase
       .from('orders')
       .select('id, status')
-      .eq('batch_id', batch_id)
+      .eq('batch_id', resolvedBatchId)
       .eq('whatsapp', whatsapp)
       .in('status', ['paid', 'pending'])
       .maybeSingle();
@@ -324,7 +348,7 @@ router.post('/create-order', async (req, res) => {
       .from('orders')
       .insert({
         order_ref: orderRef,
-        batch_id: batch_id,
+        batch_id: resolvedBatchId,
         full_name: full_name,
         email: email,
         whatsapp: whatsapp,
@@ -344,7 +368,7 @@ router.post('/create-order', async (req, res) => {
     }
 
     // 8. Update Filled Slots
-    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: batch_id });
+    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: resolvedBatchId });
 
     console.log(`[CREATE_ORDER] SUCCESS: ${orderRef} (${gateway})`);
     return res.json({

@@ -87,6 +87,7 @@ function showPage(page) {
   if (page === 'dashboard') loadDashboard();
   if (page === 'batches') loadAdminBatches();
   if (page === 'orders') loadOrders();
+  if (page === 'codes') loadAccessCodes();
 }
 
 async function refreshAll() {
@@ -668,5 +669,127 @@ async function toggleMasterGate() {
     showToast('⚠ Gagal menyambung ke server');
   } finally {
     btn.disabled = false;
+  }
+}
+
+// ── ACCESS CODES MANAGEMENT ────────────────────────────────────
+let _allBatchesForCode = [];
+
+async function loadAccessCodes() {
+  try {
+    const h = { 'x-admin-token': getAdminToken() };
+    const [cRes, bRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/admin/access-codes`, { headers: h }),
+      fetch(`${BACKEND_URL}/api/admin/batches`, { headers: h })
+    ]);
+    const { codes } = await cRes.json();
+    const { batches } = await bRes.json();
+    _allBatchesForCode = batches || [];
+
+    const tbody = document.getElementById('codes-tbody');
+    if (!tbody) return;
+    if (!codes || codes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--txm); padding:30px;">Belum ada kode sesi. Klik "+ Tambah Kode" untuk membuat kode baru.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = codes.map(c => {
+      const sisa = c.max_uses - c.use_count;
+      const batchName = c.batches?.name || '—';
+      const pct = Math.round((c.use_count / c.max_uses) * 100);
+      const sisakColor = sisa <= 0 ? 'color:var(--red); font-weight:700;' : sisa < 20 ? 'color:#f59e0b; font-weight:700;' : 'color:var(--green); font-weight:700;';
+      return `<tr>
+        <td style="font-family:monospace; font-weight:700; font-size:13px; letter-spacing:1px;">${c.code}</td>
+        <td><span class="pill active" style="font-size:10px;">${batchName}</span></td>
+        <td style="text-align:center;">${c.max_uses}</td>
+        <td style="text-align:center;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="flex:1; background:var(--bg3); border-radius:4px; height:6px;">
+              <div style="width:${Math.min(pct,100)}%; background:var(--td); height:6px; border-radius:4px;"></div>
+            </div>
+            <span>${c.use_count}</span>
+          </div>
+        </td>
+        <td style="${sisakColor}">${sisa}</td>
+        <td style="font-size:10px; color:var(--txm);">${new Date(c.created_at).toLocaleDateString('id-ID')}</td>
+        <td style="text-align:right;">
+          <button class="btn-sm" style="background:rgba(224,85,85,0.12); color:var(--red); border:1px solid rgba(224,85,85,0.3);" onclick="deleteCode('${c.code}')">Hapus</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('loadAccessCodes error:', e);
+    showToast('⚠️ Gagal memuat kode sesi');
+  }
+}
+
+async function openAddCodeModal() {
+  // Load batches for dropdown
+  if (_allBatchesForCode.length === 0) {
+    const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
+    const { batches } = await res.json();
+    _allBatchesForCode = batches || [];
+  }
+  const select = document.getElementById('new-code-batch');
+  if (select) {
+    select.innerHTML = _allBatchesForCode.map(b => `<option value="${b.id}">${b.name} (${b.status})</option>`).join('');
+  }
+  const modal = document.getElementById('add-code-modal');
+  if (modal) modal.classList.add('show');
+}
+
+function closeAddCodeModal() {
+  const modal = document.getElementById('add-code-modal');
+  if (modal) modal.classList.remove('show');
+}
+
+async function saveNewCode() {
+  const btn = document.getElementById('btn-save-code');
+  const code = document.getElementById('new-code-input')?.value.trim().toUpperCase();
+  const batch_id = document.getElementById('new-code-batch')?.value;
+  const max_uses = document.getElementById('new-code-maxuses')?.value;
+
+  if (!code) return showToast('⚠️ Isi kode akses terlebih dahulu');
+  if (!batch_id) return showToast('⚠️ Pilih batch tujuan');
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/access-codes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
+      body: JSON.stringify({ code, batch_id, max_uses: parseInt(max_uses) || 100 })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Kode sesi berhasil ditambahkan!');
+      closeAddCodeModal();
+      document.getElementById('new-code-input').value = '';
+      loadAccessCodes();
+    } else {
+      showToast('❌ ' + data.error);
+    }
+  } catch (e) {
+    showToast('❌ Gagal menyambung ke server');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Simpan Kode'; }
+  }
+}
+
+async function deleteCode(code) {
+  if (!confirm(`Hapus kode sesi "${code}"? Data penggunaan akan hilang permanen.`)) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/access-codes/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getAdminToken() }
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('✅ Kode berhasil dihapus');
+      loadAccessCodes();
+    } else {
+      showToast('❌ Gagal: ' + data.error);
+    }
+  } catch (e) {
+    showToast('❌ Gagal menyambung ke server');
   }
 }
