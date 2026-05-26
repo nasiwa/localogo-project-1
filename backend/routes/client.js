@@ -523,7 +523,7 @@ router.get('/invoice/:orderRef', async (req, res) => {
       email: order.email,
       whatsapp: order.whatsapp || 'N/A',
       batch_name: order.batches?.name,
-      batch_num: order.batch_id,
+      batch_num: parseInt(order.batches?.name?.replace(/\D/g, '')) || 1,
       sequence: order.sequence_num,
       wa_group_url: order.batches?.wa_group_url,
       paid_at: order.paid_at || order.created_at,
