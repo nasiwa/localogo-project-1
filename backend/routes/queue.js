@@ -42,7 +42,7 @@ router.post('/verify-code', async (req, res) => {
 
     const { data, error } = await adminSupabase
       .from('access_codes')
-      .select('code, use_count, max_uses, batch_id')
+      .select('code, use_count, max_uses, batch_id, batches(status)')
       .eq('code', normalizedCode)
       .maybeSingle();
 
@@ -51,6 +51,11 @@ router.post('/verify-code', async (req, res) => {
     
     if (data.use_count >= data.max_uses) {
       return res.json({ success: false, error: 'Kuota untuk kode sesi ini sudah penuh.' });
+    }
+
+    // Cek apakah batch yang terhubung masih aktif
+    if (!data.batch_id || data.batches?.status !== 'active') {
+      return res.json({ success: false, error: 'Kode ini sudah tidak berlaku. Gunakan kode sesi yang sesuai dengan batch yang sedang dibuka.' });
     }
 
     res.json({ success: true, batch_id: data.batch_id, code: normalizedCode });
