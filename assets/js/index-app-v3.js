@@ -149,7 +149,7 @@ function fileToBase64(file) {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error('Gagal membaca file. Coba pilih ulang foto bukti transfer.'));
   });
 }
 
@@ -165,13 +165,13 @@ async function handleBooking() {
   console.log("DEBUG handleBooking:", { nameVal, emailVal, waVal, proofFile, code, batchId });
 
   if (!nameVal || !emailVal || !waVal) return showToast('⚠️ Lengkapi nama, email, dan nomor WA');
-  
+
   // Validasi Email Ketat
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(emailVal)) {
     return showToast('⚠️ Format email tidak valid (contoh: nama@gmail.com)');
   }
-  
+
   if (!proofFile) return showToast('⚠️ Upload bukti transfer terlebih dahulu');
   if (!code) { showPanel('panel-enter-code'); return; }
 
@@ -221,7 +221,10 @@ async function handleBooking() {
       throw new Error(resData.error || 'Gagal mengirim pendaftaran');
     }
   } catch (err) {
-    showToast('⚠️ ' + err.message);
+    const errMsg = err instanceof Error
+      ? err.message
+      : (err?.message || err?.error || 'Terjadi kesalahan. Coba lagi.');
+    showToast('⚠️ ' + errMsg);
     if (btn) { btn.disabled = false; btn.innerHTML = oldHTML; }
   }
 }
