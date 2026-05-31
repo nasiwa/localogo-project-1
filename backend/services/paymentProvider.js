@@ -88,7 +88,6 @@ async function createTransaction(gateway, params) {
     },
     callbacks: {
       finish: `${frontendUrl}/midtrans_payment`,
-      notification: `${backendUrl}/api/midtrans-webhook`
     },
   };
 
