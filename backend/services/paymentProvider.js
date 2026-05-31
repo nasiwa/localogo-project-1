@@ -86,6 +86,10 @@ async function createTransaction(gateway, params) {
       unit: 'minutes',
       duration: 30,
     },
+    callbacks: {
+      finish: `${frontendUrl}/midtrans_payment`,
+      notification: `${backendUrl}/api/midtrans-webhook`
+    },
   };
 
   const snapResponse = await snap.createTransaction(midtransParams);
