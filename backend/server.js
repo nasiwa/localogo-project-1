@@ -69,12 +69,14 @@ const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhooks');
 const queueRoutes = require('./routes/queue');
 const cronRoutes = require('./routes/cron');
+const slotQueueRoutes = require('./routes/slotQueue');
 
 app.use('/api', clientRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', webhookRoutes); 
 app.use('/api/queue', queueRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/slot-queue', slotQueueRoutes);
 
 // ── GLOBAL ERROR HANDLER ─────────────────────────────────────────
 app.use((err, req, res, next) => {

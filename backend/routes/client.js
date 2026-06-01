@@ -211,42 +211,68 @@ router.post('/create-midtrans-order', async (req, res) => {
  * POST /api/create-order
  */
 router.post('/create-order', async (req, res) => {
-  const { full_name, email, whatsapp, batch_id, proof_base64, proof_ext, access_code, paymentMethod } = req.body;
+  const { full_name, email, whatsapp, batch_id, proof_base64, proof_ext, access_code, slot_token, paymentMethod } = req.body;
   const gateway = req.body.gateway || process.env.PAYMENT_GATEWAY || 'manual';
 
-  if (!full_name || !email || !whatsapp || !batch_id || !access_code) {
+  if (!full_name || !email || !whatsapp) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap.' });
   }
-
+  if (!access_code && !slot_token) {
+    return res.status(400).json({ success: false, error: 'Kode akses atau token diperlukan.' });
+  }
   if (gateway === 'manual' && !proof_base64) {
     return res.status(400).json({ success: false, error: 'Bukti transfer wajib diunggah untuk metode manual.' });
   }
 
   const orderRef = genOrderRef();
-  const normalizedCode = access_code.trim().toUpperCase();
+  let normalizedCode = null;
+  let resolvedBatchFromToken = null;
 
   try {
-    // 1. Atomic code claim
-    const { data: claimData, error: claimErr } = await adminSupabase
-      .rpc('increment_access_code', { p_code: normalizedCode });
+    if (slot_token) {
+      // ── JALUR TOKEN (WAR system) — bypass access_code ──
+      const { data: tokenData, error: tokenErr } = await adminSupabase
+        .from('slot_queue')
+        .select('id, batch_id, token_expires_at, token_used_at')
+        .eq('token', slot_token)
+        .single();
 
-    if (claimErr) throw claimErr;
-    const claimResult = claimData && claimData[0];
+      if (tokenErr || !tokenData) {
+        return res.status(400).json({ success: false, error: 'Token tidak valid.' });
+      }
+      if (tokenData.token_used_at) {
+        return res.status(400).json({ success: false, error: 'Token ini sudah digunakan sebelumnya.' });
+      }
+      if (new Date(tokenData.token_expires_at) < new Date()) {
+        return res.status(400).json({ success: false, error: 'Token sudah expired. Hubungi admin untuk slot baru.' });
+      }
+      resolvedBatchFromToken = tokenData;
+    } else {
+      // ── JALUR KODE SESI (existing system) ──
+      normalizedCode = access_code.trim().toUpperCase();
+      const { data: claimData, error: claimErr } = await adminSupabase
+        .rpc('increment_access_code', { p_code: normalizedCode });
 
-    if (!claimResult || !claimResult.success) {
-      return res.status(409).json({ success: false, error: 'Kuota untuk kode sesi ini sudah penuh atau kode tidak valid.' });
+      if (claimErr) throw claimErr;
+      const claimResult = claimData && claimData[0];
+
+      if (!claimResult || !claimResult.success) {
+        return res.status(409).json({ success: false, error: 'Kuota untuk kode sesi ini sudah penuh atau kode tidak valid.' });
+      }
     }
 
     // 2. Cek Batch
     let batch = null;
     let bErr = null;
 
-    if (batch_id) {
-      // Cari batch berdasarkan ID yang dikirim
+    // Jika dari slot_token → batch_id sudah diketahui
+    const effectiveBatchId = resolvedBatchFromToken?.batch_id || batch_id;
+
+    if (effectiveBatchId) {
       const result = await adminSupabase
         .from('batches')
         .select('id, name, total_slots, filled_slots')
-        .eq('id', batch_id)
+        .eq('id', effectiveBatchId)
         .eq('status', 'active')
         .single();
       batch = result.data;
@@ -268,7 +294,7 @@ router.post('/create-order', async (req, res) => {
 
     if (bErr || !batch) {
       console.error('[BATCH_ERR]', bErr);
-      await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
+      if (normalizedCode) await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
       return res.status(400).json({ success: false, error: 'Batch tidak tersedia atau sudah penuh' });
     }
 
@@ -285,7 +311,7 @@ router.post('/create-order', async (req, res) => {
       .maybeSingle();
 
     if (existing) {
-      await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
+      if (normalizedCode) await adminSupabase.rpc('decrement_access_code', { p_code: normalizedCode });
       const msg = existing.status === 'paid'
         ? 'Nomor WhatsApp ini sudah lunas di Batch ini.'
         : 'Pendaftaran nomor ini sedang diproses (Pending).';
@@ -370,6 +396,14 @@ router.post('/create-order', async (req, res) => {
     // 8. Update Filled Slots
     await adminSupabase.rpc('increment_filled_slots', { p_batch_id: resolvedBatchId });
 
+    // 9. Jika dari token WAR system → tandai token sudah dipakai
+    if (slot_token && resolvedBatchFromToken?.id) {
+      await adminSupabase
+        .from('slot_queue')
+        .update({ token_used_at: new Date().toISOString(), status: 'registered' })
+        .eq('id', resolvedBatchFromToken.id);
+    }
+
     console.log(`[CREATE_ORDER] SUCCESS: ${orderRef} (${gateway})`);
     return res.json({
       success: true,
@@ -377,8 +411,8 @@ router.post('/create-order', async (req, res) => {
       order_ref: orderRef,
       amount: finalAmount,
       batch_name: batch.name,
-      payment_url: paymentData.paymentUrl || null, // Duitku might return paymentUrl
-      token: paymentData.token || null // Midtrans uses token
+      payment_url: paymentData.paymentUrl || null,
+      token: paymentData.token || null
     });
 
   } catch (err) {

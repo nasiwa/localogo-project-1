@@ -9,6 +9,16 @@ let _countdownInterval = null;
 async function init() {
   console.log("System initializing (Code Verification Mode)...");
   try {
+    // ── CEK TOKEN DI URL TERLEBIH DAHULU ──
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      await loadConfig();
+      await handleTokenValidation(urlToken);
+      setInterval(loadConfig, 10000);
+      return;
+    }
+
     await loadConfig();
 
     const verifiedCode = sessionStorage.getItem('verified_code');
@@ -27,6 +37,46 @@ async function init() {
   } catch (err) {
     console.error("Init error:", err);
     showPanel('panel-enter-code');
+  }
+}
+
+// ── VALIDASI TOKEN WAR SYSTEM ───────────────────────────────
+async function handleTokenValidation(token) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/slot-queue/validate-token/${token}`);
+    const data = await res.json();
+
+    if (data.valid) {
+      // Simpan info token ke sessionStorage
+      sessionStorage.setItem('slot_token', token);
+      sessionStorage.setItem('verified_batch_id', data.batch_id);
+      sessionStorage.setItem('code_verified_at', Date.now().toString());
+      sessionStorage.setItem('verified_code', '_TOKEN_BYPASS_');
+
+      // Pre-fill nama & WA dari data token
+      setTimeout(() => {
+        const nameEl = document.getElementById('f-name');
+        const waEl   = document.getElementById('id-wa');
+        if (nameEl && data.full_name) { nameEl.value = data.full_name; onNameInput(); }
+        if (waEl   && data.whatsapp)  { waEl.value   = data.whatsapp;  updateNominal(); }
+      }, 200);
+
+      showPanel('panel-active');
+      startFormTimer();
+    } else {
+      // Token tidak valid — tampilkan pesan error di panel kode
+      showPanel('panel-enter-code');
+      const errEl = document.getElementById('code-error');
+      const reason = data.reason === 'expired' ? 'Link sudah expired. Hubungi admin untuk mendapatkan slot baru.'
+                   : data.reason === 'used'    ? 'Link ini sudah digunakan sebelumnya.'
+                   :                             'Link tidak valid atau tidak ditemukan.';
+      if (errEl) errEl.textContent = '❌ ' + reason;
+    }
+  } catch (err) {
+    console.error('Token validation error:', err);
+    showPanel('panel-enter-code');
+    const errEl = document.getElementById('code-error');
+    if (errEl) errEl.textContent = '❌ Gagal memvalidasi link. Coba refresh halaman.';
   }
 }
 
@@ -159,10 +209,11 @@ async function handleBooking() {
   const emailVal = document.getElementById('f-email')?.value.trim();
   const waVal = document.getElementById('id-wa')?.value.trim();
   const proofFile = document.getElementById('f-proof')?.files[0];
-  const code = sessionStorage.getItem('verified_code');
-  const batchId = sessionStorage.getItem('verified_batch_id') || activeBatch?.id;
+  const code      = sessionStorage.getItem('verified_code');
+  const slotToken = sessionStorage.getItem('slot_token');
+  const batchId   = sessionStorage.getItem('verified_batch_id') || activeBatch?.id;
 
-  console.log("DEBUG handleBooking:", { nameVal, emailVal, waVal, proofFile, code, batchId });
+  console.log("DEBUG handleBooking:", { nameVal, emailVal, waVal, proofFile, code, slotToken, batchId });
 
   if (!nameVal || !emailVal || !waVal) return showToast('⚠️ Lengkapi nama, email, dan nomor WA');
 
@@ -173,7 +224,7 @@ async function handleBooking() {
   }
 
   if (!proofFile) return showToast('⚠️ Upload bukti transfer terlebih dahulu');
-  if (!code) { showPanel('panel-enter-code'); return; }
+  if (!slotToken && !code) { showPanel('panel-enter-code'); return; }
 
   // ── KONFIRMASI AKHIR ──
   const confirmMsg = `Pastikan email Anda sudah benar:\n\n» ${emailVal}\n\nEmail ini akan digunakan untuk mengirim INVOICE dan LINK GRUP WA setelah diverifikasi. Apakah email ini sudah aktif dan sesuai?`;
@@ -201,9 +252,10 @@ async function handleBooking() {
       email: emailVal,
       whatsapp: waVal,
       batch_id: batchId,
-      access_code: code,
       proof_base64: base64,
-      proof_ext: ext
+      proof_ext: ext,
+      // Kirim slot_token jika ada, otherwise kirim access_code
+      ...(slotToken ? { slot_token: slotToken } : { access_code: code })
     };
 
     const res = await fetch(`${BACKEND_URL}/api/create-order`, {
