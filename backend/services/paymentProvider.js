@@ -61,7 +61,8 @@ async function createTransaction(gateway, params) {
       order_id: orderRef,
       gross_amount: amount,
     },
-    // enabled_payments: tidak difilter → Midtrans tampilkan semua yg aktif di akun
+    // Hanya tampilkan metode yang sudah aktif di akun Production
+    enabled_payments: ['gopay', 'bni_va', 'bri_va', 'mandiri_bill', 'permata_va', 'cimb_va'],
     customer_details: {
       first_name: 'Localogo-PO Ospek',
       last_name: '', // Empty so it doesn't append the user's name
