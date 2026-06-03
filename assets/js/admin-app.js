@@ -515,6 +515,7 @@ function toggleManualOrderType() {
   const typeSelect = document.getElementById('man-type');
   const amountInput = document.getElementById('man-amount');
   const statusSelect = document.getElementById('man-status');
+  const batchSelect = document.getElementById('man-batch');
   if (!typeSelect || !amountInput || !statusSelect) return;
 
   if (typeSelect.value === 'giveaway') {
@@ -522,23 +523,37 @@ function toggleManualOrderType() {
     amountInput.disabled = true;
     statusSelect.value = 'paid';
     statusSelect.disabled = true;
+    
+    if (batchSelect) {
+      for (let i = 0; i < batchSelect.options.length; i++) {
+        if (batchSelect.options[i].text.toLowerCase().includes('giveaway')) {
+          batchSelect.selectedIndex = i;
+          break;
+        }
+      }
+      batchSelect.disabled = true;
+    }
   } else {
     amountInput.value = 100000;
     amountInput.disabled = false;
     statusSelect.disabled = false;
+    if (batchSelect) {
+      batchSelect.disabled = false;
+    }
   }
 }
 
 async function openManualModal() {
   const modal = document.getElementById('manual-order-modal');
   
-  // Reset form inputs
-  const typeSelect = document.getElementById('man-type');
-  if (typeSelect) {
-    typeSelect.value = 'reguler';
-    toggleManualOrderType();
-  }
-  
+  // Clear input fields
+  const nameInput = document.getElementById('man-name');
+  const emailInput = document.getElementById('man-email');
+  const waInput = document.getElementById('man-wa');
+  if (nameInput) nameInput.value = '';
+  if (emailInput) emailInput.value = '';
+  if (waInput) waInput.value = '';
+
   // Load batches for the dropdown
   const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
   const { batches } = await res.json();
@@ -546,6 +561,14 @@ async function openManualModal() {
   if (select) {
     select.innerHTML = batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
   }
+
+  // Reset form type to reguler
+  const typeSelect = document.getElementById('man-type');
+  if (typeSelect) {
+    typeSelect.value = 'reguler';
+  }
+  toggleManualOrderType();
+
   if (modal) modal.classList.add('show');
 }
 
