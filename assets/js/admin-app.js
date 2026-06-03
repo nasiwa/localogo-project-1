@@ -511,8 +511,34 @@ async function openMembersModal(id, name) {
   }
 }
 
+function toggleManualOrderType() {
+  const typeSelect = document.getElementById('man-type');
+  const amountInput = document.getElementById('man-amount');
+  const statusSelect = document.getElementById('man-status');
+  if (!typeSelect || !amountInput || !statusSelect) return;
+
+  if (typeSelect.value === 'giveaway') {
+    amountInput.value = 0;
+    amountInput.disabled = true;
+    statusSelect.value = 'paid';
+    statusSelect.disabled = true;
+  } else {
+    amountInput.value = 100000;
+    amountInput.disabled = false;
+    statusSelect.disabled = false;
+  }
+}
+
 async function openManualModal() {
   const modal = document.getElementById('manual-order-modal');
+  
+  // Reset form inputs
+  const typeSelect = document.getElementById('man-type');
+  if (typeSelect) {
+    typeSelect.value = 'reguler';
+    toggleManualOrderType();
+  }
+  
   // Load batches for the dropdown
   const res = await fetch(`${BACKEND_URL}/api/admin/batches`, { headers: { 'x-admin-token': getAdminToken() } });
   const { batches } = await res.json();
@@ -534,13 +560,15 @@ async function submitManualOrder() {
   btn.disabled = true;
   btn.textContent = 'Menyimpan...';
 
+  const typeVal = document.getElementById('man-type')?.value || 'reguler';
   const payload = {
     full_name: document.getElementById('man-name').value,
     email: document.getElementById('man-email').value,
     whatsapp: document.getElementById('man-wa').value,
     batch_id: document.getElementById('man-batch').value,
     amount: document.getElementById('man-amount').value,
-    status: document.getElementById('man-status').value
+    status: document.getElementById('man-status').value,
+    gateway: typeVal === 'giveaway' ? 'giveaway' : 'manual'
   };
 
   try {

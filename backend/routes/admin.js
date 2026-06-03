@@ -198,15 +198,20 @@ router.post('/order/:orderRef/confirm-manual', async (req, res) => {
 // ── MANUAL ORDER ──────────────────────────────────────────────────
 router.post('/order/manual', async (req, res) => {
   try {
-    const { full_name, email, whatsapp, batch_id, amount, status } = req.body;
+    const { full_name, email, whatsapp, batch_id, amount, status, gateway } = req.body;
     if (!full_name || !email || !batch_id) return res.status(400).json({ success: false, error: 'Data tidak lengkap' });
 
     const orderRef = `MANUAL-${Date.now().toString(36).toUpperCase()}`;
     const { data: claimData, error: claimErr } = await adminSupabase.rpc('claim_slot', {
       p_batch_id: batch_id, p_order_ref: orderRef, p_name: full_name,
-      p_email: email, p_wa: whatsapp || 'Manual', p_amount: parseInt(amount || 100000)
+      p_email: email, p_wa: whatsapp || 'Manual', p_amount: gateway === 'giveaway' ? 0 : parseInt(amount || 100000)
     });
     if (claimErr || !claimData?.success) return res.status(400).json({ success: false, error: claimData?.error || 'Gagal' });
+
+    // Update to giveaway if selected
+    if (gateway === 'giveaway') {
+      await adminSupabase.from('orders').update({ payment_gateway: 'giveaway', amount: 0 }).eq('order_ref', orderRef);
+    }
 
     if (status === 'paid') {
       const { data: conf } = await adminSupabase.rpc('confirm_payment', { p_order_ref: orderRef });

@@ -68,7 +68,8 @@ router.post('/simulate-payment-success', async (req, res) => {
           sequence: order.sequence_num, // Now this will have a valid number!
           wa_group_url: order.batches?.wa_group_url,
           paid_at: order.paid_at,
-          amount: order.amount
+          amount: order.amount,
+          payment_gateway: order.payment_gateway
         };
 
         const pdfBuffer = await generateInvoicePDF(mappedOrder);
@@ -487,7 +488,8 @@ router.get('/download-invoice/:orderRef', async (req, res) => {
       sequence: order.sequence_num,
       wa_group_url: order.batch?.wa_group_url,
       paid_at: order.paid_at,
-      amount: order.amount
+      amount: order.amount,
+      payment_gateway: order.payment_gateway
     };
 
     const pdfBuffer = await generateInvoicePDF(mappedOrder);
@@ -596,6 +598,8 @@ router.get('/invoice/:orderRef', async (req, res) => {
       sequence: order.sequence_num,
       wa_group_url: order.batches?.wa_group_url,
       paid_at: order.paid_at || order.created_at,
+      amount: order.amount,
+      payment_gateway: order.payment_gateway
     });
 
     res.setHeader('Content-Type', 'application/pdf');

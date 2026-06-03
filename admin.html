@@ -361,6 +361,13 @@
       <div class="modal-title">Tambah Order Manual</div>
       <div class="modal-sub">Input data pendaftar yang sudah bayar secara manual.</div>
       <div class="modal-field">
+        <label>Tipe Order</label>
+        <select id="man-type" onchange="toggleManualOrderType()">
+          <option value="reguler">Reguler (DP Rp 100.000)</option>
+          <option value="giveaway">Giveaway (Gratis)</option>
+        </select>
+      </div>
+      <div class="modal-field">
         <label>Nama Lengkap</label>
         <input type="text" id="man-name" placeholder="Nama Mahasiswa" />
       </div>

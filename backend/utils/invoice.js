@@ -30,14 +30,25 @@ function generateSecureQrData(orderRef) {
  */
 async function generateInvoicePDF(order) {
   const seq = order.sequence || 0;
-  const batchNum = parseInt(order.batch_num) || 1;
-  // Hitung sesi (200 per sesi), maksimal Sesi 5
-  const rawSession = Math.ceil(seq / 200) || 1;
-  const sessionNum = Math.min(5, rawSession);
+  const isGiveaway = order.payment_gateway === 'giveaway' || (order.batch_name && order.batch_name.toLowerCase().includes('giveaway'));
 
-  const romanBatch = toRoman(batchNum);
-  // SMART CODE with SESSION NUMBER (1-5)
-  const smartCode = `BC${romanBatch}${sessionNum}_${seq.toString().padStart(4, '0')}`;
+  let batchNumVal = '1';
+  let sessionNumVal = '1';
+  let smartCode = '';
+
+  if (isGiveaway) {
+    batchNumVal = 'GW';
+    sessionNumVal = 'GW';
+    smartCode = `GW_${seq.toString().padStart(4, '0')}`;
+  } else {
+    const batchNum = parseInt(order.batch_num) || 1;
+    const rawSession = Math.ceil(seq / 200) || 1;
+    const sessionNum = Math.min(5, rawSession);
+    const romanBatch = toRoman(batchNum);
+    batchNumVal = batchNum.toString();
+    sessionNumVal = sessionNum.toString();
+    smartCode = `BC${romanBatch}${sessionNum}_${seq.toString().padStart(4, '0')}`;
+  }
   
   const qrData = generateSecureQrData(order.order_ref);
   const qrBuffer = await QRCode.toBuffer(qrData, { margin: 1, width: 200 });
@@ -85,10 +96,10 @@ async function generateInvoicePDF(order) {
     row('Email', order.email, startY + 30);
     row('WhatsApp', order.whatsapp, startY + 60);
     row('Order', 'PO PAKET PERLENGKAPAN OSPEK 2026', startY + 90, teal);
-    row('Nominal DP', 'Rp. 100,000', startY + 115);
+    row('Nominal DP', isGiveaway ? 'Rp. 0 (GIVEAWAY)' : 'Rp. 100,000', startY + 115);
     
     doc.rect(labelX, startY + 132, 260, 1).fill('#e0eeee');
-    const formattedTotal = 'Rp. ' + (order.amount || 100000).toLocaleString('id-ID');
+    const formattedTotal = isGiveaway ? 'Rp. 0 (LUNAS)' : ('Rp. ' + (order.amount || 100000).toLocaleString('id-ID'));
     row('Total Bayar', formattedTotal, startY + 142, darkTeal);
 
     const paidTime = order.paid_at ? new Date(order.paid_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'N/A';
@@ -108,11 +119,11 @@ async function generateInvoicePDF(order) {
     // Batch
     doc.roundedRect(rightX, 345, halfW, 90, 8).stroke();
     doc.fillColor(grayText).font('Helvetica-Bold').fontSize(10).text('Batch', rightX, 355, { width: halfW, align: 'center' });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(batchNum.toString(), rightX, 385, { width: halfW, align: 'center' });
+    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(batchNumVal, rightX, 385, { width: halfW, align: 'center' });
     // Session
     doc.roundedRect(rightX + halfW + 10, 345, halfW, 90, 8).stroke();
     doc.fillColor(grayText).font('Helvetica-Bold').fontSize(10).text('Sesi', rightX + halfW + 10, 355, { width: halfW, align: 'center' });
-    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(sessionNum.toString(), rightX + halfW + 10, 385, { width: halfW, align: 'center' });
+    doc.fillColor(darkTeal).font('Helvetica-Bold').fontSize(32).text(sessionNumVal, rightX + halfW + 10, 385, { width: halfW, align: 'center' });
 
     // ── FOOTER & QR ──
     const footY = 560;
@@ -139,14 +150,9 @@ async function generateInvoicePDF(order) {
     doc.fillColor(white).font('Helvetica-Bold').fontSize(12).text('AUTHENTIC INVOICE — OSPEK RABRAW 2026', 0, 822, { align: 'center' });
 
     doc.end();
-  });
-}
-
-/**
- * Send Invoice Email
- */
-async function sendInvoiceEmail(order, pdfBuffer) {
+  }async function sendInvoiceEmail(order, pdfBuffer) {
   const waGroup = order.wa_group_url || '';
+  const isGiveaway = order.payment_gateway === 'giveaway' || (order.batch_name && order.batch_name.toLowerCase().includes('giveaway'));
   
   const html = `
   <!DOCTYPE html>
@@ -177,12 +183,12 @@ async function sendInvoiceEmail(order, pdfBuffer) {
         <div style="font-size:12px;opacity:0.6;margin-top:10px;letter-spacing:1px;font-weight:700;">PRE-ORDER OSPEK 2026</div>
       </div>
       <div class="content">
-        <div class="badge">PAYMENT SUCCESSFUL</div>
+        <div class="badge">${isGiveaway ? 'GIVEAWAY SLOT' : 'PAYMENT SUCCESSFUL'}</div>
         <h2>Halo, <strong>${order.full_name}</strong>! 👋</h2>
-        <p>Terima kasih telah melakukan pembayaran Down Payment. Slot kamu untuk <strong>Batch ${order.batch_num}</strong> telah resmi <strong>DIAMANKAN</strong>.</p>
+        <p>${isGiveaway ? 'Selamat! Kamu memenangkan slot Giveaway. Slot kamu untuk <strong>Batch Giveaway</strong> telah resmi <strong>DIAMANKAN</strong>.' : `Terima kasih telah melakukan pembayaran Down Payment. Slot kamu untuk <strong>Batch ${order.batch_num}</strong> telah resmi <strong>DIAMANKAN</strong>.`}</p>
         
         <div style="background:#fffbe6; padding:20px; border-radius:12px; border:1px solid #ffe58f; margin-bottom:25px;">
-           <p style="margin:0; font-size:14px; color:#856404;"><strong>PENTING:</strong> Segera bergabung ke grup WhatsApp Batch ${order.batch_num} untuk informasi sesi pengambilan:</p>
+           <p style="margin:0; font-size:14px; color:#856404;"><strong>PENTING:</strong> Segera bergabung ke grup WhatsApp ${isGiveaway ? 'Giveaway' : `Batch ${order.batch_num}`} untuk informasi sesi pengambilan:</p>
            <a href="${waGroup}" class="btn-wa">Gabung Grup WhatsApp</a>
         </div>
 
@@ -204,9 +210,13 @@ async function sendInvoiceEmail(order, pdfBuffer) {
   await resend.emails.send({
     from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`,
     to: order.email,
-    subject: `SLOT SECURED: Invoice PO Perlengkapan OSPEK - ${order.full_name}`,
+    subject: isGiveaway 
+      ? `GIVEAWAY SLOT SECURED: Invoice PO Perlengkapan OSPEK - ${order.full_name}`
+      : `SLOT SECURED: Invoice PO Perlengkapan OSPEK - ${order.full_name}`,
     html,
-    text: `Halo ${order.full_name}, pembayaran DP Anda berhasil. Slot untuk Batch ${order.batch_num} telah diamankan. Silakan cek invoice terlampir. Order Ref: ${order.order_ref}`,
+    text: isGiveaway
+      ? `Halo ${order.full_name}, selamat! Slot Giveaway Anda telah diamankan. Silakan cek invoice terlampir. Order Ref: ${order.order_ref}`
+      : `Halo ${order.full_name}, pembayaran DP Anda berhasil. Slot untuk Batch ${order.batch_num} telah diamankan. Silakan cek invoice terlampir. Order Ref: ${order.order_ref}`,
     attachments: [{
       filename: `Invoice-${order.full_name.replace(/\s+/g, '-')}.pdf`,
       content: pdfBuffer,
