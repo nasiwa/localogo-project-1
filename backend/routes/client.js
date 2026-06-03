@@ -117,21 +117,48 @@ router.get('/batches', async (req, res) => {
  * Dedicated route for Midtrans payment page — no access_code required
  */
 router.post('/create-midtrans-order', async (req, res) => {
-  const { full_name, email, whatsapp, batch_id } = req.body;
+  const { full_name, email, whatsapp, batch_id, slot_token } = req.body;
 
-  if (!full_name || !email || !whatsapp || !batch_id) {
+  if (!full_name || !email || !whatsapp) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap. Isi semua field.' });
   }
 
   const orderRef = genOrderRef();
-  const finalAmount = 102500; // Rp100.000 + Rp2.500 admin fee
+  const finalAmount = 102500;
+  let resolvedBatchId = batch_id;
+  let tokenQueueId = null;
 
   try {
+    // 0. Jika ada slot_token → validasi dan ambil batch_id dari token
+    if (slot_token) {
+      const { data: tokenData, error: tokenErr } = await adminSupabase
+        .from('slot_queue')
+        .select('id, batch_id, token_expires_at, token_used_at')
+        .eq('token', slot_token)
+        .single();
+
+      if (tokenErr || !tokenData) {
+        return res.status(400).json({ success: false, error: 'Token tidak valid.' });
+      }
+      if (tokenData.token_used_at) {
+        return res.status(400).json({ success: false, error: 'Token ini sudah digunakan sebelumnya.' });
+      }
+      if (new Date(tokenData.token_expires_at) < new Date()) {
+        return res.status(400).json({ success: false, error: 'Token sudah expired. Hubungi admin untuk slot baru.' });
+      }
+      resolvedBatchId = tokenData.batch_id;
+      tokenQueueId = tokenData.id;
+    }
+
+    if (!resolvedBatchId) {
+      return res.status(400).json({ success: false, error: 'Batch tidak ditemukan.' });
+    }
+
     // 1. Cek Batch masih aktif
     const { data: batch, error: bErr } = await adminSupabase
       .from('batches')
       .select('id, name, total_slots, filled_slots, status')
-      .eq('id', batch_id)
+      .eq('id', resolvedBatchId)
       .eq('status', 'active')
       .single();
 
@@ -143,7 +170,7 @@ router.post('/create-midtrans-order', async (req, res) => {
     const { data: existing } = await adminSupabase
       .from('orders')
       .select('id, status')
-      .eq('batch_id', batch_id)
+      .eq('batch_id', resolvedBatchId)
       .eq('whatsapp', whatsapp)
       .in('status', ['paid', 'pending'])
       .maybeSingle();
@@ -179,7 +206,7 @@ router.post('/create-midtrans-order', async (req, res) => {
       .from('orders')
       .insert({
         order_ref: orderRef,
-        batch_id: batch_id,
+        batch_id: resolvedBatchId,
         full_name,
         email,
         whatsapp,
@@ -192,6 +219,14 @@ router.post('/create-midtrans-order', async (req, res) => {
       .single();
 
     if (insErr) throw insErr;
+
+    // 5. Jika dari token WAR system → tandai token sudah dipakai
+    if (slot_token && tokenQueueId) {
+      await adminSupabase
+        .from('slot_queue')
+        .update({ token_used_at: new Date().toISOString(), status: 'registered' })
+        .eq('id', tokenQueueId);
+    }
 
     console.log(`[MIDTRANS_ORDER] Created: ${orderRef}`);
     return res.json({

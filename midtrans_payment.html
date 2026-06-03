@@ -138,6 +138,8 @@
   <div class="sim-main">
     <div class="form-card">
       <div class="form-card-head"><div class="form-card-title">Form Pendaftaran</div><div class="form-card-sub">Invoice PDF akan dikirim otomatis ke email.</div></div>
+      <!-- Banner token WAR system — hidden by default, shown via JS jika ada ?token= -->
+      <div id="token-info-banner" style="display:none; background:#0d3d2e; border:1px solid #1a6b4a; color:#4ade80; padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:16px;"></div>
       <div class="form-body" style="display: block;">
         <div class="field-row">
           <div class="field full" style="display: none;"><label>Batch</label><select id="sim-batch" onchange="updateSummary()"></select></div>

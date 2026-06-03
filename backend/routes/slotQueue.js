@@ -119,7 +119,7 @@ router.post('/allocate', async (req, res) => {
 
     for (const entry of waitingList) {
       const token = generateToken();
-      const link = `https://localogo.id/claim-verification-v1-x92?token=${token}`;
+      const link = `https://localogo.id/midtrans_payment?token=${token}`;
       const message =
         `Halo ${entry.full_name}! 🎉\n\n` +
         `Selamat! Kamu berhasil mendapatkan slot pendaftaran *${batchName}*.\n\n` +

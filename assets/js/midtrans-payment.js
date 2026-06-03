@@ -1,4 +1,5 @@
 let currentBatches = [];
+let _slotToken = null; // Token dari URL ?token=xxx
 
 async function loadBatches() {
   try {
@@ -92,7 +93,8 @@ async function startSimulatedPayment() {
         full_name: name,
         email: email,
         whatsapp: wa,
-        batch_id: batchId
+        batch_id: batchId,
+        ...((_slotToken) ? { slot_token: _slotToken } : {})
       })
     });
 
@@ -156,5 +158,70 @@ function showSuccessModal(orderRef) {
   document.getElementById('success-modal').classList.add('show');
 }
 
+// ── TOKEN WAR FLOW ──────────────────────────────────────────────
+async function initTokenFlow() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  if (!token) return;
+
+  _slotToken = token;
+
+  try {
+    const res = await fetch(`/api/slot-queue/validate-token/${token}`);
+    const data = await res.json();
+
+    if (data.valid) {
+      // Pre-fill nama & WA
+      const nameEl = document.getElementById('sim-name');
+      const waEl   = document.getElementById('sim-wa');
+      if (nameEl) nameEl.value = data.full_name;
+      if (waEl)   waEl.value   = data.whatsapp;
+
+      // Set batch dari token + disable dropdown
+      const batchSelect = document.getElementById('sim-batch');
+      if (batchSelect && data.batch_id) {
+        // Tambahkan option jika belum ada (batch mungkin belum aktif di dropdown)
+        if (!batchSelect.querySelector(`option[value="${data.batch_id}"]`)) {
+          const opt = document.createElement('option');
+          opt.value = data.batch_id;
+          opt.textContent = 'Slot Kamu';
+          batchSelect.appendChild(opt);
+        }
+        batchSelect.value = data.batch_id;
+        batchSelect.disabled = true;
+        updateSummary();
+      }
+
+      // Hitung sisa waktu & tampilkan banner
+      const expiresAt  = new Date(data.expires_at);
+      const minsLeft   = Math.max(0, Math.floor((expiresAt - Date.now()) / 60000));
+      const tokenBanner = document.getElementById('token-info-banner');
+      if (tokenBanner) {
+        tokenBanner.style.display = 'block';
+        tokenBanner.innerHTML = `⏰ Slot kamu valid! Sisa waktu: <strong>${minsLeft} menit</strong>. Segera lengkapi data & bayar.`;
+      }
+    } else {
+      // Token tidak valid — disable tombol bayar
+      const reason = data.reason === 'expired' ? 'Link slot sudah expired.'
+                   : data.reason === 'used'    ? 'Link ini sudah pernah digunakan.'
+                   :                             'Link tidak valid.';
+      const btn = document.getElementById('btn-pay-sim');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>❌ ${reason}</span>`;
+        btn.style.opacity = '0.6';
+        btn.style.cursor  = 'not-allowed';
+      }
+      alert(`❌ ${reason}\n\nHubungi admin Localogo jika ada pertanyaan.`);
+    }
+  } catch (err) {
+    console.error('Token validation error:', err);
+  }
+}
+
 // Init
-loadBatches();
+async function init() {
+  await loadBatches();
+  await initTokenFlow();
+}
+init();
