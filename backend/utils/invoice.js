@@ -150,7 +150,10 @@ async function generateInvoicePDF(order) {
     doc.fillColor(white).font('Helvetica-Bold').fontSize(12).text('AUTHENTIC INVOICE — OSPEK RABRAW 2026', 0, 822, { align: 'center' });
 
     doc.end();
-  }async function sendInvoiceEmail(order, pdfBuffer) {
+  });
+}
+
+async function sendInvoiceEmail(order, pdfBuffer) {
   const waGroup = order.wa_group_url || '';
   const isGiveaway = order.payment_gateway === 'giveaway' || (order.batch_name && order.batch_name.toLowerCase().includes('giveaway'));
   
