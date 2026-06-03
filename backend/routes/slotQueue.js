@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { adminSupabase } = require('../supabaseClient');
+const crypto = require('crypto');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY || 'dummy_key_will_fail_at_send_time');
 
 // ── HELPER: Kirim WA via Fonnte ───────────────────────────────────
 async function sendFontteWA(whatsapp, message) {
@@ -32,7 +36,7 @@ function generateToken() {
  * Dipanggil Google Apps Script tiap kali ada submit Google Form
  */
 router.post('/add', async (req, res) => {
-  const { full_name, whatsapp, batch_id } = req.body;
+  const { full_name, whatsapp, email, batch_id } = req.body;
 
   if (!full_name || !whatsapp || !batch_id) {
     return res.status(400).json({ success: false, error: 'Data tidak lengkap: full_name, whatsapp, batch_id wajib diisi.' });
@@ -40,29 +44,119 @@ router.post('/add', async (req, res) => {
 
   // Normalisasi nomor WA: 08xx → 628xx
   const normalizedWA = whatsapp.replace(/\D/g, '').replace(/^0/, '62');
+  const cleanEmail = email ? email.trim().toLowerCase() : null;
 
   try {
-    // Cek duplikat WA di batch ini
-    const { data: existing } = await adminSupabase
+    // Cek duplikat WA / Email di batch ini
+    let query = adminSupabase
       .from('slot_queue')
       .select('id, status')
-      .eq('batch_id', batch_id)
-      .eq('whatsapp', normalizedWA)
-      .maybeSingle();
+      .eq('batch_id', batch_id);
+
+    if (cleanEmail) {
+      query = query.or(`whatsapp.eq.${normalizedWA},email.eq.${cleanEmail}`);
+    } else {
+      query = query.eq('whatsapp', normalizedWA);
+    }
+
+    const { data: existing } = await query.maybeSingle();
 
     if (existing) {
-      return res.status(400).json({ success: false, error: 'Nomor WA ini sudah terdaftar di antrian batch ini.' });
+      return res.status(400).json({ success: false, error: 'Nomor WA atau Email ini sudah terdaftar di antrian batch ini.' });
     }
+
+    // Ambil info batch untuk nama batch
+    const { data: batch } = await adminSupabase
+      .from('batches')
+      .select('name')
+      .eq('id', batch_id)
+      .single();
+
+    const batchName = batch?.name || 'Localogo';
+
+    // Generasi Token Instan & Expires
+    const token = generateToken();
+    const expiryMinutes = 30;
+    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000).toISOString();
 
     const { data, error } = await adminSupabase
       .from('slot_queue')
-      .insert({ full_name: full_name.trim(), whatsapp: normalizedWA, batch_id, status: 'waiting' })
+      .insert({
+        full_name: full_name.trim(),
+        whatsapp: normalizedWA,
+        email: cleanEmail,
+        batch_id,
+        status: 'allocated',
+        token,
+        token_expires_at: expiresAt
+      })
       .select('id')
       .single();
 
     if (error) throw error;
 
-    console.log(`[SLOT_QUEUE] Tambah antrian: ${full_name} (${normalizedWA})`);
+    console.log(`[SLOT_QUEUE] Sukses alokasi instan: ${full_name} (${normalizedWA}) - Email: ${cleanEmail}`);
+
+    // Jika email di-submit, langsung kirim Link Pembayaran via Resend secara instan
+    if (cleanEmail) {
+      const link = `https://www.localogo.id/midtrans_payment?token=${token}`;
+      
+      const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+          body{font-family:'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background-color:#f4f9f9;margin:0;padding:20px;}
+          .card{max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(2,72,71,0.08);border:1px solid #e0eeee;}
+          .header{background:#024847;padding:50px 20px;text-align:center;color:#fff;}
+          .header h1{margin:0;font-size:32px;letter-spacing:3px;font-weight:700;}
+          .content{padding:40px;color:#2d5c5c;text-align:center;}
+          .badge{display:inline-block;padding:8px 20px;background:#eefaf6;color:#10b981;border-radius:99px;font-weight:700;font-size:12px;margin-bottom:25px;border:1px solid #a7f3d0;}
+          h2{font-size:22px;margin-bottom:15px;color:#024847;font-weight:700;}
+          p{line-height:1.7;font-size:15px;margin-bottom:25px;color:#4a6e6e;}
+          .btn-pay{display:inline-block;padding:16px 32px;background:#24999b;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;font-size:16px;box-shadow:0 4px 15px rgba(36,153,155,0.25);margin-bottom:25px;}
+          .timer-box{background:#fffbe6;padding:15px;border-radius:12px;border:1px solid #ffe58f;margin-bottom:25px;color:#856404;font-size:14px;font-weight:700;}
+          .footer{background:#f9fdfd;padding:25px;text-align:center;font-size:12px;color:#6a9999;border-top:1px solid #eaf5f5;}
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <h1>LOCALOGO</h1>
+            <div style="font-size:12px;opacity:0.6;margin-top:10px;letter-spacing:1px;font-weight:700;">PRE-ORDER OSPEK 2026</div>
+          </div>
+          <div class="content">
+            <div class="badge">SLOT SECURED</div>
+            <h2>Halo, <strong>${full_name.trim()}</strong>! 👋</h2>
+            <p>Selamat! Kamu berhasil mengamankan slot pendaftaran untuk <strong>${batchName}</strong>.</p>
+            
+            <div class="timer-box">
+              ⏰ PENTING: Link pembayaran ini hanya berlaku selama ${expiryMinutes} menit!
+            </div>
+
+            <a href="${link}" class="btn-pay">Bayar Sekarang</a>
+
+            <p style="font-size:13px; color:#8a9f9f;">Setelah pembayaran berhasil, invoice resmi dan link grup WhatsApp ${batchName} akan dikirimkan otomatis ke email kamu.</p>
+          </div>
+          <div class="footer">
+            © 2026 LOCALOGO · Malang, Indonesia<br>
+            <span style="opacity:0.7">Email ini dikirim otomatis oleh sistem pendaftaran.</span>
+          </div>
+        </div>
+      </body>
+      </html>`;
+
+      await resend.emails.send({
+        from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`,
+        to: cleanEmail,
+        subject: `KLAIM SLOT: Link Pembayaran ${batchName} - ${full_name.trim()}`,
+        html,
+        text: `Halo ${full_name.trim()}, selamat! Kamu berhasil mengamankan slot pendaftaran ${batchName}. Silakan lakukan pembayaran di link berikut: ${link}. Link ini hanya berlaku ${expiryMinutes} menit.`
+      });
+    }
+
     res.json({ success: true, id: data.id });
 
   } catch (err) {
