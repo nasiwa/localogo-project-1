@@ -610,4 +610,37 @@ router.get('/invoice/:orderRef', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/order-details/:orderRef
+ * Publicly check order details (minimal info) to show success screen
+ */
+router.get('/order-details/:orderRef', async (req, res) => {
+  const { orderRef } = req.params;
+  try {
+    const { data: order, error } = await adminSupabase
+      .from('orders')
+      .select('*, batches(name)')
+      .eq('order_ref', orderRef)
+      .single();
+
+    if (error || !order) {
+      return res.status(404).json({ success: false, error: 'Order tidak ditemukan' });
+    }
+
+    res.json({
+      success: true,
+      order: {
+        order_ref: order.order_ref,
+        full_name: order.full_name,
+        email: order.email,
+        batch_name: order.batches?.name || 'Localogo',
+        status: order.status
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
+

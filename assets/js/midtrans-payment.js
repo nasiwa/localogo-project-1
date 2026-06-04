@@ -219,9 +219,57 @@ async function initTokenFlow() {
   }
 }
 
+function showSuccessModalWithData(order) {
+  document.getElementById('res-name').textContent = order.full_name;
+  document.getElementById('res-oid').textContent = order.order_ref;
+  document.getElementById('res-batch').textContent = order.batch_name;
+  document.getElementById('res-email').textContent = order.email;
+  
+  const downloadBtn = document.getElementById('download-link');
+  downloadBtn.href = `/api/download-invoice/${order.order_ref}`;
+  
+  document.getElementById('success-modal').classList.add('show');
+}
+
 // Init
 async function init() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const orderId = urlParams.get('order_id');
+  const statusCode = urlParams.get('status_code');
+  const transactionStatus = urlParams.get('transaction_status');
+
+  // Jika dialihkan kembali dari Midtrans setelah pembayaran berhasil
+  if (orderId && (statusCode === '200' || transactionStatus === 'settlement' || transactionStatus === 'capture')) {
+    // Tampilkan state loading
+    const heroTitle = document.querySelector('.hero-title');
+    if (heroTitle) {
+      heroTitle.innerHTML = '<span>Verifikasi</span>Sinkronisasi Pembayaran...';
+    }
+
+    try {
+      // 1. Jalankan Fast Sync ke server
+      const syncRes = await fetch(`/api/verify-payment/${orderId}`);
+      const syncData = await syncRes.json();
+      console.log('Fast Sync Result:', syncData);
+
+      // 2. Ambil detail order
+      const detailsRes = await fetch(`/api/order-details/${orderId}`);
+      const detailsData = await detailsRes.json();
+
+      if (detailsData.success) {
+        showSuccessModalWithData(detailsData.order);
+        // Load batches di background saja untuk melengkapi view
+        loadBatches();
+        return; // Hentikan inisialisasi normal agar user tetap di modal sukses
+      }
+    } catch (err) {
+      console.error('Failed to sync or load order details:', err);
+    }
+  }
+
+  // Alur normal
   await loadBatches();
   await initTokenFlow();
 }
 init();
+
