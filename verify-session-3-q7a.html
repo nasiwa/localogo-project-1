@@ -1,9 +1,164 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/claim-verification-v1-x92.html">
-  <script>window.location.replace('/claim-verification-v1-x92.html' + window.location.search);</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifikasi Peserta Batch 1 — LOCALOGO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+  <link rel="stylesheet" href="assets/css/index.css">
+  <style>
+    /* Fix for messy layout shown in screenshot */
+    .booking-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 30px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .booking-layout { grid-template-columns: 1fr; }
+      .sidebar { order: -1; } /* Sidebar above form on mobile */
+    }
+    .state-panel { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
-<body></body>
+<body>
+  <script src="assets/js/config.js"></script>
+
+  <nav>
+    <a class="logo" href="#">
+      <img src="favicon.png" alt="Logo" style="height: 30px; margin-right: 10px;">
+      <div class="logo-text">Localogo</div>
+    </a>
+    <div class="live-chip"><div class="dot"></div><span>Verification Mode</span></div>
+  </nav>
+
+  <div class="main-wrap" style="padding-top: 40px; padding-bottom: 80px;">
+    
+    <!-- STEP PROGRESS -->
+    <div class="steps-nav fade-up" style="margin-bottom: 40px;">
+      <div class="step-item active" id="step1">
+        <div class="step-circle">1</div>
+        <div><div class="step-label">Verifikasi</div><div class="step-desc">Kode akses</div></div>
+      </div>
+      <div class="step-item" id="step2">
+        <div class="step-circle">2</div>
+        <div><div class="step-label">Data Diri</div><div class="step-desc">Isi form & bayar</div></div>
+      </div>
+      <div class="step-item" id="step3">
+        <div class="step-circle">3</div>
+        <div><div class="step-label">Selesai</div><div class="step-desc">Tunggu konfirmasi</div></div>
+      </div>
+    </div>
+
+    <div class="booking-layout">
+      <!-- MAIN FORM COLUMN -->
+      <div class="form-card">
+        <div class="form-card-head">
+          <div class="form-card-title" id="form-batch-title">Pendaftaran</div>
+          <div class="form-card-sub" id="form-batch-sub">Gunakan kode sesi yang kamu terima untuk melanjutkan pendaftaran.</div>
+        </div>
+
+        <!-- PANEL 1: KODE -->
+        <div id="panel-enter-code" class="state-panel" style="padding: 30px 10px; text-align: center;">
+          <div style="font-size:48px; margin-bottom:15px;">🎟️</div>
+          <h3 style="margin-bottom:10px;">Masukkan Kode Sesi</h3>
+          <p style="font-size:13px; color:var(--txm); margin-bottom:25px; line-height:1.6;">
+            Kode ini bersifat rahasia dan hanya bisa digunakan sesuai kuota sesi.
+          </p>
+          <input type="text" id="f-code" placeholder="LCG-30APR-XXX"
+            style="width:100%; padding:16px; border:2px solid var(--border); border-radius:12px; font-size:18px; font-family:monospace; text-transform:uppercase; text-align:center; letter-spacing:2px; margin-bottom:10px; outline:none; transition:0.2s;"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter') verifyCode()">
+          <div id="code-error" style="color:var(--red); font-size:13px; margin-bottom:15px; min-height:20px;"></div>
+          <button id="btn-verify-code" onclick="verifyCode()" class="btn-pay" style="width:100%;">
+            <span>Verifikasi Kode</span><span>→</span>
+          </button>
+        </div>
+
+        <!-- PANEL 2: FORM -->
+        <div id="panel-active" class="state-panel form-body" style="display:none;">
+          <div style="background:rgba(224,85,85,0.08); border:1.5px solid rgba(224,85,85,0.15); border-radius:10px; padding:15px; margin-bottom:25px; display:flex; align-items:center; gap:15px;">
+            <div style="font-size:28px;">⏱️</div>
+            <div>
+              <div style="font-size:11px; color:var(--red); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Selesaikan Dalam</div>
+              <div id="active-countdown-timer" style="font-size:22px; font-weight:900; color:var(--red);">30:00</div>
+            </div>
+          </div>
+          
+          <div class="field-row">
+            <div class="field full"><label>Nama Lengkap <span class="req">*</span></label><input type="text" id="f-name" placeholder="Sesuai KTM/KTP" oninput="onNameInput()" /></div>
+            <div class="field full"><label>Email Aktif <span class="req">*</span></label><input type="email" id="f-email" placeholder="emailkamu@gmail.com" /></div>
+            <div class="field full"><label>No. WhatsApp <span class="req">*</span></label><input type="tel" id="id-wa" placeholder="08xxxxxxxxxx" oninput="onWaInput()" /></div>
+          </div>
+
+          <div style="background:var(--bg3); padding:20px; border-radius:12px; margin: 25px 0; border:1.5px solid var(--border);">
+            <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:12px;">Transfer Ke: BCA 3150915928 (a.n. Anang Kuntoro)</div>
+            <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:12px;">
+              Transfer Atas Nama: <span id="display-sender-name" style="color:var(--td); background:#e0eeee; padding:2px 6px; border-radius:4px;">...</span>
+              <div style="font-size:10px; color:var(--red); margin-top:4px; text-transform:none;">*Wajib tulis nama di atas di kolom berita/keterangan transfer.</div>
+            </div>
+            <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Nominal (Wajib Sesuai):</div>
+            <div style="font-size:28px; color:var(--td); font-weight:900; letter-spacing:-0.5px;" id="display-unique-nominal">Rp100.---</div>
+            <div style="font-size:10px; color:var(--red); font-weight:600; margin-top:5px;">*3 digit terakhir diambil dari nomor WhatsApp Anda.</div>
+          </div>
+
+          <div class="field full">
+            <label>Upload Bukti Transfer <span class="req">*</span></label>
+            <input type="file" id="f-proof" accept="image/*" style="padding: 10px; border: 1.5px dashed var(--border); width: 100%; border-radius: 8px;" />
+          </div>
+          
+          <button class="btn-pay" id="btn-pay" onclick="handleBooking()" style="margin-top:30px; height: 55px;">
+            <span>Kirim Pendaftaran</span><span>→</span>
+          </button>
+        </div>
+
+        <!-- PANEL 3: SUCCESS -->
+        <div id="panel-done" class="state-panel" style="display:none; padding: 40px 10px; text-align: center;">
+          <div style="font-size:54px; margin-bottom:20px;">🎉</div>
+          <h3 style="font-size:24px; color:var(--td); margin-bottom:12px;">Pendaftaran Berhasil!</h3>
+          <p style="font-size:14px; color:var(--txm); line-height:1.7; margin-bottom:25px;">Data Anda telah kami terima. Tim kami akan melakukan verifikasi manual dalam 1x24 jam. Invoice resmi akan dikirim ke email.</p>
+          <div style="background:#fff9e6; border:1px solid #ffeeba; padding:20px; border-radius:12px; margin-top:30px; text-align:left;">
+            <h4 style="color:#856404; margin-bottom:10px;">Butuh Bantuan?</h4>
+            <p style="color:#856404; font-size:14px; margin-bottom:15px;">Jika ada kesalahan data atau kendala pembayaran, segera hubungi Admin WhatsApp:</p>
+            <a href="https://wa.me/6289653405239" target="_blank" style="color:#024847; font-weight:900; font-size:18px; text-decoration:none;">+62 896-5340-5239 (Admin Localogo)</a>
+          </div>
+        </div>
+
+        <!-- PANEL EXPIRED -->
+        <div id="panel-expired" class="state-panel" style="display:none; padding: 40px 10px; text-align: center;">
+          <div style="font-size:54px; margin-bottom:20px;">⏱️</div>
+          <h3 style="font-size:24px; color:var(--red); margin-bottom:12px;">Waktu Habis</h3>
+          <p style="font-size:14px; color:var(--txm); line-height:1.7; margin-bottom:30px;">Sesi pendaftaran Anda telah berakhir (30 menit). Silakan coba verifikasi kode kembali.</p>
+          <button onclick="location.reload()" class="btn-pay" style="width:100%;"><span>Coba Lagi</span><span>→</span></button>
+        </div>
+      </div>
+
+      <!-- SIDEBAR COLUMN -->
+      <div class="sidebar">
+        <div class="order-card" style="position: sticky; top: 20px;">
+          <div class="order-head">
+            <div class="order-head-label">Ringkasan Pesanan</div>
+            <div class="order-price" id="sidebar-total">Rp100.---</div>
+          </div>
+          <div class="order-body">
+            <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
+            <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">Batch 1</span></div>
+          </div>
+          <div style="padding: 15px; background: #f9f9f9; border-radius: 0 0 12px 12px; font-size: 11px; color: var(--txm); line-height: 1.5;">
+            ✓ Jaminan slot aman<br>
+            ✓ Invoice PDF otomatis<br>
+            ✓ Verifikasi manual 24 jam
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="assets/js/index-app-v3.js"></script>
+</body>
 </html>

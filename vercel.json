@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/verify-session-3-q7a",
-      "destination": "/claim-verification-v1-x92.html"
+      "destination": "/verify-session-3-q7a.html"
     },
     {
       "source": "/api/(.*)",

@@ -64,7 +64,7 @@ app.get('/midtrans_payment', (req, res) => {
 });
 
 app.get('/verify-session-3-q7a', (req, res) => {
-  res.sendFile(path.join(__dirname, '../claim-verification-v1-x92.html'));
+  res.sendFile(path.join(__dirname, '../verify-session-3-q7a.html'));
 });
 
 // ── ROUTES ───────────────────────────────────────────────────────
