@@ -67,6 +67,10 @@ app.get('/verify-session-3-q7a', (req, res) => {
   res.sendFile(path.join(__dirname, '../verify-session-3-q7a.html'));
 });
 
+app.get('/register-b3', (req, res) => {
+  res.sendFile(path.join(__dirname, '../register-b3.html'));
+});
+
 // ── ROUTES ───────────────────────────────────────────────────────
 const clientRoutes = require('./routes/client');
 const adminRoutes = require('./routes/admin');

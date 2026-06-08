@@ -7,6 +7,10 @@
       "destination": "/verify-session-3-q7a.html"
     },
     {
+      "source": "/register-b3",
+      "destination": "/register-b3.html"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     }

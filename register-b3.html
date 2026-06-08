@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendaftaran Batch 3 — LOCALOGO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+  <link rel="stylesheet" href="assets/css/index.css">
+  <style>
+    .booking-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 30px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .booking-layout { grid-template-columns: 1fr; }
+      .sidebar { order: -1; }
+    }
+    .state-panel { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── WARNING BANNER ── */
+    .warning-banner {
+      background: linear-gradient(135deg, #b91c1c, #dc2626);
+      color: #fff;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      box-shadow: 0 4px 20px rgba(185,28,28,0.35);
+      animation: pulseBorder 2.5s ease-in-out infinite;
+    }
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 4px 20px rgba(185,28,28,0.35); }
+      50% { box-shadow: 0 4px 32px rgba(185,28,28,0.6); }
+    }
+    .warning-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+    .warning-title {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .warning-body { font-size: 12px; line-height: 1.65; opacity: 0.92; }
+
+    /* ── FULL SCREEN PANELS ── */
+    .center-panel {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .center-panel .icon { font-size: 64px; margin-bottom: 20px; }
+    .center-panel h2 { font-size: 26px; font-weight: 800; margin-bottom: 12px; }
+    .center-panel p { font-size: 14px; color: var(--txm); line-height: 1.7; }
+
+    /* ── TIMER ── */
+    .timer-box {
+      background: rgba(224,85,85,0.08);
+      border: 1.5px solid rgba(224,85,85,0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .timer-label { font-size: 11px; color: var(--red); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .timer-value { font-size: 26px; font-weight: 900; color: var(--red); }
+
+    /* ── LOADING SPINNER ── */
+    .loading-wrap { text-align: center; padding: 80px 20px; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--td);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <script src="assets/js/config.js"></script>
+
+  <nav>
+    <a class="logo" href="#">
+      <img src="favicon.png" alt="Logo" style="height:30px; margin-right:10px;">
+      <div class="logo-text">Localogo</div>
+    </a>
+    <div class="live-chip"><div class="dot"></div><span>Batch 3 Open</span></div>
+  </nav>
+
+  <div class="main-wrap" style="padding-top:36px; padding-bottom:80px;" id="app-root">
+
+    <!-- LOADING -->
+    <div id="panel-loading" class="state-panel loading-wrap">
+      <div class="spinner"></div>
+      <p style="color:var(--txm); font-size:14px;">Memverifikasi sesi pendaftaran...</p>
+    </div>
+
+    <!-- INVALID LINK -->
+    <div id="panel-invalid" class="state-panel center-panel" style="display:none;">
+      <div class="icon">🔒</div>
+      <h2 style="color:var(--red);">Link Tidak Valid</h2>
+      <p>Link yang kamu gunakan tidak valid atau sudah tidak aktif.<br>Pastikan kamu menggunakan link resmi dari admin Localogo.</p>
+    </div>
+
+    <!-- QUOTA FULL -->
+    <div id="panel-full" class="state-panel center-panel" style="display:none;">
+      <div class="icon">😔</div>
+      <h2 style="color:var(--red);">Kuota Sesi Ini Sudah Penuh</h2>
+      <p>Maaf, kuota pendaftaran sesi ini sudah habis.<br>Ikuti terus info Localogo untuk mendapatkan slot di sesi berikutnya!</p>
+      <a href="https://instagram.com/localogo.id" target="_blank" style="display:inline-block; margin-top:24px; background:var(--td); color:#fff; padding:14px 28px; border-radius:12px; font-weight:700; text-decoration:none;">📸 Follow @localogo.id</a>
+    </div>
+
+    <!-- MAIN FORM -->
+    <div id="panel-form" class="state-panel" style="display:none;">
+
+      <!-- WARNING BANNER -->
+      <div class="warning-banner">
+        <div class="warning-icon">⚠️</div>
+        <div>
+          <div class="warning-title">⛔ LINK INI HANYA UNTUK 1X PAKAI!</div>
+          <div class="warning-body">
+            Jika kamu menyebarkan link ini kepada orang lain di luar yang sudah ditetapkan, <strong>kami tidak bertanggung jawab atas risiko apapun.</strong> Semua konsekuensi akibat penyebaran link ini <strong>ditanggung sepenuhnya oleh pemegang link.</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-layout">
+        <!-- FORM COLUMN -->
+        <div class="form-card">
+          <div class="form-card-head">
+            <div class="form-card-title">Pendaftaran <span id="hd-batch-name">Batch 3</span></div>
+            <div class="form-card-sub">Isi data diri dengan benar. Setiap nomor WA dan email hanya bisa digunakan <strong>1 kali</strong>.</div>
+          </div>
+
+          <div class="form-body">
+            <!-- TIMER -->
+            <div class="timer-box">
+              <div style="font-size:28px;">⏱️</div>
+              <div>
+                <div class="timer-label">Selesaikan Dalam</div>
+                <div class="timer-value" id="countdown-timer">30:00</div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field full">
+                <label>Nama Lengkap <span class="req">*</span></label>
+                <input type="text" id="f-name" placeholder="Sesuai KTM/KTP" oninput="onNameInput()">
+              </div>
+              <div class="field full">
+                <label>Email Aktif <span class="req">*</span></label>
+                <input type="email" id="f-email" placeholder="emailkamu@gmail.com">
+              </div>
+              <div class="field full">
+                <label>No. WhatsApp <span class="req">*</span></label>
+                <input type="tel" id="f-wa" placeholder="08xxxxxxxxxx"
+                  oninput="this.value=this.value.replace(/[^0-9]/g,''); onWaInput();"
+                  onkeypress="return /[0-9]/.test(event.key)">
+                <div style="font-size:11px; color:var(--txm); margin-top:4px; opacity:0.8;">Hanya boleh angka. Huruf dan simbol tidak diterima.</div>
+              </div>
+            </div>
+
+            <!-- TRANSFER INFO -->
+            <div style="background:var(--bg3); padding:20px; border-radius:14px; margin:24px 0; border:1.5px solid var(--border);">
+              <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:10px;">Transfer Ke: BCA 3150915928 (a.n. Anang Kuntoro)</div>
+              <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:5px;">
+                Transfer Atas Nama:
+                <span id="display-sender-name" style="color:var(--td); background:#e0eeee; padding:2px 6px; border-radius:4px;">...</span>
+              </div>
+              <div style="font-size:10px; color:var(--red); margin-bottom:12px;">*Wajib tulis nama di atas di kolom berita/keterangan transfer.</div>
+              <div style="font-size:11px; color:var(--txm); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Nominal (Wajib Sesuai):</div>
+              <div style="font-size:30px; color:var(--td); font-weight:900;" id="display-nominal">Rp100.---</div>
+              <div style="font-size:10px; color:var(--red); font-weight:600; margin-top:5px;">*3 digit terakhir diambil dari nomor WhatsApp Anda.</div>
+            </div>
+
+            <!-- UPLOAD -->
+            <div class="field full">
+              <label>Upload Bukti Transfer <span class="req">*</span></label>
+              <input type="file" id="f-proof" accept="image/*" style="padding:10px; border:1.5px dashed var(--border); width:100%; border-radius:10px;">
+            </div>
+
+            <button class="btn-pay" id="btn-submit" onclick="handleSubmit()" style="margin-top:28px; height:56px; width:100%;">
+              <span>Kirim Pendaftaran</span><span>→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+          <div class="order-card" style="position:sticky; top:20px;">
+            <div class="order-head">
+              <div class="order-head-label">Ringkasan Pesanan</div>
+              <div class="order-price" id="sidebar-total">Rp100.---</div>
+            </div>
+            <div class="order-body">
+              <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
+              <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">Batch 3</span></div>
+              <div class="order-row"><span class="k">Metode</span><span class="v">Transfer BCA Manual</span></div>
+            </div>
+            <div style="padding:15px; background:#f9f9f9; border-radius:0 0 12px 12px; font-size:11px; color:var(--txm); line-height:1.6;">
+              ✓ Slot dijamin setelah verifikasi admin<br>
+              ✓ Invoice PDF dikirim ke email<br>
+              ✓ Maks. 1x per nomor WA & email
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="panel-done" class="state-panel center-panel" style="display:none;">
+      <div class="icon">🎉</div>
+      <h2 style="color:var(--td);">Pendaftaran Berhasil!</h2>
+      <p>Data dan bukti transfer kamu telah kami terima.<br>Tim admin akan melakukan verifikasi manual.<br>Invoice resmi akan dikirim ke email kamu.</p>
+      <div style="background:#fff9e6; border:1px solid #ffeeba; padding:20px; border-radius:12px; margin-top:28px; text-align:left; max-width:420px; margin-left:auto; margin-right:auto;">
+        <h4 style="color:#856404; margin-bottom:8px;">Butuh Bantuan?</h4>
+        <p style="color:#856404; font-size:13px; margin-bottom:12px;">Hubungi Admin WhatsApp jika ada kendala:</p>
+        <a href="https://wa.me/6289653405239" target="_blank" style="color:#024847; font-weight:900; font-size:17px; text-decoration:none;">+62 896-5340-5239 (Admin Localogo)</a>
+      </div>
+    </div>
+
+    <!-- EXPIRED -->
+    <div id="panel-expired" class="state-panel center-panel" style="display:none;">
+      <div class="icon">⏱️</div>
+      <h2 style="color:var(--red);">Waktu Habis</h2>
+      <p>Sesi pendaftaran kamu telah berakhir (30 menit).<br>Silakan refresh halaman untuk memulai kembali.</p>
+      <button onclick="location.reload()" class="btn-pay" style="margin-top:24px; display:inline-flex;">
+        <span>Coba Lagi</span><span>→</span>
+      </button>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <a href="https://wa.me/6289653405239" target="_blank" class="floating-wa">
+    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+  </a>
+
+  <script>
+    const BACKEND_URL = window.BACKEND_URL || '';
+    let _sessionToken = null;
+    let _countdownInterval = null;
+    let _startedAt = null;
+
+    // ── INIT ─────────────────────────────────────────────────────────
+    async function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+
+      if (!token) {
+        showPanel('panel-invalid');
+        return;
+      }
+
+      _sessionToken = token;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/session/validate?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (!data.valid) {
+          showPanel('panel-invalid');
+          return;
+        }
+
+        if (data.is_full) {
+          showPanel('panel-full');
+          return;
+        }
+
+        // Update batch name
+        const batchName = data.batch_name || 'Batch 3';
+        const hdBatch = document.getElementById('hd-batch-name');
+        const sbBatch = document.getElementById('sidebar-batch');
+        if (hdBatch) hdBatch.textContent = batchName;
+        if (sbBatch) sbBatch.textContent = batchName;
+
+        // Show form
+        showPanel('panel-form');
+        startTimer();
+
+      } catch (err) {
+        console.error('Init error:', err);
+        showPanel('panel-invalid');
+      }
+    }
+
+    // ── TIMER ─────────────────────────────────────────────────────────
+    function startTimer() {
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      _startedAt = Date.now();
+      let remaining = 30 * 60;
+      const el = document.getElementById('countdown-timer');
+
+      function tick() {
+        if (remaining <= 0) {
+          clearInterval(_countdownInterval);
+          showPanel('panel-expired');
+          return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        if (el) el.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        remaining--;
+      }
+      tick();
+      _countdownInterval = setInterval(tick, 1000);
+    }
+
+    // ── INPUT HANDLERS ────────────────────────────────────────────────
+    function onNameInput() {
+      const val = document.getElementById('f-name')?.value.trim();
+      const el = document.getElementById('display-sender-name');
+      if (el) el.textContent = val || '...';
+    }
+
+    function onWaInput() {
+      const wa = document.getElementById('f-wa')?.value.trim();
+      const last3 = (wa || '').slice(-3).replace(/\D/g, '0');
+      const nominal = 100000 + parseInt(last3 || '0', 10);
+      const formatted = 'Rp' + nominal.toLocaleString('id-ID');
+      const nomEl = document.getElementById('display-nominal');
+      const sbEl = document.getElementById('sidebar-total');
+      if (nomEl) nomEl.textContent = formatted;
+      if (sbEl) sbEl.textContent = formatted;
+    }
+
+    // ── SUBMIT ────────────────────────────────────────────────────────
+    async function handleSubmit() {
+      const name = document.getElementById('f-name')?.value.trim();
+      const email = document.getElementById('f-email')?.value.trim();
+      const wa = document.getElementById('f-wa')?.value.trim();
+      const proofFile = document.getElementById('f-proof')?.files[0];
+
+      if (!name || !email || !wa) return showToast('⚠️ Lengkapi nama, email, dan nomor WA.');
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) return showToast('⚠️ Format email tidak valid. Contoh: nama@gmail.com');
+
+      // WA: numbers only validation
+      if (/\D/.test(wa)) return showToast('⚠️ Nomor WA hanya boleh berisi angka.');
+      if (wa.length < 9) return showToast('⚠️ Nomor WA terlalu pendek.');
+
+      if (!proofFile) return showToast('⚠️ Upload bukti transfer terlebih dahulu.');
+
+      // Confirm email
+      const confirmed = confirm(`Pastikan email kamu sudah benar:\n\n» ${email}\n\nEmail ini akan digunakan untuk mengirim INVOICE setelah diverifikasi. Sudah benar?`);
+      if (!confirmed) return;
+
+      const btn = document.getElementById('btn-submit');
+      const oldHTML = btn?.innerHTML;
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span>Mengirim...</span>'; }
+
+      try {
+        // Compress image if > 500KB
+        let finalFile = proofFile;
+        if (proofFile.size > 500 * 1024) {
+          try {
+            finalFile = await imageCompression(proofFile, { maxSizeMB: 0.8, maxWidthOrHeight: 1280, useWebWorker: true });
+          } catch (e) { console.warn('Compression failed, using original'); }
+        }
+
+        // Convert to base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(finalFile);
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = () => reject(new Error('Gagal membaca file bukti transfer.'));
+        });
+
+        const ext = finalFile.name.split('.').pop().toLowerCase() || 'jpg';
+
+        const res = await fetch(`${BACKEND_URL}/api/session/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: _sessionToken,
+            full_name: name,
+            email,
+            whatsapp: wa,
+            proof_base64: base64,
+            proof_ext: ext
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (_countdownInterval) clearInterval(_countdownInterval);
+          showPanel('panel-done');
+        } else {
+          throw new Error(data.error || 'Gagal mengirim pendaftaran.');
+        }
+      } catch (err) {
+        showToast('⚠️ ' + (err.message || 'Terjadi kesalahan. Coba lagi.'));
+        if (btn) { btn.disabled = false; btn.innerHTML = oldHTML; }
+      }
+    }
+
+    // ── HELPERS ───────────────────────────────────────────────────────
+    function showPanel(id) {
+      document.querySelectorAll('.state-panel').forEach(p => p.style.display = 'none');
+      const target = document.getElementById(id);
+      if (target) target.style.display = 'block';
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

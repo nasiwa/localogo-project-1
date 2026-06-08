@@ -642,5 +642,139 @@ router.get('/order-details/:orderRef', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/session/validate?token=xxx
+ * Validasi session token bersama (shared link untuk 200 orang)
+ */
+router.get('/session/validate', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.json({ valid: false, reason: 'no_token' });
+
+  try {
+    const { data: batch, error } = await adminSupabase
+      .from('batches')
+      .select('id, name, quota, filled_slots')
+      .eq('session_token', token)
+      .single();
+
+    if (error || !batch) {
+      return res.json({ valid: false, reason: 'not_found' });
+    }
+
+    const isFull = (batch.filled_slots || 0) >= (batch.quota || 200);
+
+    res.json({
+      valid: true,
+      is_full: isFull,
+      batch_name: batch.name,
+      batch_id: batch.id,
+      remaining: Math.max(0, (batch.quota || 200) - (batch.filled_slots || 0))
+    });
+  } catch (err) {
+    res.status(500).json({ valid: false, reason: 'server_error', error: err.message });
+  }
+});
+
+/**
+ * POST /api/session/register
+ * Daftarkan peserta via shared session token (tanpa kode sesi individual)
+ */
+router.post('/session/register', async (req, res) => {
+  const { token, full_name, email, whatsapp, proof_base64, proof_ext } = req.body;
+
+  if (!token || !full_name || !email || !whatsapp) {
+    return res.status(400).json({ success: false, error: 'Data tidak lengkap.' });
+  }
+  if (!proof_base64) {
+    return res.status(400).json({ success: false, error: 'Bukti transfer wajib diunggah.' });
+  }
+
+  try {
+    // 1. Validasi session token → ambil batch
+    const { data: batch, error: batchErr } = await adminSupabase
+      .from('batches')
+      .select('id, name, quota, filled_slots')
+      .eq('session_token', token)
+      .single();
+
+    if (batchErr || !batch) {
+      return res.status(400).json({ success: false, error: 'Link tidak valid atau sudah tidak aktif.' });
+    }
+
+    // 2. Cek kuota
+    const currentFilled = batch.filled_slots || 0;
+    const maxQuota = batch.quota || 200;
+    if (currentFilled >= maxQuota) {
+      return res.status(400).json({ success: false, error: 'Maaf, kuota sesi ini sudah penuh. Pantau info batch selanjutnya!' });
+    }
+
+    // 3. Normalisasi WA (angka saja)
+    const normalizedWA = whatsapp.replace(/\D/g, '');
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 4. Cek duplikat (WA atau email)
+    const { data: existing } = await adminSupabase
+      .from('orders')
+      .select('id, status')
+      .eq('batch_id', batch.id)
+      .or(`whatsapp.eq.${normalizedWA},email.eq.${normalizedEmail}`)
+      .in('status', ['paid', 'pending'])
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return res.status(400).json({ success: false, error: 'Nomor WA atau email ini sudah terdaftar di sesi ini. Setiap orang hanya bisa mendaftar 1x.' });
+    }
+
+    // 5. Upload bukti transfer
+    const fileName = `proof_${Date.now()}.${proof_ext || 'jpg'}`;
+    const fileBuffer = Buffer.from(proof_base64, 'base64');
+    const { error: uploadErr } = await adminSupabase.storage
+      .from('transfer_proofs')
+      .upload(fileName, fileBuffer, {
+        contentType: `image/${proof_ext || 'jpeg'}`,
+        upsert: false
+      });
+
+    if (uploadErr) {
+      console.error('[SESSION_UPLOAD_ERR]', uploadErr);
+      return res.status(500).json({ success: false, error: `Gagal upload bukti: ${uploadErr.message}` });
+    }
+
+    // 6. Hitung nominal unik
+    const last3WA = normalizedWA.slice(-3).replace(/\D/g, '0');
+    const amount = 100000 + parseInt(last3WA || '0');
+
+    // 7. Buat order
+    const orderRef = genOrderRef();
+    const { data: newOrder, error: insErr } = await adminSupabase
+      .from('orders')
+      .insert({
+        order_ref: orderRef,
+        batch_id: batch.id,
+        full_name: full_name.trim(),
+        email: normalizedEmail,
+        whatsapp: normalizedWA,
+        amount,
+        status: 'pending',
+        payment_gateway: 'manual',
+        proof_url: fileName
+      })
+      .select()
+      .single();
+
+    if (insErr) throw insErr;
+
+    // 8. Increment filled_slots
+    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: batch.id });
+
+    console.log(`[SESSION_REGISTER] ${orderRef} - ${full_name} (${normalizedWA}) - Batch: ${batch.name}`);
+    res.json({ success: true, order_ref: orderRef });
+
+  } catch (err) {
+    console.error('[SESSION_REGISTER_ERR]', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
 
