@@ -3,6 +3,10 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/verify-session-3-q7a",
+      "destination": "/claim-verification-v1-x92.html"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     }
