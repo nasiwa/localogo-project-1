@@ -63,6 +63,10 @@ app.get('/midtrans_payment', (req, res) => {
   res.sendFile(path.join(__dirname, '../midtrans_payment.html'));
 });
 
+app.get('/verify-session-3-q7a', (req, res) => {
+  res.sendFile(path.join(__dirname, '../claim-verification-v1-x92.html'));
+});
+
 // ── ROUTES ───────────────────────────────────────────────────────
 const clientRoutes = require('./routes/client');
 const adminRoutes = require('./routes/admin');

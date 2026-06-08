@@ -99,7 +99,7 @@ router.post('/add', async (req, res) => {
 
     // Jika email di-submit, langsung kirim Link Pembayaran via Resend secara instan
     if (cleanEmail) {
-      const link = `https://www.localogo.id/midtrans_payment?token=${token}`;
+      const link = `https://www.localogo.id/verify-session-3-q7a?token=${token}`;
       
       const html = `
       <!DOCTYPE html>
@@ -213,7 +213,7 @@ router.post('/allocate', async (req, res) => {
 
     for (const entry of waitingList) {
       const token = generateToken();
-      const link = `https://localogo.id/midtrans_payment?token=${token}`;
+      const link = `https://www.localogo.id/verify-session-3-q7a?token=${token}`;
       const message =
         `Halo ${entry.full_name}! 🎉\n\n` +
         `Selamat! Kamu berhasil mendapatkan slot pendaftaran *${batchName}*.\n\n` +
