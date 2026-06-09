@@ -350,7 +350,7 @@ router.get('/session-links', async (req, res) => {
 
 // POST create new session link
 router.post('/session-links', async (req, res) => {
-  const { batch_id, label, max_quota } = req.body;
+  const { batch_id, label, max_quota, valid_from } = req.body;
   if (!batch_id || !label) {
     return res.status(400).json({ success: false, error: 'batch_id dan label wajib diisi.' });
   }
@@ -359,7 +359,13 @@ router.post('/session-links', async (req, res) => {
   try {
     const { data, error } = await adminSupabase
       .from('session_links')
-      .insert({ token, batch_id, label, max_quota: max_quota || 50 })
+      .insert({
+        token,
+        batch_id,
+        label,
+        max_quota: max_quota || 50,
+        valid_from: valid_from || null
+      })
       .select('*, batches(name)')
       .single();
     if (error) throw error;

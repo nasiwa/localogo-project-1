@@ -664,9 +664,17 @@ router.get('/session/validate', async (req, res) => {
 
     const isFull = (link.used_count || 0) >= (link.max_quota || 50);
 
+    // Check if the link has a scheduled start time in the future
+    let notStarted = false;
+    if (link.valid_from && new Date(link.valid_from) > new Date()) {
+      notStarted = true;
+    }
+
     res.json({
       valid: true,
       is_full: isFull,
+      not_started: notStarted,
+      valid_from: link.valid_from,
       batch_name: link.batches?.name || 'Batch',
       batch_id: link.batch_id,
       label: link.label,
@@ -704,7 +712,12 @@ router.post('/session/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Link tidak valid atau sudah tidak aktif.' });
     }
 
-    // 2. Cek kuota per-link
+    // 2. Cek waktu mulai (valid_from)
+    if (link.valid_from && new Date(link.valid_from) > new Date()) {
+      return res.status(400).json({ success: false, error: 'Sesi pendaftaran link ini belum dimulai.' });
+    }
+
+    // 3. Cek kuota per-link
     const currentUsed = link.used_count || 0;
     const maxQuota = link.max_quota || 50;
     if (currentUsed >= maxQuota) {

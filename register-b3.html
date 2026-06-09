@@ -123,6 +123,19 @@
       <a href="https://wa.me/6289653405239" target="_blank" style="display:inline-block; margin-top:24px; background:#25d366; color:#fff; padding:14px 28px; border-radius:12px; font-weight:700; text-decoration:none;">💬 Hubungi Admin WhatsApp</a>
     </div>
 
+    <!-- NOT STARTED -->
+    <div id="panel-not-started" class="state-panel center-panel" style="display:none;">
+      <div class="icon">⏳</div>
+      <h2 style="color:var(--td);">Pendaftaran Belum Dibuka</h2>
+      <p>Sesi pendaftaran untuk link ini belum dimulai.<br>Halaman akan otomatis memuat ulang saat waktu sudah tiba.</p>
+      
+      <div style="background:var(--bg3); padding:24px; border-radius:16px; border:1px solid var(--border); display:inline-block; min-width:280px; margin-top:24px;">
+        <div style="font-size:12px; font-weight:700; color:var(--td); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Terbuka Dalam Waktu</div>
+        <div id="wait-countdown" style="font-size:32px; font-weight:900; color:var(--txd); font-variant-numeric: tabular-nums;">00:00:00</div>
+        <div id="wait-target-time" style="font-size:11px; color:var(--txm); margin-top:8px;">Buka pukul: --:--</div>
+      </div>
+    </div>
+
     <!-- QUOTA FULL -->
     <div id="panel-full" class="state-panel center-panel" style="display:none;">
       <div class="icon">😔</div>
@@ -290,6 +303,12 @@
           return;
         }
 
+        if (data.not_started && data.valid_from) {
+          showPanel('panel-not-started');
+          startWaitingTimer(data.valid_from);
+          return;
+        }
+
         if (data.is_full) {
           showPanel('panel-full');
           return;
@@ -310,6 +329,43 @@
         console.error('Init error:', err);
         showPanel('panel-invalid');
       }
+    }
+
+    // ── WAITING TIMER (SEBELUM DIBUKA) ────────────────────────────────
+    function startWaitingTimer(validFromStr) {
+      const targetTime = new Date(validFromStr).getTime();
+      const elCount = document.getElementById('wait-countdown');
+      const elTarget = document.getElementById('wait-target-time');
+      
+      if (elTarget) {
+        const d = new Date(validFromStr);
+        elTarget.textContent = 'Buka pukul: ' + d.toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      }
+
+      function tick() {
+        const now = Date.now();
+        const diff = targetTime - now;
+
+        if (diff <= 0) {
+          if (_countdownInterval) clearInterval(_countdownInterval);
+          elCount.textContent = "MEMBUAT ULANG...";
+          setTimeout(() => location.reload(), 1000); // Reload the page to enter
+          return;
+        }
+
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        let text = '';
+        if (h > 0) text += String(h).padStart(2, '0') + ':';
+        text += String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        
+        if (elCount) elCount.textContent = text;
+      }
+
+      tick();
+      _countdownInterval = setInterval(tick, 1000);
     }
 
     // ── TIMER ─────────────────────────────────────────────────────────

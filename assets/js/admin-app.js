@@ -879,9 +879,16 @@ async function loadSessionLinks() {
 
       const fullLink = `${SESSION_BASE_URL}?token=${link.token}`;
 
+      let validFromText = '—';
+      if (link.valid_from) {
+        const d = new Date(link.valid_from);
+        validFromText = d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+      }
+
       return `<tr>
         <td><strong>${link.label}</strong></td>
         <td>${link.batches?.name || '—'}</td>
+        <td>${validFromText}</td>
         <td>${link.max_quota}</td>
         <td>${link.used_count}</td>
         <td>
@@ -934,14 +941,22 @@ function closeCreateLinkModal() {
   if (modal) modal.style.display = 'none';
   const labelEl = document.getElementById('sl-label');
   const quotaEl = document.getElementById('sl-quota');
+  const validFromEl = document.getElementById('sl-valid-from');
   if (labelEl) labelEl.value = '';
   if (quotaEl) quotaEl.value = '50';
+  if (validFromEl) validFromEl.value = '';
 }
 
 async function saveNewSessionLink() {
   const label = document.getElementById('sl-label')?.value.trim();
   const batch_id = document.getElementById('sl-batch')?.value;
   const max_quota = parseInt(document.getElementById('sl-quota')?.value || '50');
+  let valid_from = document.getElementById('sl-valid-from')?.value;
+  if (valid_from) {
+    valid_from = new Date(valid_from).toISOString();
+  } else {
+    valid_from = null;
+  }
 
   if (!label) return showToast('⚠️ Masukkan label untuk link ini.');
   if (!batch_id) return showToast('⚠️ Pilih batch terlebih dahulu.');
@@ -953,7 +968,7 @@ async function saveNewSessionLink() {
     const res = await fetch(`${BACKEND_URL}/api/admin/session-links`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
-      body: JSON.stringify({ batch_id, label, max_quota })
+      body: JSON.stringify({ batch_id, label, max_quota, valid_from })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
