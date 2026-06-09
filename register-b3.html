@@ -115,6 +115,14 @@
       <p>Link yang kamu gunakan tidak valid atau sudah tidak aktif.<br>Pastikan kamu menggunakan link resmi dari admin Localogo.</p>
     </div>
 
+    <!-- ALREADY REGISTERED -->
+    <div id="panel-already" class="state-panel center-panel" style="display:none;">
+      <div class="icon">📝</div>
+      <h2 style="color:var(--td);">Kamu Sudah Mendaftar</h2>
+      <p>Setiap orang hanya diperbolehkan melakukan pendaftaran 1 kali.<br>Jika ada kendala pembayaran atau verifikasi, hubungi Admin WhatsApp.</p>
+      <a href="https://wa.me/6289653405239" target="_blank" style="display:inline-block; margin-top:24px; background:#25d366; color:#fff; padding:14px 28px; border-radius:12px; font-weight:700; text-decoration:none;">💬 Hubungi Admin WhatsApp</a>
+    </div>
+
     <!-- QUOTA FULL -->
     <div id="panel-full" class="state-panel center-panel" style="display:none;">
       <div class="icon">😔</div>
@@ -267,6 +275,12 @@
 
       _sessionToken = token;
 
+      // Check if this browser has already registered for this token
+      if (localStorage.getItem('registered_token_' + token) === 'true') {
+        showPanel('panel-already');
+        return;
+      }
+
       try {
         const res = await fetch(`${BACKEND_URL}/api/session/validate?token=${encodeURIComponent(token)}`);
         const data = await res.json();
@@ -399,6 +413,7 @@
 
         const data = await res.json();
         if (data.success) {
+          localStorage.setItem('registered_token_' + _sessionToken, 'true');
           if (_countdownInterval) clearInterval(_countdownInterval);
           showPanel('panel-done');
         } else {
