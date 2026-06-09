@@ -72,6 +72,9 @@
       <a class="snav-item" onclick="showPage('codes')" id="nav-codes">
         <span class="icon">🔑</span>Kode Sesi
       </a>
+      <a class="snav-item" onclick="showPage('session-links')" id="nav-session-links">
+        <span class="icon">🔗</span>Session Links
+      </a>
       <div class="snav-bottom">
         <div class="admin-info">
           <div class="admin-avatar" id="admin-avatar">A</div>
@@ -265,6 +268,43 @@
         </div>
       </div>
 
+      <!-- ── SESSION LINKS PAGE ── -->
+      <div class="page-section" id="page-session-links">
+        <div class="page-header">
+          <div>
+            <div class="page-title">🔗 Session Links</div>
+            <div class="page-sub">Kelola link pendaftaran bersama per grup (Batch 3)</div>
+          </div>
+          <button class="btn-sm btn-primary" onclick="openCreateLinkModal()" style="background:var(--td)">+ Buat Link Baru</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">Daftar Session Links</div>
+              <div class="card-sub">Setiap link punya kuota sendiri. Token di-generate otomatis.</div>
+            </div>
+            <button class="btn-sm" onclick="loadSessionLinks()" style="background:var(--bg3);color:var(--tx);border:1px solid var(--border)">↻ Refresh</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Batch</th>
+                <th>Kuota</th>
+                <th>Terpakai</th>
+                <th>Progress</th>
+                <th>Status</th>
+                <th style="text-align:right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="session-links-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--txm);">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div><!-- /main-content -->
   </div><!-- /app -->
 
@@ -402,6 +442,30 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- CREATE SESSION LINK MODAL -->
+  <div class="modal-backdrop" id="create-link-modal">
+    <div class="modal-box">
+      <div class="modal-title">Buat Session Link Baru</div>
+      <div class="modal-sub">Token akan di-generate otomatis. Link bisa langsung disalin setelah dibuat.</div>
+      <div class="modal-field">
+        <label>Label (Nama Internal)</label>
+        <input type="text" id="sl-label" placeholder="contoh: Grup WA 1 / Cluster A" />
+      </div>
+      <div class="modal-field">
+        <label>Batch Tujuan</label>
+        <select id="sl-batch"></select>
+      </div>
+      <div class="modal-field">
+        <label>Kuota per Link</label>
+        <input type="number" id="sl-quota" value="50" min="1" max="1000" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel-m" onclick="closeCreateLinkModal()">Batal</button>
+        <button class="btn-save-m" id="btn-save-link" onclick="saveNewSessionLink()">Buat Link</button>
+      </div>
+    </div>
+  </div>
 
   <script src="assets/js/admin-app.js"></script>
 </body>

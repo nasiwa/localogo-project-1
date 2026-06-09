@@ -332,4 +332,70 @@ router.delete('/access-codes/:code', async (req, res) => {
   }
 });
 
+// ── SESSION LINKS CRUD ───────────────────────────────────────────
+
+// GET all session links (with batch info)
+router.get('/session-links', async (req, res) => {
+  try {
+    const { data, error } = await adminSupabase
+      .from('session_links')
+      .select('*, batches(name)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ success: true, links: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST create new session link
+router.post('/session-links', async (req, res) => {
+  const { batch_id, label, max_quota } = req.body;
+  if (!batch_id || !label) {
+    return res.status(400).json({ success: false, error: 'batch_id dan label wajib diisi.' });
+  }
+  // Auto-generate token (32 hex chars)
+  const token = require('crypto').randomBytes(16).toString('hex');
+  try {
+    const { data, error } = await adminSupabase
+      .from('session_links')
+      .insert({ token, batch_id, label, max_quota: max_quota || 50 })
+      .select('*, batches(name)')
+      .single();
+    if (error) throw error;
+    res.json({ success: true, link: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PATCH toggle active/inactive
+router.patch('/session-links/:id/toggle', async (req, res) => {
+  try {
+    const { data: current } = await adminSupabase
+      .from('session_links').select('is_active').eq('id', req.params.id).single();
+    const { data, error } = await adminSupabase
+      .from('session_links')
+      .update({ is_active: !current?.is_active })
+      .eq('id', req.params.id)
+      .select().single();
+    if (error) throw error;
+    res.json({ success: true, link: data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE session link
+router.delete('/session-links/:id', async (req, res) => {
+  try {
+    const { error } = await adminSupabase
+      .from('session_links').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

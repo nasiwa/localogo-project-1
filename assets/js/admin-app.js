@@ -88,6 +88,7 @@ function showPage(page) {
   if (page === 'batches') loadAdminBatches();
   if (page === 'orders') loadOrders();
   if (page === 'codes') loadAccessCodes();
+  if (page === 'session-links') loadSessionLinks();
 }
 
 async function refreshAll() {
@@ -842,5 +843,166 @@ async function deleteCode(code) {
     }
   } catch (e) {
     showToast('❌ Gagal menyambung ke server');
+  }
+}
+
+// ── SESSION LINKS ───────────────────────────────────────────────────
+
+const SESSION_BASE_URL = 'https://www.localogo.id/register-b3';
+
+async function loadSessionLinks() {
+  const tbody = document.getElementById('session-links-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--txm);">Memuat...</td></tr>';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/session-links`, {
+      headers: { 'x-admin-token': getAdminToken() }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const links = data.links || [];
+    if (links.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--txm);">Belum ada session link. Klik "+ Buat Link Baru" untuk memulai.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = links.map(link => {
+      const pct = Math.round((link.used_count / link.max_quota) * 100);
+      const isFull = link.used_count >= link.max_quota;
+      const statusBadge = !link.is_active
+        ? '<span style="background:#f1f1f1;color:#888;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">NONAKTIF</span>'
+        : isFull
+          ? '<span style="background:#fee;color:var(--red);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">PENUH</span>'
+          : '<span style="background:#e6f9f0;color:#0d9666;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">AKTIF</span>';
+
+      const fullLink = `${SESSION_BASE_URL}?token=${link.token}`;
+
+      return `<tr>
+        <td><strong>${link.label}</strong></td>
+        <td>${link.batches?.name || '—'}</td>
+        <td>${link.max_quota}</td>
+        <td>${link.used_count}</td>
+        <td>
+          <div style="background:var(--bg3);border-radius:20px;height:8px;overflow:hidden;">
+            <div style="background:${isFull ? 'var(--red)' : 'var(--td)'};height:100%;width:${Math.min(pct, 100)}%;transition:width .3s;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--txm);margin-top:2px;">${pct}%</div>
+        </td>
+        <td>${statusBadge}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button onclick="copySessionLink('${fullLink}')" style="background:var(--td);color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:4px;">📋 Copy</button>
+          <button onclick="toggleSessionLink('${link.id}')" style="background:${link.is_active ? '#fff3cd' : '#d4edda'};color:${link.is_active ? '#856404' : '#155724'};border:1px solid ${link.is_active ? '#ffeeba' : '#c3e6cb'};padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:4px;">${link.is_active ? '⏸ Nonaktif' : '▶ Aktifkan'}</button>
+          <button onclick="deleteSessionLink('${link.id}', '${link.label}')" style="background:#fee;color:var(--red);border:1px solid rgba(224,85,85,.3);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;">🗑 Hapus</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--red);">Gagal memuat: ${err.message}</td></tr>`;
+  }
+}
+
+function copySessionLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('✅ Link berhasil disalin!');
+  }).catch(() => {
+    prompt('Salin link berikut:', url);
+  });
+}
+
+function openCreateLinkModal() {
+  const modal = document.getElementById('create-link-modal');
+  if (modal) modal.style.display = 'flex';
+
+  // Populate batch dropdown
+  const sel = document.getElementById('sl-batch');
+  if (sel) {
+    sel.innerHTML = '<option value="">Memuat batch...</option>';
+    fetch(`${BACKEND_URL}/api/batches`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.batches) {
+          sel.innerHTML = d.batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+        }
+      });
+  }
+}
+
+function closeCreateLinkModal() {
+  const modal = document.getElementById('create-link-modal');
+  if (modal) modal.style.display = 'none';
+  const labelEl = document.getElementById('sl-label');
+  const quotaEl = document.getElementById('sl-quota');
+  if (labelEl) labelEl.value = '';
+  if (quotaEl) quotaEl.value = '50';
+}
+
+async function saveNewSessionLink() {
+  const label = document.getElementById('sl-label')?.value.trim();
+  const batch_id = document.getElementById('sl-batch')?.value;
+  const max_quota = parseInt(document.getElementById('sl-quota')?.value || '50');
+
+  if (!label) return showToast('⚠️ Masukkan label untuk link ini.');
+  if (!batch_id) return showToast('⚠️ Pilih batch terlebih dahulu.');
+
+  const btn = document.getElementById('btn-save-link');
+  if (btn) { btn.disabled = true; btn.textContent = 'Membuat...'; }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/session-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': getAdminToken() },
+      body: JSON.stringify({ batch_id, label, max_quota })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const fullLink = `${SESSION_BASE_URL}?token=${data.link.token}`;
+    closeCreateLinkModal();
+    loadSessionLinks();
+    showToast('✅ Link berhasil dibuat!');
+
+    // Otomatis prompt copy
+    setTimeout(() => {
+      if (confirm(`Link berhasil dibuat!\n\n${fullLink}\n\nSalin ke clipboard sekarang?`)) {
+        navigator.clipboard.writeText(fullLink).catch(() => prompt('Salin link:', fullLink));
+      }
+    }, 300);
+  } catch (err) {
+    showToast('❌ Gagal: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Buat Link'; }
+  }
+}
+
+async function toggleSessionLink(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/session-links/${id}/toggle`, {
+      method: 'PATCH',
+      headers: { 'x-admin-token': getAdminToken() }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    showToast('✅ Status link diperbarui');
+    loadSessionLinks();
+  } catch (err) {
+    showToast('❌ Gagal: ' + err.message);
+  }
+}
+
+async function deleteSessionLink(id, label) {
+  if (!confirm(`Hapus session link "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/admin/session-links/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-token': getAdminToken() }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    showToast('✅ Link berhasil dihapus');
+    loadSessionLinks();
+  } catch (err) {
+    showToast('❌ Gagal: ' + err.message);
   }
 }

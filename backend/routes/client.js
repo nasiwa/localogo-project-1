@@ -644,31 +644,33 @@ router.get('/order-details/:orderRef', async (req, res) => {
 
 /**
  * GET /api/session/validate?token=xxx
- * Validasi session token bersama (shared link untuk 200 orang)
+ * Validasi session token bersama dari tabel session_links
  */
 router.get('/session/validate', async (req, res) => {
   const { token } = req.query;
   if (!token) return res.json({ valid: false, reason: 'no_token' });
 
   try {
-    const { data: batch, error } = await adminSupabase
-      .from('batches')
-      .select('id, name, quota, filled_slots')
-      .eq('session_token', token)
+    const { data: link, error } = await adminSupabase
+      .from('session_links')
+      .select('*, batches(name)')
+      .eq('token', token)
+      .eq('is_active', true)
       .single();
 
-    if (error || !batch) {
+    if (error || !link) {
       return res.json({ valid: false, reason: 'not_found' });
     }
 
-    const isFull = (batch.filled_slots || 0) >= (batch.quota || 200);
+    const isFull = (link.used_count || 0) >= (link.max_quota || 50);
 
     res.json({
       valid: true,
       is_full: isFull,
-      batch_name: batch.name,
-      batch_id: batch.id,
-      remaining: Math.max(0, (batch.quota || 200) - (batch.filled_slots || 0))
+      batch_name: link.batches?.name || 'Batch',
+      batch_id: link.batch_id,
+      label: link.label,
+      remaining: Math.max(0, (link.max_quota || 50) - (link.used_count || 0))
     });
   } catch (err) {
     res.status(500).json({ valid: false, reason: 'server_error', error: err.message });
@@ -690,33 +692,34 @@ router.post('/session/register', async (req, res) => {
   }
 
   try {
-    // 1. Validasi session token → ambil batch
-    const { data: batch, error: batchErr } = await adminSupabase
-      .from('batches')
-      .select('id, name, quota, filled_slots')
-      .eq('session_token', token)
+    // 1. Validasi session token dari session_links
+    const { data: link, error: linkErr } = await adminSupabase
+      .from('session_links')
+      .select('*, batches(name)')
+      .eq('token', token)
+      .eq('is_active', true)
       .single();
 
-    if (batchErr || !batch) {
+    if (linkErr || !link) {
       return res.status(400).json({ success: false, error: 'Link tidak valid atau sudah tidak aktif.' });
     }
 
-    // 2. Cek kuota
-    const currentFilled = batch.filled_slots || 0;
-    const maxQuota = batch.quota || 200;
-    if (currentFilled >= maxQuota) {
-      return res.status(400).json({ success: false, error: 'Maaf, kuota sesi ini sudah penuh. Pantau info batch selanjutnya!' });
+    // 2. Cek kuota per-link
+    const currentUsed = link.used_count || 0;
+    const maxQuota = link.max_quota || 50;
+    if (currentUsed >= maxQuota) {
+      return res.status(400).json({ success: false, error: 'Maaf, kuota link ini sudah penuh. Pantau info batch selanjutnya!' });
     }
 
     // 3. Normalisasi WA (angka saja)
     const normalizedWA = whatsapp.replace(/\D/g, '');
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 4. Cek duplikat (WA atau email)
+    // 4. Cek duplikat (WA atau email) di seluruh batch
     const { data: existing } = await adminSupabase
       .from('orders')
       .select('id, status')
-      .eq('batch_id', batch.id)
+      .eq('batch_id', link.batch_id)
       .or(`whatsapp.eq.${normalizedWA},email.eq.${normalizedEmail}`)
       .in('status', ['paid', 'pending'])
       .limit(1);
@@ -750,7 +753,7 @@ router.post('/session/register', async (req, res) => {
       .from('orders')
       .insert({
         order_ref: orderRef,
-        batch_id: batch.id,
+        batch_id: link.batch_id,
         full_name: full_name.trim(),
         email: normalizedEmail,
         whatsapp: normalizedWA,
@@ -764,10 +767,15 @@ router.post('/session/register', async (req, res) => {
 
     if (insErr) throw insErr;
 
-    // 8. Increment filled_slots
-    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: batch.id });
+    // 8. Increment used_count di session_links & filled_slots di batches
+    await adminSupabase
+      .from('session_links')
+      .update({ used_count: (link.used_count || 0) + 1 })
+      .eq('id', link.id);
 
-    console.log(`[SESSION_REGISTER] ${orderRef} - ${full_name} (${normalizedWA}) - Batch: ${batch.name}`);
+    await adminSupabase.rpc('increment_filled_slots', { p_batch_id: link.batch_id });
+
+    console.log(`[SESSION_REGISTER] ${orderRef} - ${full_name} (${normalizedWA}) - Link: ${link.label}`);
     res.json({ success: true, order_ref: orderRef });
 
   } catch (err) {
