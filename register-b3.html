@@ -145,6 +145,22 @@
     </div>
 
     <!-- MAIN FORM -->
+    <!-- ENTER CODE PANEL -->
+    <div id="panel-enter-code" class="state-panel center-panel" style="display:none;">
+      <div class="icon">🎟️</div>
+      <h2 style="color:var(--td);">Masukkan Kode Sesi</h2>
+      <p style="margin-bottom:24px;">Gunakan kode pendaftaran yang kamu terima untuk melanjutkan.</p>
+      <div style="max-width:320px; margin:0 auto;">
+        <input type="text" id="f-code" placeholder="LCG-30APR-XXX"
+          style="width:100%; padding:16px; border:2px solid var(--border); border-radius:12px; font-size:18px; font-family:monospace; text-transform:uppercase; text-align:center; letter-spacing:2px; margin-bottom:15px; outline:none; transition:0.2s;"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter') verifyCode()">
+        <button id="btn-verify-code" onclick="verifyCode()" class="btn-pay" style="width:100%;">
+          <span>Verifikasi Kode</span><span>→</span>
+        </button>
+      </div>
+    </div>
+
     <div id="panel-form" class="state-panel" style="display:none;">
 
       <!-- WARNING BANNER -->
@@ -273,6 +289,7 @@
 
   <script>
     let _sessionToken = null;
+    let _accessCode = null;
     let _countdownInterval = null;
     let _startedAt = null;
 
@@ -282,7 +299,7 @@
       const token = urlParams.get('token');
 
       if (!token) {
-        showPanel('panel-invalid');
+        showPanel('panel-enter-code');
         return;
       }
 
@@ -328,6 +345,46 @@
       } catch (err) {
         console.error('Init error:', err);
         showPanel('panel-invalid');
+      }
+    }
+
+    // ── VERIFY CODE (NO TOKEN MODE) ───────────────────────────────────
+    async function verifyCode() {
+      const code = document.getElementById('f-code')?.value.trim().toUpperCase();
+      if (!code) return showToast('⚠️ Masukkan kode sesi terlebih dahulu.');
+      
+      const btn = document.getElementById('btn-verify-code');
+      const oldHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>Memverifikasi...</span>';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/session/validate-code?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        
+        if (!data.valid) {
+          if (data.reason === 'full') return showToast('⚠️ Kuota untuk kode ini sudah penuh.');
+          return showToast('⚠️ Kode tidak valid atau tidak ditemukan.');
+        }
+
+        _accessCode = code;
+
+        // Update batch name
+        const batchName = data.batch_name || 'Batch 3';
+        const hdBatch = document.getElementById('hd-batch-name');
+        const sbBatch = document.getElementById('sidebar-batch');
+        if (hdBatch) hdBatch.textContent = batchName;
+        if (sbBatch) sbBatch.textContent = batchName;
+
+        // Show form
+        showPanel('panel-form');
+        startTimer();
+
+      } catch (err) {
+        showToast('⚠️ Terjadi kesalahan. Coba lagi.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldHTML;
       }
     }
 
@@ -454,22 +511,41 @@
 
         const ext = finalFile.name.split('.').pop().toLowerCase() || 'jpg';
 
-        const res = await fetch(`${BACKEND_URL}/api/session/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        let url, payload;
+        if (_sessionToken) {
+          url = `${BACKEND_URL}/api/session/register`;
+          payload = {
             token: _sessionToken,
             full_name: name,
             email,
             whatsapp: wa,
             proof_base64: base64,
             proof_ext: ext
-          })
+          };
+        } else if (_accessCode) {
+          url = `${BACKEND_URL}/api/create-order`;
+          payload = {
+            access_code: _accessCode,
+            full_name: name,
+            email,
+            whatsapp: wa,
+            proof_base64: base64,
+            proof_ext: ext,
+            gateway: 'manual'
+          };
+        } else {
+          throw new Error('Sesi tidak valid.');
+        }
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json();
         if (data.success) {
-          localStorage.setItem('registered_token_' + _sessionToken, 'true');
+          if (_sessionToken) localStorage.setItem('registered_token_' + _sessionToken, 'true');
           if (_countdownInterval) clearInterval(_countdownInterval);
           showPanel('panel-done');
         } else {

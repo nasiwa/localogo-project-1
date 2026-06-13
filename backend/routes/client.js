@@ -797,5 +797,43 @@ router.post('/session/register', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/session/validate-code?code=XXX
+ * Validasi kode sesi dari tabel access_codes TANPA mengonsumsi kuota.
+ * Dipakai frontend untuk cek kode sebelum tampilkan form.
+ */
+router.get('/session/validate-code', async (req, res) => {
+  const code = (req.query.code || '').trim().toUpperCase();
+  if (!code) return res.json({ valid: false, reason: 'no_code' });
+
+  try {
+    const { data, error } = await adminSupabase
+      .from('access_codes')
+      .select('code, max_uses, use_count, batch_id, batches(name)')
+      .eq('code', code)
+      .single();
+
+    if (error || !data) {
+      return res.json({ valid: false, reason: 'not_found' });
+    }
+
+    const remaining = (data.max_uses || 100) - (data.use_count || 0);
+    if (remaining <= 0) {
+      return res.json({ valid: false, reason: 'full' });
+    }
+
+    res.json({
+      valid: true,
+      batch_id: data.batch_id,
+      batch_name: data.batches?.name || 'Batch',
+      remaining
+    });
+  } catch (err) {
+    console.error('[VALIDATE_CODE_ERR]', err);
+    res.status(500).json({ valid: false, reason: 'server_error' });
+  }
+});
+
 module.exports = router;
+
 
