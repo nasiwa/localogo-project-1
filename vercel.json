@@ -3,7 +3,12 @@
   "cleanUrls": true,
   "redirects": [
     {
-      "source": "/midtrans_payment(?:\\.html)?",
+      "source": "/midtrans_payment",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/midtrans_payment.html",
       "destination": "/",
       "permanent": false
     }
