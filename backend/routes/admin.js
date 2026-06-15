@@ -350,7 +350,7 @@ router.get('/session-links', async (req, res) => {
 
 // POST create new session link
 router.post('/session-links', async (req, res) => {
-  const { batch_id, label, max_quota, valid_from } = req.body;
+  const { batch_id, label, max_quota, valid_from, allowed_emails } = req.body;
   if (!batch_id || !label) {
     return res.status(400).json({ success: false, error: 'batch_id dan label wajib diisi.' });
   }
@@ -364,7 +364,8 @@ router.post('/session-links', async (req, res) => {
         batch_id,
         label,
         max_quota: max_quota || 50,
-        valid_from: valid_from || null
+        valid_from: valid_from || null,
+        allowed_emails: allowed_emails || null
       })
       .select('*, batches(name)')
       .single();

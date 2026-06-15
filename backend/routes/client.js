@@ -728,6 +728,14 @@ router.post('/session/register', async (req, res) => {
     const normalizedWA = whatsapp.replace(/\D/g, '');
     const normalizedEmail = email.trim().toLowerCase();
 
+    // 3.5 Cek Whitelist Email (jika dikonfigurasi)
+    if (link.allowed_emails && Array.isArray(link.allowed_emails) && link.allowed_emails.length > 0) {
+      const isAllowed = link.allowed_emails.some(e => e.trim().toLowerCase() === normalizedEmail);
+      if (!isAllowed) {
+        return res.status(403).json({ success: false, error: 'Maaf, email kamu tidak terdaftar sebagai penerima kuota sesi ini.' });
+      }
+    }
+
     // 4. Cek duplikat (WA atau email) di seluruh batch
     const { data: existing } = await adminSupabase
       .from('orders')
