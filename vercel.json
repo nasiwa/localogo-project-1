@@ -1,18 +1,7 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "redirects": [
-    {
-      "source": "/midtrans_payment",
-      "destination": "/",
-      "permanent": false
-    },
-    {
-      "source": "/midtrans_payment.html",
-      "destination": "/",
-      "permanent": false
-    }
-  ],
+  "redirects": [],
   "rewrites": [
     {
       "source": "/verify-session-3-q7a",
