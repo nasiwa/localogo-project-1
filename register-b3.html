@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pendaftaran Batch 3 — LOCALOGO</title>
+  <title>Pendaftaran Batch 5 — LOCALOGO</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
@@ -97,7 +97,7 @@
       <img src="favicon.png" alt="Logo" style="height:30px; margin-right:10px;">
       <div class="logo-text">Localogo</div>
     </a>
-    <div class="live-chip"><div class="dot"></div><span>Batch 3 Open</span></div>
+    <div class="live-chip"><div class="dot"></div><span>Batch 5 Open</span></div>
   </nav>
 
   <div class="main-wrap" style="padding-top:36px; padding-bottom:80px;" id="app-root">
@@ -178,7 +178,7 @@
         <!-- FORM COLUMN -->
         <div class="form-card">
           <div class="form-card-head">
-            <div class="form-card-title">Pendaftaran <span id="hd-batch-name">Batch 3</span></div>
+            <div class="form-card-title">Pendaftaran <span id="hd-batch-name">Batch 5</span></div>
             <div class="form-card-sub">Isi data diri dengan benar. Setiap nomor WA dan email hanya bisa digunakan <strong>1 kali</strong>.</div>
           </div>
 
@@ -244,7 +244,7 @@
             </div>
             <div class="order-body">
               <div class="order-row"><span class="k">Item</span><span class="v">Paket Perlengkapan OSPEK 2026</span></div>
-              <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">Batch 3</span></div>
+              <div class="order-row"><span class="k">Batch</span><span class="v" id="sidebar-batch">Batch 5</span></div>
               <div class="order-row"><span class="k">Metode</span><span class="v">Transfer BCA Manual</span></div>
             </div>
             <div style="padding:15px; background:#f9f9f9; border-radius:0 0 12px 12px; font-size:11px; color:var(--txm); line-height:1.6;">
@@ -332,7 +332,7 @@
         }
 
         // Update batch name
-        const batchName = data.batch_name || 'Batch 3';
+        const batchName = data.batch_name || 'Batch 5';
         const hdBatch = document.getElementById('hd-batch-name');
         const sbBatch = document.getElementById('sidebar-batch');
         if (hdBatch) hdBatch.textContent = batchName;
@@ -370,7 +370,7 @@
         _accessCode = code;
 
         // Update batch name
-        const batchName = data.batch_name || 'Batch 3';
+        const batchName = data.batch_name || 'Batch 5';
         const hdBatch = document.getElementById('hd-batch-name');
         const sbBatch = document.getElementById('sidebar-batch');
         if (hdBatch) hdBatch.textContent = batchName;
